@@ -56,11 +56,10 @@ test('QUERY7: resposta antiga, mesmo ignorando AbortSignal, não substitui proje
   const old = deferred<AnalysisPage>()
   vi.mocked(queryAnalysis).mockImplementation(body => body.query.projects[0] === project ? old.promise : Promise.resolve(page('ATUAL', second)))
   await start()
-  await act(async () => {
-    const select = host.querySelector('select[multiple]') as HTMLSelectElement
-    for (const option of select.options) option.selected = option.value === second
-    select.dispatchEvent(new Event('change', { bubbles: true }))
-  })
+  const group = [...host.querySelectorAll('fieldset')].find(element => element.querySelector('legend')?.textContent === 'Projetos da consulta')!
+  for (const option of group.querySelectorAll<HTMLInputElement>('input[type=checkbox]')) {
+    if (option.checked !== (option.value === second)) await act(async () => option.click())
+  }
   await act(async () => button('Aplicar filtros').click())
   expect(host.querySelector('table.results-table')?.textContent).toContain('ATUAL')
   await act(async () => old.resolve(page('ATRASADA')))

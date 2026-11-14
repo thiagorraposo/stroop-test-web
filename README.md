@@ -1,4 +1,4 @@
-# Plataforma Stroop Web
+# Stroop Test Web
 
 Desenvolver uma plataforma Web modular para aplicação, gerenciamento e análise
 de avaliações cognitivas, iniciando pelo Stroop Go/No-Go, com integridade de dados,

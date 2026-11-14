@@ -1,3 +1,4 @@
+import { selectMulti } from '../support/multiselect'
 /** W15C: download de snapshot PostgreSQL/API/HTTPS reais, sem interceptacoes. */
 import { execFileSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
@@ -13,7 +14,7 @@ function manage(name: string, value = {}): Prepared {
 async function open(page: Page, context: BrowserContext, prepared: Prepared) {
   await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
-  await page.getByRole('listbox', { name: 'Projetos da consulta', exact: true }).selectOption(prepared.projects)
+  await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
 }
 async function download(page: Page) {
@@ -50,9 +51,9 @@ test('CSV real corresponde a todas paginas/projetos e filtros; vinculo revogado 
   await page.getByText('Filtros avançados e ordenação', { exact: true }).click()
   await page.getByLabel('Data inicial', { exact: true }).fill('2026-10-01')
   await page.getByLabel('Data final', { exact: true }).fill('2026-10-03')
-  await page.getByRole('listbox', { name: 'Participantes (códigos)', exact: true }).selectOption('P_SINTETICO_W15')
-  await page.getByRole('listbox', { name: 'Versões', exact: true }).selectOption('synthetic.1')
-  await page.getByRole('listbox', { name: 'Visitas', exact: true }).selectOption('V_SINTETICA')
+  await selectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), 'P_SINTETICO_W15')
+  await selectMulti(page.getByRole('group', { name: 'Versões', exact: true }), 'synthetic.1')
+  await selectMulti(page.getByRole('group', { name: 'Visitas', exact: true }), 'V_SINTETICA')
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(2)
   const filtered = await download(page)
@@ -76,7 +77,7 @@ test('CSV real corresponde a todas paginas/projetos e filtros; vinculo revogado 
 test('CSV demonstrativo real conserva metricas proprias e nao mistura contagens Stroop', async ({ page, context }) => {
   const prepared = manage('complete-results')
   await open(page, context, prepared)
-  await page.getByRole('listbox', { name: 'Instrumento da consulta', exact: true }).selectOption('instrumento_sintetico_demo')
+  await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'instrumento_sintetico_demo')
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   await expect(page.getByRole('table', { name: 'Métricas por instrumento e avaliação' }).locator('tbody tr')).toHaveCount(4)
   const output = await download(page)

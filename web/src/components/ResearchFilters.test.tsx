@@ -70,7 +70,7 @@ test('REQ-REL-004: renderiza catalogo completo de filtros combinados e emite que
   const searchInput = container.querySelector('input[placeholder="Ex: PAT-"]') as HTMLInputElement
   expect(searchInput).not.toBeNull()
 
-  const labels = Array.from(container.querySelectorAll('label')).map(l => l.textContent ?? '')
+  const labels = Array.from(container.querySelectorAll('label, legend')).map(l => l.textContent ?? '')
   expect(labels.some(l => l.includes('Status da avaliação'))).toBe(true)
   expect(labels.some(l => l.includes('Faixa de precisão'))).toBe(true)
   expect(labels.some(l => l.includes('Faixa de tempo de reação (RT)'))).toBe(true)
@@ -172,12 +172,10 @@ test('QUERY7: multisseleção de condição/resposta exige capacidade e só publ
   const applied = vi.fn()
   await act(async () => root.render(<ResearchFilters projects={mockProjects} initialProject={mockProjects[0]!.id} loading={false} onApply={applied} />))
   const select = async (label: string, values: string[]) => {
-    const labelNode = [...container.querySelectorAll('label')].find(node => node.textContent === label)!
-    const list = container.querySelector<HTMLSelectElement>(`[id="${labelNode.htmlFor}"]`)!
-    await act(async () => {
-      for (const option of list.options) option.selected = values.includes(option.value)
-      list.dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    const list = [...container.querySelectorAll('fieldset')].find(node => node.querySelector('legend')?.textContent === label)!
+    for (const option of list.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
+      if (option.checked !== values.includes(option.value)) await act(async () => option.click())
+    }
     return list
   }
   await select('Condição experimental', ['congruent', 'incongruent'])
@@ -189,12 +187,13 @@ test('QUERY7: multisseleção de condição/resposta exige capacidade e só publ
   await select('Instrumento da consulta', ['stroop_go_nogo_ptbr'])
   await act(async () => button('Aplicar filtros').click())
   expect(applied.mock.lastCall?.[0].advanced).toMatchObject({ condition: ['congruent', 'incongruent'], responseType: ['hit', 'omission'] })
-  const search = container.querySelector<HTMLInputElement>(`[aria-controls="${list.id}"]`)!
+  const search = list.querySelector<HTMLInputElement>('input[type=search]')!
   await fill(search, 'comissão')
-  expect([...list.selectedOptions].map(option => option.value)).toEqual(['hit', 'omission'])
+  const selected = () => [...list.querySelectorAll<HTMLInputElement>('input:checked')].map(option => option.value)
+  expect(selected()).toEqual(['hit', 'omission'])
   await act(async () => container.querySelector<HTMLButtonElement>('[aria-label^="Remover filtro Resposta"]')!.click())
-  expect(list.selectedOptions).toHaveLength(0)
+  expect(selected()).toHaveLength(0)
   expect(applied).toHaveBeenCalledTimes(1)
   await act(async () => button('Descartar alterações').click())
-  expect(list.selectedOptions).toHaveLength(2)
+  expect(selected()).toHaveLength(2)
 })

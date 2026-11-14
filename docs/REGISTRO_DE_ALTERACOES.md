@@ -4,6 +4,22 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-14 — Fundação visual e ampliação da consulta aplicada
+
+Marca pública Stroop Test Web aplicada ao shell, início, títulos/metadados e
+README, preservando instrumento e apresentação experimental. Adicionado
+catálogo compartilhado de componentes com contratos de uso, tokens e estilos
+administrativos delimitados, controles por teclado e diálogos com foco.
+Ensaios sintéticos de contraste/reflow e uso efetivo do Orca registrados na
+WEB-048; conformidade integral e aceite permanecem na ficha canônica.
+
+Consulta POST habilita faixas de precisão Go/No-Go e presença/ausência de erros
+usando métricas Python oficiais. Filtros usam multisseleção pesquisável por
+checkboxes, sem Ctrl/Cmd, com seleção e foco preservados durante a busca.
+Recortes sem suporte de exportação continuam bloqueados. Corrigida mensagem de
+histórico vazio em consultas de vários projetos. Sem mudança científica,
+schema, dependências, produção ou deploy. Evidências e limites em EV-M8-048/050.
+
 ## 2026-11-12 — Consolidação das entregas pendentes pelo GitHub Flow
 
 Solicitação explícita de integrar as pendências à main por Merge Commit

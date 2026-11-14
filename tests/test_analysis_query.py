@@ -40,6 +40,7 @@ class AnalysisSchemaTests(unittest.TestCase):
     def test_metricas_exigem_capacidade_faixas_finitas_e_busca_apenas_codigo(self):
         project = str(uuid4())
         for filters in ({'accuracy_min': 50}, {'include_null_rt': False},
+                        {'go_accuracy_min': 20}, {'no_go_accuracy_max': 80}, {'has_commission_errors': False},
                         {'test_code': ['stroop_go_nogo_ptbr'], 'accuracy_min': 80, 'accuracy_max': 50},
                         {'patient_search': 'CODIGO\x00'}):
             with self.subTest(filters=filters), self.assertRaises(APIError):
@@ -52,3 +53,25 @@ class AnalysisSchemaTests(unittest.TestCase):
         for value in (float('nan'), float('inf'), '50', True):
             with self.subTest(value=value), self.assertRaises(ValidationError):
                 QuerySelection.model_validate({'projects': [project], 'filters': {'accuracy_min': value}})
+
+    def test_precisao_por_tipo_e_presenca_de_erros_estritas(self):
+        project = str(uuid4())
+        base = {'test_code': ['stroop_go_nogo_ptbr']}
+        for field in ('go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max'):
+            for value in (-1, 101, True, '50', float('nan'), float('inf')):
+                with self.subTest(field=field, value=value), self.assertRaises(ValidationError):
+                    QuerySelection.model_validate({'projects': [project], 'filters': {**base, field: value}})
+        for prefix in ('go_accuracy', 'no_go_accuracy'):
+            with self.subTest(prefix=prefix), self.assertRaises(APIError):
+                normalize(QuerySelection.model_validate({'projects': [project], 'filters': {
+                    **base, f'{prefix}_min': 80, f'{prefix}_max': 80}}))
+        for field in ('has_commission_errors', 'has_omission_errors'):
+            for value in ('false', 0, 1):
+                with self.subTest(field=field, value=value), self.assertRaises(ValidationError):
+                    QuerySelection.model_validate({'projects': [project], 'filters': {**base, field: value}})
+        query, filters = normalize(QuerySelection.model_validate({'projects': [project], 'filters': {
+            **base, 'has_commission_errors': False, 'has_omission_errors': True, 'go_accuracy_min': 0}}))
+        self.assertIs(query['filters']['has_commission_errors'], False)
+        self.assertIs(query['filters']['has_omission_errors'], True)
+        self.assertEqual(query['filters']['go_accuracy_min'], 0)
+        self.assertNotIn('has_commission_errors', filters)

@@ -1,7 +1,9 @@
+import { selectMulti } from '../support/multiselect'
 /** QUERY7: POST normalizado em HTTPS/API/PG reais, sem interceptação HTTP. */
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
+import type { AnalysisBody } from '../../src/api/analysis'
 const python = fileURLToPath(new URL('../../../.venv/bin/python', import.meta.url))
 const script = fileURLToPath(new URL('./dashboard-manage.py', import.meta.url))
 
@@ -71,8 +73,8 @@ test('React aplica busca/faixas/RT ausente no POST compartilhado entre módulos'
   })
   await page.goto('/equipe')
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
-  await form.getByRole('listbox', { name: 'Projetos da consulta', exact: true }).selectOption(prepared.projects)
-  await form.getByRole('listbox', { name: 'Instrumento da consulta', exact: true }).selectOption('stroop_go_nogo_ptbr')
+  await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
+  await selectMulti(form.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   const table = page.getByRole('table', { name: 'Avaliações filtradas' })
   await expect(table.locator('tbody tr')).toHaveCount(4)
@@ -104,4 +106,42 @@ test('React aplica busca/faixas/RT ausente no POST compartilhado entre módulos'
   await page.getByRole('button', { name: 'Visão geral (Dashboard)', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })).toBeDisabled()
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0])
+})
+
+test('precisão Go/No-Go e erros selecionam avaliação completa e bloqueiam CSV incompatível', async ({ page, context }) => {
+  const complete = fileURLToPath(new URL('./complete-results-manage.py', import.meta.url))
+  const prepared = JSON.parse(execFileSync(python, [complete], { input: '{}', encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }))
+  await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
+  const queries: AnalysisBody[] = []
+  page.on('request', request => { if (request.url().endsWith('/api/v1/analysis/query')) queries.push(request.postDataJSON()) })
+  await page.goto('/equipe')
+  const form = page.getByRole('form', { name: 'Filtros da consulta' })
+  await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
+  await selectMulti(form.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
+  await form.getByText('Filtros avançados e ordenação', { exact: true }).click()
+  await form.getByRole('combobox', { name: 'Faixa de precisão Go', exact: true }).selectOption('under50')
+  await form.getByRole('combobox', { name: 'Faixa de precisão No-Go', exact: true }).selectOption('80plus')
+  await form.getByRole('combobox', { name: 'Presença de erros de comissão', exact: true }).selectOption('no')
+  await form.getByRole('combobox', { name: 'Presença de erros de omissão', exact: true }).selectOption('yes')
+  await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  const table = page.getByRole('table', { name: 'Avaliações filtradas' })
+  await expect(table.locator('tbody tr')).toHaveCount(1)
+  await expect(table).toContainText('P_SINTETICO_SEM_HITS')
+  expect(queries.at(-1)!.query.filters).toMatchObject({ go_accuracy_max: 50, no_go_accuracy_min: 80, has_commission_errors: false, has_omission_errors: true })
+  await expect(page.getByRole('status').filter({ hasText: 'Filtros aplicados:' })).toContainText('erros de comissão: sem')
+  await expect(page.getByRole('status').filter({ hasText: 'A exportação deste recorte ainda não está disponível.' })).toBeVisible()
+  const before = queries.length
+  await page.getByRole('button', { name: 'Resultados e análises', exact: true }).click()
+  await expect(page.locator('.dashboard-cards > div').filter({ has: page.getByText('Avaliações analisadas', { exact: true }) }).locator('dd')).toHaveText('1')
+  expect(queries.length).toBe(before)
+  await page.getByRole('button', { name: 'Avaliações e histórico', exact: true }).click()
+  await form.getByRole('button', { name: /Remover filtro Precisão Go/ }).click()
+  await expect(form.getByRole('status').filter({ hasText: 'Alterações não aplicadas' })).toBeVisible()
+  await form.getByRole('button', { name: 'Descartar alterações', exact: true }).click()
+  await expect(form.getByRole('combobox', { name: 'Faixa de precisão Go', exact: true })).toHaveValue('under50')
+  await form.getByRole('combobox', { name: 'Presença de erros de comissão', exact: true }).selectOption('yes')
+  await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await expect(page.getByText('Nenhuma avaliação corresponde aos filtros.', { exact: true })).toBeVisible()
+  expect(page.url()).not.toContain('go_accuracy')
+  expect(await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length }))).toEqual({ local: 0, session: 0 })
 })

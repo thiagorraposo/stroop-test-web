@@ -38,6 +38,12 @@ class QueryFilters(RequestModel):
     patient_search: str | None = Field(default=None, max_length=120)
     accuracy_min: float | None = Field(default=None, ge=0, le=100)
     accuracy_max: float | None = Field(default=None, ge=0, le=100)
+    go_accuracy_min: float | None = Field(default=None, ge=0, le=100)
+    go_accuracy_max: float | None = Field(default=None, ge=0, le=100)
+    no_go_accuracy_min: float | None = Field(default=None, ge=0, le=100)
+    no_go_accuracy_max: float | None = Field(default=None, ge=0, le=100)
+    has_commission_errors: bool | None = None
+    has_omission_errors: bool | None = None
     rt_median_min_ms: float | None = Field(default=None, ge=0)
     rt_median_max_ms: float | None = Field(default=None, ge=0)
     include_null_rt: bool = True
@@ -79,6 +85,8 @@ def normalize(selection: QuerySelection):
     raw = selection.filters.model_dump(exclude_none=True)
     raw.pop('status')
     advanced = {key: raw.pop(key) for key in ('patient_search', 'accuracy_min', 'accuracy_max',
+                'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max',
+                'has_commission_errors', 'has_omission_errors',
                 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt') if key in raw}
     if 'patient_search' in advanced:
         value = advanced['patient_search']
@@ -89,10 +97,13 @@ def normalize(selection: QuerySelection):
             advanced['patient_search'] = value
         else:
             advanced.pop('patient_search')
-    for lower, upper in [('accuracy_min', 'accuracy_max'), ('rt_median_min_ms', 'rt_median_max_ms')]:
+    for lower, upper in [('accuracy_min', 'accuracy_max'), ('go_accuracy_min', 'go_accuracy_max'),
+                         ('no_go_accuracy_min', 'no_go_accuracy_max'), ('rt_median_min_ms', 'rt_median_max_ms')]:
         if lower in advanced and upper in advanced and advanced[lower] >= advanced[upper]:
             raise APIError('invalid_request')
-    metric_filter = any(key in advanced for key in ('accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms')) or not advanced['include_null_rt']
+    metric_filter = any(key in advanced for key in ('accuracy_min', 'accuracy_max', 'go_accuracy_min', 'go_accuracy_max',
+                        'no_go_accuracy_min', 'no_go_accuracy_max', 'has_commission_errors', 'has_omission_errors',
+                        'rt_median_min_ms', 'rt_median_max_ms')) or not advanced['include_null_rt']
     if metric_filter and set(raw.get('test_code', [])) != {'stroop_go_nogo_ptbr'}:
         raise APIError('invalid_request')
     if any(raw.get(key) == '' for key in ('date_from', 'date_to', 'start_date', 'end_date')):
@@ -187,6 +198,8 @@ async def analysis_query(request: Request, body: AnalysisRequest):
                                             'visit_identity': ['project_id', 'participant_code', 'visit']},
                                   'summary': {'source': 'stroop.domain.stroop.calculate_metrics', 'population': 'complete_assessment', 'rt_unit': 'seconds'}},
         'capabilities': {'filters': ['date_from', 'date_to', 'participant_code', 'visit', 'evaluator_id', 'test_code', 'test_version', 'platform', 'status',
+                                     'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max',
+                                     'has_commission_errors', 'has_omission_errors',
                                      'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt'],
                          'status': ['valid'], 'trial_filters': {'stroop_go_nogo_ptbr': ['condition', 'response_type']},
                          'grouping': [{'level': 'assessment', 'dimension': 'project'}],

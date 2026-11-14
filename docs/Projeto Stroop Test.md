@@ -1,6 +1,6 @@
 # Projeto Stroop Test — backlog canônico da plataforma WEB
 
-Última verificação documental: **2026-11-12**. Missão e limites:
+Última verificação documental: **2026-11-14**. Missão e limites:
 [arquitetura](ARQUITETURA_WEB.md); inventário: [auditoria](AUDITORIA_REPLANEJAMENTO.md);
 especificação: [requisitos e matriz](REQUISITOS_E_RASTREABILIDADE.md).
 Este é o único registro executável de marcos, tarefas, estados, dependências,
@@ -50,11 +50,11 @@ de legados sem merge automático (WEB-027, EV-M7-027), e cobertura operacional e
 
 ## Painel visual de acompanhamento
 
-Atualizado em **2026-11-12**, a partir das fichas deste backlog.
+Atualizado em **2026-11-14**, a partir das fichas deste backlog.
 
 | Entregáveis aceitos | Ainda sem aceite | Marco autorizado | Próxima ação |
 |---|---|---|---|
-| **37 de 56 · 66,1%** | **19** | **M8 em execução (2/12 aceitos)** | WEB-050: completar catálogo e UX7-AA; WEB-048 pronta; WEB-031 bloqueada |
+| **37 de 56 · 66,1%** | **19** | **M8 em execução (2/12 aceitos)** | WEB-050: catálogo residual e UX7-AA; WEB-048 em validação; WEB-031 bloqueada |
 
 ```text
 Aceites   █████████████░░░░░░░   66,1%
@@ -133,7 +133,7 @@ Clique no ID para conferir critérios, evidências e limites do aceite.
 
 Novo `continue o projeto` de **2026-11-11** autoriza **M8 — CI, infraestrutura e
 preparação operacional**, com 2/12 aceitos. WEB-050 está EM_ANDAMENTO; WEB-048
-PRONTA. A preparação de WEB-031 continua bloqueada por destino externo/custódia
+EM_VALIDACAO após a continuidade de 2026-11-14. A preparação de WEB-031 continua bloqueada por destino externo/custódia
 não autorizados; isso impede WEB-032 e o encerramento de M8, sem bloquear
 CHG-007 independente. M7 permanece integralmente aceito (4/4). PR #18 deve
 permanecer aberto sem merge, inclusive por ancestralidade de outra branch.
@@ -2228,7 +2228,7 @@ de critério, sem conclusão de M8/WEB-032 nem autorização de publicação.
 
 ### WEB-048 — Padronizar identidade pública e componentes visuais
 
-- Marco: M8. Prioridade: P1. Complexidade: G. Estado: PRONTA.
+- Marco: M8. Prioridade: P1. Complexidade: G. Estado: EM_VALIDACAO.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Converter a marca Cores e a UI heterogênea em uma fundação reutilizável para os três eixos.
 - Inclui: Marca Stroop Test Web no cabeçalho, início, área profissional, título da aba, metadados, navegação e textos institucionais; inventário de referências públicas; tokens e catálogo completo de componentes da decisão UX7-VIS.
@@ -2243,11 +2243,88 @@ de critério, sem conclusão de M8/WEB-032 nem autorização de publicação.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: COMP7: Vitest por comportamento (teclado, erro preservando dados, foco e diálogo), TypeScript, build; regressão DOM de apresentação experimental; comparação de tokens usados.
 - Testes manuais/visuais exigidos: Revisão visual do catálogo em Chromium/Firefox, dez cores experimentais preservadas por regressão quando CSS compartilhado for tocado; larguras/zoom de UX7-AA.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-048, 2026-11-14: marca, tokens delimitados, catálogo/contratos, testes e ensaio Orca. Checklist UX7-AA integral ainda em conferência; sem aceite funcional antecipado.
 - Riscos/bloqueios: R15: CSS global e troca indevida de nome científico. Sem bloqueio técnico conhecido.
 - Decisões externas necessárias: Nenhuma para marca/direção visual autorizadas nesta missão; mudança científica exige decisão separada.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
 - Referências: CHG-007; [UX](experimento/UX_DECISIONS.md#interface-profissional-integrada--chg-007); [contrato](desenvolvimento/CONTRATO_API_WEB.md#consulta-e-exportação-integradas--alvo-chg-007); [ADR-008](arquitetura/ADR-008-simplificacao-estrutural-e-fluxo-direto-sessao.md).
+
+### EV-M8-048 — fundação de componentes e identidade, 2026-11-14
+
+Continuidade de M8 renovada explicitamente pelo proprietário, com execução em
+sequência das tarefas elegíveis. Base main/origin/main `b185e7c`, limpa após
+fetch; branch `feat/m8-componentes-consulta-integrada`. PR #19 confirmado MERGED,
+merge `b185e7c36bc6eb6f05804c5151f043a1b84ae314`; `verify` aprovado na execução
+[43332786381](https://github.com/thiagorraposo/stroop-test-web/actions/runs/43332786381).
+Isso encerra a pendência Git anterior, sem transferir aprovação funcional.
+
+Marca pública substituída em cabeçalho, início, rodapé, README, title por rota,
+HTML title/description/application-name. Inventário auditado com `rg -n
+'Cores|Correspondência' web/src web/index.html README.md docs/desenvolvimento
+ docs/operacao`: nome descritivo do instrumento na preparação e conteúdo
+experimental/histórico preservados. `test_code`, versões, protocolo e CSV não
+foram renomeados. Código científico e motor não foram alterados.
+
+Fundação e contrato de uso em [COMPONENTES_WEB](desenvolvimento/COMPONENTES_WEB.md),
+`web/src/components/ui/controls.tsx`, `presentation.tsx` e `theme.css`. Todos os
+componentes UX7-VIS têm composição/contrato/exemplo sintético; catálogo servido
+somente por Vite em `/e2e/fixtures/component-catalog.html`, sem importação no App
+nem entrada de produção. Tokens novos e CSS administrativo anterior delimitados
+à `.professional-theme`, fora do experimento. Botões primário/secundário/perigo,
+campos/erros, seleções pesquisáveis, tabs por setas, diálogos/drawer com Escape e
+retorno de foco, estados, tabela equivalente e exportação indisponível exercitados.
+Módulos são migrados durante sua integração; esta fundação não antecipa WEB-049/052/053.
+
+Ambiente observado: Linux `7.0.0-43-generic`, Python 3.12.3, Node 24.15.0,
+npm 11.16.0, Chromium 156.0.8078.4, Firefox 157.0, Orca 46.1. Sem instalação ou
+atualização de dependências. Ensaios exclusivamente sintéticos.
+
+Validação do catálogo: `npm --prefix web test -- --reporter=dot`, **366/366**,
+30 arquivos, sem skips, incluindo quatro novos casos COMP7. Tipos/build aprovados;
+aviso histórico de bundle >500 kB mantido (570,69 kB após integração aos filtros).
+Em `web/`, `WEB_TEST_PORT=4291 npx playwright test e2e/component-catalog.spec.ts
+--workers=2 --trace=off --output=test-results/m8-components-final-checked`:
+**10/10**, 10,6 s, Chromium/Firefox; cinco larguras 360/768/1024/1366/1920, reflow
+320, ampliação CSS 200%/400%, espaçamento customizado, foco e contraste de oito
+pares de tokens >=4,5:1, variantes efetivamente renderizadas e alvos >=24px.
+Screenshots de Chromium 360 e Firefox 1366 inspecionados pelo agente; artefatos
+ignorados. A rodada após o último ajuste de foco/grade tem registro no fechamento.
+
+Ensaio real com Orca 46.1/Firefox 157.0, em Xephyr :91 e sessão D-Bus próprios,
+preferências/cache temporários e catálogo sintético local. Saída de fala e braille
+conferida pelo agente: nome/valor de campo, mensagem de erro preservando dados,
+ativação da aba Detalhes, nome do diálogo, botão Fechar e retorno ao acionador.
+Exemplos observados: “Identificação sintética entry Valor sintético preservado”,
+“Confira o valor informado. Seu preenchimento foi preservado” e “Conferir dados
+sintéticos dialog”. Logs/screenshot somente em diretório temporário privado,
+sem versionamento. É uso efetivo da tecnologia assistiva, sem alegar escuta ou
+revisão por participante humano. A primeira tentativa não abriu display e foi
+corrigida mantendo Xephyr e browser na mesma sessão isolada. Não houve leitura
+de desktop operacional, coleta real ou acesso à VPS.
+
+Falhas corrigidas: jsdom não implementa showModal/close (double apenas no teste
+unitário, com foco real nos browsers); trap de Tab do diálogo no Chromium;
+reflow com CSS zoom 400%; parser de contraste do teste não expandia hex curto;
+especificidade CSS anulava variantes, detectada na inspeção visual e agora
+verificada no estilo computado. Teste de data esperava aria-invalid=false onde
+atributo ausente é válido; passou a exigir ausência de estado inválido.
+
+Conferência após integração da multisseleção e correção de foco: em `web/`,
+`WEB_TEST_PORT=4291 npx playwright test e2e/component-catalog.spec.ts
+ e2e/research-filters.spec.ts e2e/presentation.spec.ts --workers=2 --trace=off
+ --output=test-results/m8-final-focus-theme`: **32/32**, 32,3 s, sem skips;
+dez cores/contorno/centro/HUD preservados em Chromium/Firefox. Reapareceram os
+avisos React históricos de flushSync/lifecycle em fixture negativa Firefox;
+não suprimidos nem declarados resolvidos. Nova tentativa local de automatizar
+zoom nativo via XTest/Xephyr não completou a matriz (janela/title/foco do harness),
+portanto não recebeu aceite nem entrou no código de produção/repositório.
+A sondagem temporária foi preservada para diagnóstico; não equivale à matriz
+manual. Revisão de screenshots não é aprovação visual do proprietário.
+
+WEB-048 permanece **EM_VALIDACAO**: falta encerrar checklist A/AA aplicável por
+superfície e matriz visual/manual, incluindo zoom nativo comprovado; CSS zoom
+não é substituído por inferência. Nenhuma conformidade global ou aceite de
+WEB-055. WEB-049 continua dependente desse aceite. Progresso **37/56**, M8 **2/12**.
 
 ### WEB-049 — Consolidar sidebar responsiva nos três eixos profissionais
 
@@ -2924,6 +3001,65 @@ HEAD/upstream/remoto sem commit artificial de autorreferência. WEB-050 segue
 EM_ANDAMENTO, global 37/56 e M8 2/12. Próxima ação funcional preservada: catálogo
 residual/capacidades e UX7-AA antes do aceite; WEB-048 independente PRONTA e
 WEB-031 BLOQUEADA externamente.
+
+#### Continuação — precisão Go/No-Go, erros e multisseleção compartilhada, 2026-11-14
+
+WEB-050 retoma na branch/base de EV-M8-048. POST fechado habilita faixas
+`go_accuracy_min/max`, `no_go_accuracy_min/max` e booleanos estritos opcionais
+`has_commission_errors` / `has_omission_errors`, somente com Stroop exclusivo.
+Limite inferior inclusivo/superior exclusivo e ausência por denominador zero
+preservados. Seleção usa exclusivamente métricas oficiais da avaliação inteira
+já hidratadas pelo núcleo Python; condição/resposta continuam na mesma tentativa.
+Não há fórmula nova, migração, mudança de paradigma ou cálculo científico React.
+
+Rascunho/aplicação/chips/descarte/resumo incluem as quatro dimensões. False não
+é descartado como ausência. Recorte avançado segue sem token CSV v1 e a UI
+bloqueia download incompatível, sem fallback para população maior. Mensagem de
+histórico vazio corrigida para mencionar filtros, já que pode haver vários
+projetos. Novo controle MultiSelect compartilhado substitui select multiple por
+busca e checkboxes com Tab/Espaço; seleção permanece na busca. Ao desmarcar opção
+fora da busca, ela permanece enquanto focada, preservando navegação/reseleção.
+Testes existentes foram adaptados aos controles reais, sem escrever estado React.
+
+Validação: `TEST_DATABASE_URL` no PostgreSQL 17.6 descartável próprio
+`stroop_etapa4_test_m8_20261114`, tmpfs/loopback 32769;
+`.venv/bin/python -m unittest tests.test_analysis_query tests.test_web_assessments -v`:
+**33/33**, 44,996 s; `.venv/bin/python scripts/verify_web_ci.py python`:
+**475/475**, 141,741 s, zero skips. Inclui faixas/limites/booleanos, ausentes,
+flags redundantes incoerentes, fonte oficial, isolamento/CSRF/revogação,
+regressão de grants/CSV e compatibilidade. Logs de deploy dessa suíte são
+simulações/doubles dos testes existentes; nenhuma conexão/deploy executado.
+
+Vitest **366/366**, tipos/build aprovados. Em `web/`,
+`WEB_TEST_PORT=4291 npx playwright test e2e/research-filters.spec.ts
+ e2e/applied-query.spec.ts e2e/dashboard.spec.ts e2e/complete-results.spec.ts
+ e2e/component-catalog.spec.ts --workers=2 --trace=off
+ --output=test-results/m8-checkbox-query`: **50/50**, 49,6 s, doubles HTTP;
+integração HTTPS real em registro complementar abaixo. Primeira campanha real
+após multisseleção teve **20/22**: dois casos ainda focavam o select removido.
+Adaptados para Tab/Espaço, revelaram perda real de foco ao desmarcar uma opção
+selecionada fora da busca; corrigida a retenção da opção focada, sem retirar
+asserções de população/seleção/descarte. Reexecução desses casos **2/2**, 14,2 s,
+HTTPS/React/API/PG reais, Chromium/Firefox.
+
+Conferência HTTPS após a migração: em `web/`, `TEST_DATABASE_URL` no banco
+sintético acima, `npx playwright test --config playwright.integration.config.ts
+ e2e/integrated/analysis-query.spec.ts e2e/integrated/filters.spec.ts
+ e2e/integrated/trial-filters.spec.ts e2e/integrated/complete-results.spec.ts
+ e2e/integrated/aggregate-export.spec.ts e2e/integrated/dashboard.spec.ts
+ --output=test-results/m8-checkbox-query-https`: **20 aprovados / 2 falhas** de
+foco no caso de tentativa. Após a correção real de retenção de foco, o comando
+focado `e2e/integrated/trial-filters.spec.ts
+ --output=test-results/m8-checkbox-keyboard-corrected-https` passou **2/2**, 14,2 s.
+Os vinte casos restantes incluem novo fluxo de faixas/erros, CSV básico,
+consulta normalizada, cardinalidades, perfis, revogação e métricas completas.
+O novo fluxo havia passado também **6/6** com analysis-query, 26 s, antes da
+multisseleção; não é passe da revisão final por inferência.
+
+WEB-050 continua **EM_ANDAMENTO**: status operacionais segregados, IDs cadastrais,
+RT médio/capacidades residuais e checklist UX7-AA continuam sem aceite integral.
+Busca nominal segue gates próprios; nenhuma habilitação por inferência.
+WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 
 ### WEB-051 — Consolidar seleção analítica autorizada e agregações no servidor
 
@@ -3859,7 +3995,33 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 
 ## Retomada
 
-### Retomada vigente — integração GitHub Flow das pendências, 2026-11-12
+### Retomada vigente — fundação visual e catálogo aplicado de M8, 2026-11-14
+
+Novo pedido de continuidade em sequência autoriza tarefas elegíveis de M8 até
+seu limite. Branch `feat/m8-componentes-consulta-integrada` sobre main/origin/main
+`b185e7c`, sem alterações preexistentes; `.deploy-hostgator/` ignorado e preservado.
+WEB-048 EM_VALIDACAO (componentes/marca/Orca; checklist e matriz visual por fechar);
+WEB-050 EM_ANDAMENTO (novas faixas/erros e multisseleção; catálogo residual/UX7-AA).
+Evidências em EV-M8-048 e continuação de EV-M8-050 de 2026-11-14. Progresso
+37/56, M8 2/12; WEB-049/051 continuam dependentes dos aceites, WEB-031 BLOQUEADA
+externamente e WEB-032 PENDENTE. M9, dados reais, produção, deploy/tag/release
+não autorizados.
+
+Validação documental final: `python3 scripts/verify_web_docs.py` e sete testes
+do verificador aprovados; 90 documentos, 743 links, 117 âncoras, sem ciclos.
+`git diff --check`/índice aprovados; scanner oficial verificou 450 fontes e
+prova negativa bloqueou token sintético sem expô-lo. Auditorias de dependências
+não reexecutadas localmente; locks intactos, CI verify executará seus gates.
+Entrega identificável por `git log -1 --format=%H
+--grep='feat(web): integra componentes acessíveis e filtros Go/No-Go'`.
+Push/PR/check/merge serão registrados somente após observação real.
+
+Próxima ação: concluir conferência/registro desta unidade, abrir PR, aguardar
+verify na SHA exata e integrar por Merge Commit tradicional se todos os checks
+passarem; prosseguir nos critérios pendentes elegíveis de M8. Estado remoto
+novo somente quando observado; resultado de #19 conferido em EV-M8-048.
+
+### Retomada anterior — integração GitHub Flow das pendências, 2026-11-12
 
 Solicitação explícita do proprietário: executar o GitHub Flow completo até o
 merge na main de todas as entregas pendentes. Esta autorização substitui as

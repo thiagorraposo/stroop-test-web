@@ -20,7 +20,7 @@ test('pagina real bloqueia script inline e conexao fora da origem', async ({ pag
   expect(blocked.connection).toBe(false)
   expect(blocked.policies.some(value => value.startsWith('script-src'))).toBe(true)
   expect(blocked.policies).toContain('connect-src')
-  await expect(page.getByRole('heading', { name: 'Tarefa de Correspondência de Cores' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Stroop Test Web' })).toBeVisible()
 })
 
 test('CSP real preserva estilo dinamico do motor sem permissoes inline', async ({ page }) => {

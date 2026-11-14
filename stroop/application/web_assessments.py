@@ -158,8 +158,13 @@ def analysis_query(database_url, actor, *, query, filters, sort, offset, size, s
     criteria = query['filters']
     def eligible(row):
         summary = row['summary']
+        for criterion, field in (('has_commission_errors', 'commission_errors'), ('has_omission_errors', 'omission_errors')):
+            if criterion in criteria and (summary.get(field, 0) > 0) != criteria[criterion]:
+                return False
         for lower, upper, field, factor in (
                 ('accuracy_min', 'accuracy_max', 'accuracy', 1),
+                ('go_accuracy_min', 'go_accuracy_max', 'accuracy_go_trials', 1),
+                ('no_go_accuracy_min', 'no_go_accuracy_max', 'accuracy_no_go_trials', 1),
                 ('rt_median_min_ms', 'rt_median_max_ms', 'response_time_seconds', 1000)):
             if lower not in criteria and upper not in criteria:
                 continue

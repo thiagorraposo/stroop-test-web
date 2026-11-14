@@ -628,6 +628,10 @@ export function ProfessionalDashboard({
                   {query.advanced?.searchText ? ` · busca: "${query.advanced.searchText}"` : ''}
                   {query.advanced?.status && query.advanced.status !== 'valid' ? ` · status: ${query.advanced.status}` : ''}
                   {query.advanced?.accuracyRange && query.advanced.accuracyRange !== 'all' ? ` · precisão: ${query.advanced.accuracyRange}` : ''}
+                  {query.advanced?.goAccuracyRange && query.advanced.goAccuracyRange !== 'all' ? ` · precisão Go: ${query.advanced.goAccuracyRange}` : ''}
+                  {query.advanced?.noGoAccuracyRange && query.advanced.noGoAccuracyRange !== 'all' ? ` · precisão No-Go: ${query.advanced.noGoAccuracyRange}` : ''}
+                  {query.advanced?.hasCommissionErrors && query.advanced.hasCommissionErrors !== 'all' ? ` · erros de comissão: ${query.advanced.hasCommissionErrors === 'yes' ? 'com' : 'sem'}` : ''}
+                  {query.advanced?.hasOmissionErrors && query.advanced.hasOmissionErrors !== 'all' ? ` · erros de omissão: ${query.advanced.hasOmissionErrors === 'yes' ? 'com' : 'sem'}` : ''}
                   {query.advanced?.rtRange && query.advanced.rtRange !== 'all' ? ` · RT: ${query.advanced.rtRange}` : ''}
                   {query.advanced?.condition.length ? ` · condições: ${query.advanced.condition.join(', ')}` : ''}
                   {query.advanced?.responseType.length ? ` · respostas: ${query.advanced.responseType.join(', ')}` : ''}
@@ -1097,7 +1101,7 @@ export function ProfessionalDashboard({
           {loading && <p role="status">Carregando histórico de avaliações…</p>}
 
           {!loading && !error && !rows.length && (
-            <p role="status">Nenhuma avaliação encontrada para este projeto.</p>
+            <p role="status">Nenhuma avaliação corresponde aos filtros.</p>
           )}
 
           {!loading && !error && rows.length > 0 && (

@@ -1,3 +1,4 @@
+import { selectMulti } from '../support/multiselect'
 /** HTTPS + API + SELECT PostgreSQL reais; perfis/dados exclusivamente sinteticos. */
 import { execFileSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
@@ -18,7 +19,7 @@ for (const [role, label] of [['consulta', 'Consulta'], ['importacao', 'Coleta e 
     page.on('pageerror', error => errors.push(error.name))
     await page.goto('/equipe')
     await expect(page.locator('.role-badge')).toHaveText(label!)
-    await page.getByRole('listbox', { name: 'Projetos da consulta', exact: true }).selectOption(prepared.project_id)
+    await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
     await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
     await expect(page.locator('.dashboard-cards').getByText('1', { exact: true })).toHaveCount(2)
     await expect(page.locator('.dashboard-cards')).toContainText('56,2%')
@@ -50,7 +51,7 @@ for (const [role, label] of [['consulta', 'Consulta'], ['importacao', 'Coleta e 
     await expect(panel.getByRole('status')).toHaveText('O recurso solicitado não está disponível.')
     await page.reload()
     if (role === 'administracao') {
-      await page.getByRole('listbox', { name: 'Projetos da consulta', exact: true }).selectOption(prepared.project_id)
+      await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
       await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
       await expect(page.locator('.professional-dashboard > p[role=alert]')).toHaveText('O recurso solicitado não está disponível.')
     } else await expect(page.getByRole('status')).toHaveText('Nenhum projeto disponível para sua conta.')
