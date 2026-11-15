@@ -1,3 +1,4 @@
+import { selectMulti, expectMulti } from '../support/multiselect'
 /** W15B: importadores canonicos + PostgreSQL + API + HTTPS reais. */
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -14,17 +15,17 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
   const detailRequests: string[] = []
   page.on('request', request => { if (/\/assessments\/[^/?]+(?:\?|$)/.test(request.url()) && !request.url().includes('/options')) detailRequests.push(request.url()) })
   await page.goto('/equipe')
-  await page.getByRole('listbox', { name: 'Projetos da consulta', exact: true }).selectOption(prepared.projects)
+  await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   const table = page.getByRole('table', { name: 'Avaliações filtradas' })
   await expect(table.locator('tbody tr')).toHaveCount(6)
-  const instruments = page.getByRole('listbox', { name: 'Instrumento da consulta', exact: true })
+  const instruments = page.getByRole('group', { name: 'Instrumento da consulta', exact: true })
   const selected = ['instrumento_sintetico_demo', 'stroop_go_nogo_ptbr']
-  await instruments.selectOption(selected)
+  await selectMulti(instruments, selected)
   await expect(page.getByText('Alterações não aplicadas.', { exact: false })).toBeVisible()
   const search = page.getByRole('searchbox', { name: 'Buscar opções de instrumento da consulta', exact: true })
   await search.fill('SEM_CORRESPONDENCIA')
-  await expect(instruments).toHaveValues(selected)
+  await expectMulti(instruments, selected)
   await search.fill('')
   const queried = page.waitForResponse(response => {
     const url = new URL(response.url())
@@ -37,7 +38,7 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
   await expect(table).toContainText('stroop_go_nogo_ptbr')
   await expect(page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })).toBeDisabled()
   // Métricas científicas continuam separadas por instrumento.
-  await page.getByRole('listbox', { name: 'Instrumento da consulta', exact: true }).selectOption('stroop_go_nogo_ptbr')
+  await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   await expect(table.locator('tbody tr')).toHaveCount(4)
   for (const label of ['Avaliador', 'Precisão Go (%)', 'Precisão No-Go (%)', 'Omissões', 'Comissões', 'Acertos', 'Rejeições corretas']) {
@@ -88,7 +89,7 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
     total_go_trials: 8, total_no_go_trials: 8, hits: 0, omission_errors: 8, commission_errors: 0, correct_rejections: 8, response_time_seconds: null })
   await expect(page.getByRole('main')).not.toContainText('NOME_SINTETICO_RESTRITO')
   await page.getByRole('button', { name: 'Fechar detalhe', exact: true }).click()
-  await page.getByRole('listbox', { name: 'Instrumento da consulta', exact: true }).selectOption('instrumento_sintetico_demo')
+  await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'instrumento_sintetico_demo')
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   const generic = page.getByRole('region', { name: 'Resultados por instrumento' })
   await expect(generic.getByRole('heading', { name: 'Demonstração sintética' })).toBeVisible()

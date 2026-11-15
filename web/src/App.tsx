@@ -26,7 +26,7 @@ function Welcome({ navigate }: { navigate: Navigate }) {
     <div className="hero-card">
       <JourneyIndicator current={1} />
       <p className="eyebrow">Participação em pesquisa</p>
-      <h1>Tarefa de Correspondência de Cores</h1>
+      <h1>Stroop Test Web</h1>
       <p className="lead">Uma tarefa breve de correspondência entre palavras e cores. Primeiro, conheça a regra e faça uma prática.</p>
       <LocalLink href="/instrucoes" navigate={navigate} className="button primary">Iniciar tutorial <span aria-hidden="true">→</span></LocalLink>
       <p className="quiet">O bloco principal dura cerca de um minuto. Para participar, você precisará do convite fornecido pela equipe de pesquisa.</p>
@@ -112,7 +112,7 @@ function ProfessionalAccess() {
     }
   }
   const roleNames = { consulta: 'Consulta', importacao: 'Coleta e importação', administracao: 'Administração' }
-  return <section className="content-card access-card" aria-busy={state.phase === 'loading' || ending}>
+  return <section className="content-card access-card professional-theme" aria-busy={state.phase === 'loading' || ending}>
     <p className="eyebrow">Acesso profissional</p>
     <h1>Área da equipe</h1>
     {state.phase === 'loading' && <p role="status" className="status-line"><span className="spinner" aria-hidden="true" />Verificando seu acesso…</p>}
@@ -183,7 +183,7 @@ export function App() {
     }
   }, [path, navigate])
   useEffect(() => {
-    document.title = `${path === '/equipe' ? 'Área da equipe' : path === '/instrucoes' ? 'Orientações' : path === '/pratica' ? 'Prática' : 'Participação'} · Tarefa de Correspondência de Cores`
+    document.title = `${path === '/equipe' ? 'Área da equipe' : path === '/instrucoes' ? 'Orientações' : path === '/pratica' ? 'Prática' : 'Participação'} · Stroop Test Web`
     main.current?.focus({ preventScroll: true })
     window.scrollTo(0, 0)
   }, [path])
@@ -192,7 +192,7 @@ export function App() {
     <a className="skip-link" href="#conteudo">Ir para o conteúdo</a>
     <div className="page-shell">
       <header className="site-header">
-        <LocalLink href="/" navigate={navigate} className="brand"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Cores<span className="brand-subtitle">Tarefa experimental</span></span></LocalLink>
+        <LocalLink href="/" navigate={navigate} className="brand"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Stroop Test Web<span className="brand-subtitle">Tarefa experimental</span></span></LocalLink>
         <nav aria-label="Navegação principal">
           <LocalLink href="/" navigate={navigate}>Participação</LocalLink>
           <LocalLink href="/equipe" navigate={navigate} className="team-link">Área da equipe <span aria-hidden="true">↗</span></LocalLink>
@@ -201,7 +201,7 @@ export function App() {
       <main id="conteudo" ref={main} tabIndex={-1}>
         {path === '/' ? <Welcome navigate={navigate} /> : path === '/instrucoes' ? <Instructions navigate={navigate} /> : path === '/pratica' ? <ParticipantFlow onBack={() => navigate('/instrucoes')} /> : path === '/equipe' ? <ProfessionalAccess /> : <section className="content-card"><p className="eyebrow">Página não encontrada</p><h1>Vamos voltar ao início?</h1><LocalLink href="/" navigate={navigate} className="button primary">Ir para o início</LocalLink></section>}
       </main>
-      <footer className="site-footer"><span>Pesquisa · Atenção às cores</span><span>Siga as orientações da equipe responsável.</span></footer>
+      <footer className="site-footer"><span>Stroop Test Web · Pesquisa</span><span>Siga as orientações da equipe responsável.</span></footer>
     </div>
   </>
 }

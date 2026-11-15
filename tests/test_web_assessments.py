@@ -710,6 +710,15 @@ class WebAssessmentsTests(unittest.TestCase):
                 ({'include_null_rt': False}, {measured['assessment_id']}),
                 ({'accuracy_min': 50, 'accuracy_max': 51}, {measured['assessment_id'], absent['assessment_id']}),
                 ({'accuracy_max': 50}, set()),
+                ({'go_accuracy_min': 50, 'go_accuracy_max': 51}, {measured['assessment_id']}),
+                ({'go_accuracy_max': 1}, {absent['assessment_id']}),
+                ({'no_go_accuracy_min': 100}, {absent['assessment_id']}),
+                ({'no_go_accuracy_max': 50}, set()),
+                ({'has_commission_errors': True}, {measured['assessment_id']}),
+                ({'has_commission_errors': False}, {absent['assessment_id']}),
+                ({'has_omission_errors': True}, {measured['assessment_id'], absent['assessment_id']}),
+                ({'has_omission_errors': False}, set()),
+                ({'has_commission_errors': True, 'no_go_accuracy_min': 80}, set()),
                 ({'patient_search': 'p_sintetico'}, {measured['assessment_id'], absent['assessment_id']}),
                 ({'patient_search': 'NOME_SINTETICO_RESTRITO'}, set()),
                 ({'patient_search': '%'}, set())):
@@ -724,6 +733,22 @@ class WebAssessmentsTests(unittest.TestCase):
         result = select({'response_type': ['hit'], 'rt_median_min_ms': 512, 'include_null_rt': False})
         self.assertEqual(result['items'][0]['summary']['total_trials'], 16)
         self.assertEqual(result['counts']['trials'], measured['summary']['hits'])
+
+    def test_analysis_precisao_ausente_nao_vira_zero_e_faixa_usa_nucleo(self):
+        result, _ = self.complete()
+        # Somente No-Go; flags de acerto e métricas redundantes não decidem o filtro.
+        with psycopg.connect(self.database_url) as connection:
+            connection.execute("UPDATE trial_results SET condition='incongruent' WHERE assessment_id=%s AND block='main'", (result['assessment_id'],))
+        base = {'test_code': ['stroop_go_nogo_ptbr']}
+        without = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body(base)).json()
+        self.assertIsNone(without['items'][0]['summary']['accuracy_go_trials'])
+        response = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({**base, 'go_accuracy_min': 0}))
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()['counts']['assessments'], 0)
+        response = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({**base, 'has_commission_errors': True}))
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()['counts']['assessments'], 1)
+        self.assertEqual(response.json()['items'][0]['summary'], without['items'][0]['summary'])
 
     def test_analysis_preserva_exportacao_basica_no_mesmo_snapshot(self):
         self.complete()

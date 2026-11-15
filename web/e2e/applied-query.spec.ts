@@ -1,3 +1,4 @@
+import { selectMulti, expectMulti } from './support/multiselect'
 import { analysisFixture } from '../src/test/analysis-fixture'
 /** QUERY7: navegador real e HTTP sintético; integração real usa suíte separada. */
 import { expect, test } from '@playwright/test'
@@ -47,10 +48,10 @@ test('recorte avançado não exporta conjunto maior; buscar opções não perde 
   let exports = 0
   await page.route('**/api/v1/assessments/export', r => { exports++; return r.abort() })
   await page.getByText('Filtros avançados e ordenação', { exact: true }).click()
-  await page.getByRole('listbox', { name: 'Participantes (códigos)', exact: true }).selectOption('P_SINTETICO')
+  await selectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), 'P_SINTETICO')
   await page.getByRole('searchbox', { name: 'Buscar opções de participantes (códigos)', exact: true }).fill('SEM_CORRESPONDENCIA')
-  await expect(page.getByRole('listbox', { name: 'Participantes (códigos)', exact: true })).toHaveValues(['P_SINTETICO'])
-  await page.getByRole('listbox', { name: 'Instrumento da consulta', exact: true }).selectOption(row.test_code)
+  await expectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), ['P_SINTETICO'])
+  await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), row.test_code)
   await page.getByRole('combobox', { name: 'Faixa de precisão', exact: true }).selectOption('50to80')
   await apply(page)
   await expect(page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })).toBeDisabled()

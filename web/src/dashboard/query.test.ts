@@ -20,10 +20,20 @@ test('QUERY7: qualquer recorte avançado não suportado bloqueia exportação ag
   const query = defaultQuery('a')
   expect(supportsLegacyExport(query)).toBe(true)
   for (const changes of [{ searchText: 'PAT-1' }, { status: 'all' as const }, { accuracyRange: 'under50' as const },
+    { goAccuracyRange: '80plus' as const }, { noGoAccuracyRange: 'under50' as const }, { hasCommissionErrors: 'no' as const }, { hasOmissionErrors: 'yes' as const },
     { rtRange: 'under500ms' as const }, { includeNullRt: false }, { condition: ['congruent'] as import('./query').Condition[] }, { responseType: ['hit'] as import('./query').ResponseType[] }]) {
     expect(supportsLegacyExport({ ...query, advanced: { ...query.advanced!, ...changes } })).toBe(false)
   }
   expect(supportsLegacyExport({ ...query, advanced: { ...query.advanced!, sortBy: 'participant', sortOrder: 'asc' } })).toBe(true)
+})
+
+test('QUERY7: faixas Go/No-Go e ausência de erros não se perdem em falsy/defaults', () => {
+  const query = defaultQuery('a')
+  Object.assign(query.advanced!, { goAccuracyRange: 'under50', noGoAccuracyRange: '50to80', hasCommissionErrors: 'no', hasOmissionErrors: 'yes' })
+  expect(analysisQueryBody(query).query.filters).toMatchObject({ go_accuracy_max: 50, no_go_accuracy_min: 50, no_go_accuracy_max: 80,
+    has_commission_errors: false, has_omission_errors: true })
+  expect(queryKey(query)).not.toBe(queryKey(defaultQuery('a')))
+  expect(supportsLegacyExport(query)).toBe(false)
 })
 
 test('QUERY7: condição/resposta são conjuntos canônicos e chegam integralmente ao servidor', () => {

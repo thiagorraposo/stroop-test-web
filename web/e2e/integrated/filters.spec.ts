@@ -1,3 +1,4 @@
+import { selectMulti } from '../support/multiselect'
 /** W15A: filtros e paginacao HTTPS/API/PostgreSQL reais, sem interceptacao. */
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -33,7 +34,7 @@ test('filtros combinados entre projetos contam codigos coincidentes e descartam 
   expect((await revoking).status()).toBe(204)
 
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
-  await form.getByRole('listbox', { name: 'Projetos da consulta', exact: true }).selectOption(prepared.projects)
+  await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   const table = page.getByRole('table', { name: 'Avaliações filtradas' })
   await expect(table.locator('tbody tr')).toHaveCount(105)
@@ -53,13 +54,13 @@ test('filtros combinados entre projetos contam codigos coincidentes e descartam 
   await form.getByText('Filtros avançados e ordenação', { exact: true }).click()
   await form.getByLabel('Data inicial', { exact: true }).fill('2026-10-01')
   await form.getByLabel('Data final', { exact: true }).fill('2026-10-03')
-  await expect(form.getByRole('listbox', { name: 'Instrumento da consulta', exact: true })).toContainText('stroop_go_nogo_ptbr')
-  await form.getByRole('listbox', { name: 'Instrumento da consulta', exact: true }).selectOption('stroop_go_nogo_ptbr')
-  await form.getByRole('listbox', { name: 'Participantes (códigos)', exact: true }).selectOption(['P_SINTETICO_W15'])
-  await form.getByRole('listbox', { name: 'Visitas', exact: true }).selectOption(['V_SINTETICA'])
-  await form.getByRole('listbox', { name: 'Avaliadores (identificação técnica)', exact: true }).selectOption(['LEGADO_NAO_MAPEADO'])
-  await form.getByRole('listbox', { name: 'Versões', exact: true }).selectOption(['synthetic.1'])
-  await form.getByRole('listbox', { name: 'Plataformas', exact: true }).selectOption(['psychopy'])
+  await expect(form.getByRole('group', { name: 'Instrumento da consulta', exact: true })).toContainText('stroop_go_nogo_ptbr')
+  await selectMulti(form.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
+  await selectMulti(form.getByRole('group', { name: 'Participantes (códigos)', exact: true }), ['P_SINTETICO_W15'])
+  await selectMulti(form.getByRole('group', { name: 'Visitas', exact: true }), ['V_SINTETICA'])
+  await selectMulti(form.getByRole('group', { name: 'Avaliadores (identificação técnica)', exact: true }), ['LEGADO_NAO_MAPEADO'])
+  await selectMulti(form.getByRole('group', { name: 'Versões', exact: true }), ['synthetic.1'])
+  await selectMulti(form.getByRole('group', { name: 'Plataformas', exact: true }), ['psychopy'])
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).focus()
   await page.keyboard.press('Enter')
   await expect(table.locator('tbody tr')).toHaveCount(2)

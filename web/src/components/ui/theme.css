@@ -1,0 +1,139 @@
+/* UX7-VIS: somente administração e catálogo sintético; nunca :root ou experiment. */
+.professional-theme {
+  --ui-background: #f8fafc;
+  --ui-surface: #fff;
+  --ui-text: #172139;
+  --ui-muted: #475569;
+  --ui-border: #64748b;
+  --ui-action: #6d28d9;
+  --ui-action-hover: #5b21b6;
+  --ui-focus: #6d28d9;
+  --ui-selection: #ede9fe;
+  --ui-success-text: #166534;
+  --ui-success-bg: #f0fdf4;
+  --ui-warning-text: #92400e;
+  --ui-warning-bg: #fffbeb;
+  --ui-error-text: #991b1b;
+  --ui-error-bg: #fef2f2;
+  --ui-font-14: 14px;
+  --ui-font-16: 16px;
+  --ui-font-18: 18px;
+  --ui-font-22: 22px;
+  --ui-font-30: 30px;
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+  --ui-space-12: 48px;
+  --ui-radius-1: 4px;
+  --ui-radius-2: 8px;
+  --ui-radius-3: 12px;
+  --ui-elevation-0: none;
+  --ui-elevation-1: 0 4px 12px #17213926;
+  --ui-elevation-2: 0 12px 32px #17213940;
+  /* Adaptadores para módulos existentes, substituídos durante sua integração. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --text-muted: var(--ui-muted);
+  --action-primary-bg: var(--ui-action);
+  --action-primary-hover: var(--ui-action-hover);
+  --action-accent-bg: var(--ui-action);
+  --action-accent-hover: var(--ui-action-hover);
+  --border-focus: var(--ui-focus);
+  --success-text: var(--ui-success-text);
+  --danger-text: var(--ui-error-text);
+  --radius-xs: var(--ui-radius-1);
+  --radius-sm: var(--ui-radius-2);
+  --radius-md: var(--ui-radius-3);
+  color: var(--ui-text);
+  background: var(--ui-background);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: var(--ui-font-16);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.professional-theme :is(.ui-card, .ui-field, .ui-tabs, .ui-date-range, .ui-multiselect) { min-width: 0; }
+.professional-theme :is(button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+.professional-theme .ui-button, .professional-theme .ui-tooltip > button, .professional-theme [role='tab'] {
+  min-height: 44px; padding: var(--ui-space-2) var(--ui-space-4); border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-2); font: inherit; cursor: pointer; color: var(--ui-text); background: var(--ui-surface);
+  overflow-wrap: anywhere;
+}
+.professional-theme .ui-button:disabled { opacity: 1; color: var(--ui-muted); background: #e2e8f0; cursor: not-allowed; }
+.professional-theme .ui-primary { color: #fff; background: var(--ui-action); border-color: var(--ui-action); }
+.professional-theme .ui-primary:hover:enabled { background: var(--ui-action-hover); }
+.professional-theme .ui-secondary:hover:enabled { background: var(--ui-selection); }
+.professional-theme .ui-danger { color: var(--ui-error-text); background: var(--ui-error-bg); border-color: var(--ui-error-text); }
+.professional-theme .ui-icon-button { min-width: 44px; padding: var(--ui-space-2); }
+.professional-theme .ui-field { display: grid; gap: var(--ui-space-1); margin-block: var(--ui-space-3); }
+.professional-theme .ui-field label { font-weight: 600; }
+.professional-theme .ui-field :is(input, select) {
+  font: inherit; min-height: 44px; width: 100%; min-width: 0; max-width: 100%; padding: var(--ui-space-2);
+  border: 1px solid var(--ui-border); border-radius: var(--ui-radius-1); color: var(--ui-text); background: var(--ui-surface);
+}
+.professional-theme .ui-field [aria-invalid='true'] { border: 2px solid var(--ui-error-text); }
+.professional-theme .ui-hint { color: var(--ui-muted); font-size: var(--ui-font-14); margin: 0; }
+.professional-theme .ui-field-error { color: var(--ui-error-text); margin: 0; }
+.professional-theme .ui-choice { display: flex; align-items: flex-start; gap: var(--ui-space-2); min-height: 44px; padding: var(--ui-space-2); overflow-wrap: anywhere; }
+.professional-theme .ui-choice input { width: 24px; height: 24px; flex-shrink: 0; margin: 0; accent-color: var(--ui-action); }
+.professional-theme :is(.ui-date-range, .ui-multiselect) { border: 1px solid var(--ui-border); border-radius: var(--ui-radius-2); padding: var(--ui-space-4); margin: 0; }
+.professional-theme .ui-options { max-height: 240px; overflow-y: auto; }
+.professional-theme .ui-combobox { position: relative; }
+.professional-theme .ui-combobox-options {
+  list-style: none; margin: 0; padding: 0; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-1);
+  background: var(--ui-surface); max-height: 240px; overflow-y: auto;
+}
+.professional-theme .ui-combobox-options li { padding: var(--ui-space-3); cursor: pointer; }
+.professional-theme .ui-option-active { background: var(--ui-selection); outline: 2px solid var(--ui-action); outline-offset: -2px; }
+.professional-theme .ui-tabs [role='tablist'] { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); }
+.professional-theme .ui-tabs [role='tab'][aria-selected='true'] { color: var(--ui-action); border: 2px solid var(--ui-action); background: var(--ui-selection); font-weight: 700; }
+.professional-theme .ui-tabs [role='tabpanel'] { padding-block: var(--ui-space-4); }
+.professional-theme .ui-card { background: var(--ui-surface); border-radius: var(--ui-radius-3); padding: var(--ui-space-6); box-shadow: var(--ui-elevation-0); }
+.professional-theme .ui-card h2 { font-size: var(--ui-font-22); line-height: 1.5; margin: 0 0 var(--ui-space-4); letter-spacing: normal; }
+.professional-theme .ui-metric { min-height: 140px; padding: var(--ui-space-4); background: var(--ui-surface); }
+.professional-theme .ui-metric dl { margin: 0; }
+.professional-theme .ui-metric dd { font-size: var(--ui-font-30); margin: var(--ui-space-2) 0; }
+.professional-theme .ui-badge { display: inline-block; padding: var(--ui-space-1) var(--ui-space-2); border-radius: var(--ui-radius-1); border: 1px solid currentColor; }
+.professional-theme .ui-tone-neutral { background: #f1f5f9; color: var(--ui-text); }
+.professional-theme .ui-tone-success { background: var(--ui-success-bg); color: var(--ui-success-text); }
+.professional-theme .ui-tone-warning { background: var(--ui-warning-bg); color: var(--ui-warning-text); }
+.professional-theme .ui-tone-error { background: var(--ui-error-bg); color: var(--ui-error-text); }
+.professional-theme .ui-state { padding: var(--ui-space-4); min-height: 96px; }
+.professional-theme .ui-filter-chip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-2); padding-inline: var(--ui-space-2); background: var(--ui-selection); border-radius: var(--ui-radius-2); overflow-wrap: anywhere; }
+.professional-theme .ui-accordion { padding-block: var(--ui-space-3); border-top: 1px solid var(--ui-border); }
+.professional-theme .ui-accordion summary { padding-block: var(--ui-space-2); cursor: pointer; }
+.professional-theme .ui-tooltip { position: relative; display: inline-block; }
+.professional-theme .ui-tooltip [role='tooltip'] {
+  display: none; position: absolute; top: 100%; left: 0; z-index: 2; max-width: min(260px, 70vw);
+  width: max-content; padding: var(--ui-space-2); background: var(--ui-text); color: #fff; border-radius: var(--ui-radius-1); box-shadow: var(--ui-elevation-1);
+}
+.professional-theme .ui-tooltip:is(:hover, :focus-within) [role='tooltip'] { display: block; }
+.professional-theme .ui-dialog {
+  box-sizing: border-box; background: var(--ui-surface); color: var(--ui-text); width: min(640px, calc(100% - 32px));
+  max-height: calc(100% - 32px); overflow: auto; padding: var(--ui-space-6); border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-3); box-shadow: var(--ui-elevation-2); overflow-wrap: anywhere;
+}
+.professional-theme .ui-dialog::backdrop { background: #17213999; }
+.professional-theme .ui-dialog-heading { display: flex; flex-wrap: wrap; gap: var(--ui-space-4); justify-content: space-between; align-items: center; margin-bottom: var(--ui-space-4); }
+.professional-theme .ui-dialog h2 { font-size: var(--ui-font-22); line-height: 1.5; }
+.professional-theme .ui-drawer { margin: 0 auto 0 0; height: 100%; max-height: 100%; width: min(320px, calc(100% - 32px)); border-radius: 0; }
+.professional-theme .ui-table-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-2); }
+.professional-theme .ui-table-scroll table { width: 100%; border-collapse: collapse; font: inherit; }
+.professional-theme .ui-table-scroll :is(caption, th, td) { padding: var(--ui-space-3); text-align: left; }
+.professional-theme .ui-table-scroll th { border-bottom: 1px solid var(--ui-border); }
+.professional-theme .ui-table-scroll td { border-bottom: 1px solid #cbd5e1; }
+.professional-theme .ui-chart { min-height: 120px; }
+.professional-theme .ui-actions { display: flex; flex-wrap: wrap; gap: var(--ui-space-3); margin-block: var(--ui-space-4); }
+.professional-theme.ui-catalog { max-width: 1600px; margin: auto; padding: var(--ui-space-8); container-type: inline-size; }
+.professional-theme .ui-catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ui-space-6); }
+.professional-theme.ui-catalog h1 { font-size: var(--ui-font-30); max-width: none; line-height: 1.5; letter-spacing: normal; }
+@media (max-width: 767px) {
+  .professional-theme.ui-catalog { padding: var(--ui-space-4); }
+  .professional-theme .ui-catalog-grid { grid-template-columns: minmax(0, 1fr); }
+  .professional-theme .ui-card { padding: var(--ui-space-4); }
+}
+@container (max-width: 700px) {
+  .professional-theme .ui-catalog-grid { grid-template-columns: minmax(0, 1fr); }
+}

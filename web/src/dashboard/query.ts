@@ -9,6 +9,10 @@ export type AdvancedFilterValues = {
   searchText: string
   status: 'valid' | 'all' | 'invalid'
   accuracyRange: 'all' | 'under50' | '50to80' | '80plus'
+  goAccuracyRange: AdvancedFilterValues['accuracyRange']
+  noGoAccuracyRange: AdvancedFilterValues['accuracyRange']
+  hasCommissionErrors: 'all' | 'yes' | 'no'
+  hasOmissionErrors: 'all' | 'yes' | 'no'
   rtRange: 'all' | 'under500ms' | '500to1000ms' | '1000to1500ms' | '1500msPlus'
   includeNullRt: boolean
   condition: Condition[]
@@ -26,6 +30,7 @@ export type ResearchQuery = {
 
 export const defaultAdvanced: AdvancedFilterValues = {
   searchText: '', status: 'valid', accuracyRange: 'all', rtRange: 'all',
+  goAccuracyRange: 'all', noGoAccuracyRange: 'all', hasCommissionErrors: 'all', hasOmissionErrors: 'all',
   includeNullRt: true, condition: [], responseType: [],
   sortBy: 'date', sortOrder: 'desc',
 }
@@ -63,6 +68,8 @@ export function queryKey(query: ResearchQuery): string {
 export function supportsLegacyExport(query: ResearchQuery): boolean {
   const a = normalizeQuery(query).advanced!
   return !a.searchText && a.status === 'valid' && a.accuracyRange === 'all'
+    && a.goAccuracyRange === 'all' && a.noGoAccuracyRange === 'all'
+    && a.hasCommissionErrors === 'all' && a.hasOmissionErrors === 'all'
     && a.rtRange === 'all' && a.includeNullRt && !a.condition.length && !a.responseType.length
 }
 
@@ -89,6 +96,13 @@ export function analysisQueryBody(query: ResearchQuery, cursor?: string): Analys
   if (a.accuracyRange === 'under50') filters.accuracy_max = 50
   if (a.accuracyRange === '50to80') { filters.accuracy_min = 50; filters.accuracy_max = 80 }
   if (a.accuracyRange === '80plus') filters.accuracy_min = 80
+  for (const [range, prefix] of [[a.goAccuracyRange, 'go_accuracy'], [a.noGoAccuracyRange, 'no_go_accuracy']] as const) {
+    if (range === 'under50') filters[`${prefix}_max`] = 50
+    if (range === '50to80') { filters[`${prefix}_min`] = 50; filters[`${prefix}_max`] = 80 }
+    if (range === '80plus') filters[`${prefix}_min`] = 80
+  }
+  if (a.hasCommissionErrors !== 'all') filters.has_commission_errors = a.hasCommissionErrors === 'yes'
+  if (a.hasOmissionErrors !== 'all') filters.has_omission_errors = a.hasOmissionErrors === 'yes'
   const bounds = { under500ms: [undefined, 500], '500to1000ms': [500, 1000], '1000to1500ms': [1000, 1500], '1500msPlus': [1500, undefined] }[a.rtRange as Exclude<typeof a.rtRange, 'all'>]
   if (bounds?.[0] !== undefined) filters.rt_median_min_ms = bounds[0]
   if (bounds?.[1] !== undefined) filters.rt_median_max_ms = bounds[1]

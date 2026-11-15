@@ -1,3 +1,4 @@
+import { selectMulti } from './support/multiselect'
 import { analysisFixture } from '../src/test/analysis-fixture'
 /** Doubles HTTP sinteticos: UI profissional, sem reivindicar integracao real. */
 import { expect, test } from '@playwright/test'
@@ -93,14 +94,14 @@ test('separa instrumento/plataforma e aplica filtros vazios pelo teclado', async
     return route.fulfill({ json: analysisFixture(body, [first, second, generic].filter(row => !query.test_code || query.test_code.includes(row.test_code))) })
   })
   await page.goto('/equipe'); await expect(card(page, 'Avaliações')).toHaveText('3')
-  await page.getByRole('listbox', { name: 'Instrumento da consulta', exact: true }).selectOption(generic.test_code)
+  await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), generic.test_code)
   await page.getByRole('button', { name: 'Aplicar filtros' }).click()
   await expect(card(page, 'Avaliações')).toHaveText('1')
   await expect(page.getByText('Precisão média', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' })).toContainText(generic.participant_id)
   await page.getByText('Filtros avançados e ordenação', { exact: true }).click()
-  await page.getByLabel('Participantes (códigos)', { exact: true }).selectOption('P_SINTETICO_AUSENTE')
-  await page.getByRole('listbox', { name: 'Visitas', exact: true }).selectOption('V2')
+  await selectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), 'P_SINTETICO_AUSENTE')
+  await selectMulti(page.getByRole('group', { name: 'Visitas', exact: true }), 'V2')
   await page.getByRole('button', { name: 'Aplicar filtros' }).focus(); await page.keyboard.press('Enter')
   await expect(page.getByText('Nenhuma avaliação corresponde aos filtros.', { exact: true })).toBeVisible()
   expect(filtered).toBe(true); await expect(page.locator('.dashboard-cards')).toHaveCount(0)

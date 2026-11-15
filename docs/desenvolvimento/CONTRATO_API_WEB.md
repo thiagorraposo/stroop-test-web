@@ -993,7 +993,8 @@ Capacidades adicionais: `patient_search` (até 120 caracteres) busca **somente
 substring literal do código do participante**, sem distinção de maiúsculas,
 espaços externos removidos, controles recusados; nomes/iniciais não são lidos,
 mesmo no perfil administrativo. Não é busca nominal autorizada. Precisão:
-`accuracy_min/max` em 0..100; RT: `rt_median_min/max_ms` não negativos e finitos.
+`accuracy_min/max`, `go_accuracy_min/max` e `no_go_accuracy_min/max` em 0..100;
+RT: `rt_median_min/max_ms` não negativos e finitos.
 Limites inferiores inclusivos e superiores exclusivos; par invertido/vazio
 retorna 422. Selecionam métricas oficiais da avaliação completa. Com faixa de RT,
 `include_null_rt=true` inclui a população sem RT separadamente da comparação
@@ -1001,7 +1002,13 @@ numérica; `false` a exclui, inclusive sem faixa. Ausência não vira zero. Esta
 canônico sempre explicita `include_null_rt` (padrão true). Ordenações disponíveis:
 `started_at_asc/desc`, `participant_code_asc/desc`, `visit_asc`,
 `accuracy_asc/desc`, `response_time_asc/desc`; ausentes ao fim em ambas direções,
-desempate estável por projeto/assessment_id. Não cria fórmula científica.
+desempate estável por projeto/assessment_id. Precisão Go/No-Go ausente por
+denominador zero não atende a faixa alguma, inclusive limite zero.
+`has_commission_errors` e `has_omission_errors` são booleanos estritos opcionais:
+true seleciona avaliação com contagem oficial positiva, false com contagem zero;
+omitir não restringe. Esses quatro recortes exigem Stroop exclusivo e combinam-se
+por AND sobre as métricas da avaliação completa, enquanto condição/resposta
+continuam qualificando a mesma tentativa. Não cria fórmula científica.
 
 Resposta identifica capacidades disponíveis e `exports=false` para o contrato
 v2 de prévia/download. `aggregates` contém somente contagens operacionais por
@@ -1030,7 +1037,7 @@ Sem fallback GET nem aplicação local dos filtros avançados. Ao expirar, desca
 resultados/detalhe/downloads e exige reaplicação. Rascunho e navegação mantêm o
 mesmo contexto em RAM. Opções de filtro ainda usam GET autorizado; detalhe e CSV
 individual preservam contratos existentes. Estados operacionais ficam desabilitados
-na UI e continuam recusados na API. Go/No-Go, precisão Go/No-Go, RT médio, IDs
+na UI e continuam recusados na API. Agrupamento Go/No-Go, RT médio, IDs
 cadastrais, busca nominal, demais agrupamentos e campos sem capacidade retornam
 422. Catálogo integral, dicionário/agregações, busca nominal e exportação v2 seguem
 nas fichas WEB-050/051/052/053 e nos gates próprios; não há aceite integrado.

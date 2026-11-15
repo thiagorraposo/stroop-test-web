@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, apiErrorMessage } from '../api/client'
 import { SearchableMultiSelect } from './SearchableMultiSelect'
+import { Select } from './ui/controls'
 import { getAssessmentOptions } from '../api/assessments'
 import type { AssessmentFacets, Project } from '../api/assessments'
 
@@ -62,7 +63,7 @@ export function ResearchFilters({
     platform: toArray(draft.filters.platform),
   }
   const advanced = { ...defaultQuery(initialProject).advanced!, ...draft.advanced }
-  const { searchText, status, accuracyRange, rtRange, includeNullRt, condition, responseType, sortBy, sortOrder } = advanced
+  const { searchText, status, accuracyRange, goAccuracyRange, noGoAccuracyRange, hasCommissionErrors, hasOmissionErrors, rtRange, includeNullRt, condition, responseType, sortBy, sortOrder } = advanced
   const setSelected = (projects: string[]) => update({ ...draft, projects })
   const setStart = (start_date: string) => update({ ...draft, filters: { ...draft.filters, start_date: start_date || undefined } })
   const setEnd = (end_date: string) => update({ ...draft, filters: { ...draft.filters, end_date: end_date || undefined } })
@@ -125,7 +126,8 @@ export function ResearchFilters({
       setValidation('A data inicial deve ser anterior ou igual à final.')
       return
     }
-    if ((condition.length || responseType.length || accuracyRange !== 'all' || rtRange !== 'all' || !includeNullRt) && (instruments.length !== 1 || instruments[0] !== 'stroop_go_nogo_ptbr')) {
+    if ((condition.length || responseType.length || accuracyRange !== 'all' || goAccuracyRange !== 'all' || noGoAccuracyRange !== 'all'
+      || hasCommissionErrors !== 'all' || hasOmissionErrors !== 'all' || rtRange !== 'all' || !includeNullRt) && (instruments.length !== 1 || instruments[0] !== 'stroop_go_nogo_ptbr')) {
       setValidation('Selecione somente o instrumento Stroop Go/No-Go para filtrar condição, resposta, precisão ou RT. Condição e resposta exigem uma mesma tentativa principal; as métricas continuam da avaliação completa.')
       return
     }
@@ -159,6 +161,10 @@ export function ResearchFilters({
   if (accuracyRange !== 'all') {
     activeChips.push({ label: `Precisão: ${accuracyRange}`, onRemove: () => setAdvanced('accuracyRange', 'all') })
   }
+  for (const [field, label] of [['goAccuracyRange', 'Precisão Go'], ['noGoAccuracyRange', 'Precisão No-Go'],
+    ['hasCommissionErrors', 'Erros de comissão'], ['hasOmissionErrors', 'Erros de omissão']] as const) {
+    if (advanced[field] !== 'all') activeChips.push({ label: `${label}: ${advanced[field]}`, onRemove: () => setAdvanced(field, 'all') })
+  }
   if (rtRange !== 'all') {
     activeChips.push({ label: `RT: ${rtRange}`, onRemove: () => setAdvanced('rtRange', 'all') })
   }
@@ -191,7 +197,7 @@ export function ResearchFilters({
         <div className="context-help-content">
           <p className="quiet">
             Seleções do mesmo campo são alternativas; os campos são combinados. Sem seleção, todas as opções desse campo.
-            Use Ctrl/Cmd ou Shift e as setas para selecionar várias opções.
+            Marque as opções desejadas. Use Tab e Espaço para selecionar pelo teclado, sem teclas modificadoras.
           </p>
           <p className="quiet">
             Período inclusivo pela data da avaliação: WEB usa o dia UTC do início; legado conserva a data civil registrada,
@@ -307,6 +313,14 @@ export function ResearchFilters({
               <option value="1500msPlus">≥ 1,5 s</option>
             </select>
           </label>
+          {([['goAccuracyRange', 'Faixa de precisão Go'], ['noGoAccuracyRange', 'Faixa de precisão No-Go']] as const).map(([field, label]) =>
+            <Select key={field} label={label} value={advanced[field]} onChange={event => setAdvanced(field, event.target.value as AdvancedFilterValues['accuracyRange'])}
+              options={[{ value: 'all', label: 'Todas as precisões' }, { value: 'under50', label: '< 50%' }, { value: '50to80', label: '50% a < 80%' }, { value: '80plus', label: '≥ 80%' }]} />)}
+          {([['hasCommissionErrors', 'Presença de erros de comissão'], ['hasOmissionErrors', 'Presença de erros de omissão']] as const).map(([field, label]) =>
+            <Select key={field} label={label} value={advanced[field]} onChange={event => setAdvanced(field, event.target.value as 'all' | 'yes' | 'no')}
+              options={[{ value: 'all', label: 'Com ou sem erros' }, { value: 'yes', label: 'Com erros' }, { value: 'no', label: 'Sem erros' }]} />)}
+          <p className="quiet">Precisão Go/No-Go e presença de erros selecionam a avaliação inteira pelas métricas oficiais.
+            Sem tentativas do tipo, a precisão correspondente está ausente e não atende a uma faixa.</p>
           <SearchableMultiSelect label="Tipo de resposta / erro" value={responseType}
             onChange={items => setAdvanced('responseType', items as AdvancedFilterValues['responseType'])}
             options={[{ value: 'hit', label: 'Acerto' }, { value: 'omission', label: 'Erro de omissão' },

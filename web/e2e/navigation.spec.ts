@@ -7,7 +7,7 @@ const profile = {
 
 test('navega pelas orientacoes e respeita o historico e o foco', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Tarefa de Correspondência de Cores' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Stroop Test Web' })).toBeVisible()
   await expect(page.getByLabel('Exemplos da regra')).toContainText('Iguais')
   await page.getByRole('link', { name: 'Iniciar tutorial' }).click()
   await expect(page).toHaveURL('/instrucoes')
@@ -18,7 +18,7 @@ test('navega pelas orientacoes e respeita o historico e o foco', async ({ page }
   await expect(page.getByRole('list', { name: 'Como responder' }).getByRole('listitem')).toHaveCount(3)
   await page.goBack()
   await expect(page).toHaveURL('/')
-  await expect(page.getByRole('heading', { name: 'Tarefa de Correspondência de Cores' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Stroop Test Web' })).toBeVisible()
   await page.goForward()
   await expect(page).toHaveURL('/instrucoes')
   await page.getByRole('link', { name: 'Voltar ao início' }).click()
