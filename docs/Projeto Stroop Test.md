@@ -2375,6 +2375,52 @@ na correção de dependência abaixo. Checklist A/AA aplicável por superfície 
 revisão integral dos estados permanecem por fechar; WEB-048 não concede aceite
 a WEB-049/055. WEB-050 segue EM_ANDAMENTO, WEB-031 bloqueada externamente.
 
+##### Conferência A/AA da fundação — alcance e lacunas explícitos
+
+Inventário dos 55 critérios A/AA da [WCAG 2.2](https://www.w3.org/TR/WCAG22/),
+restrito ao **catálogo sintético de componentes** nesta conferência. Não é
+declaração de conformidade de página/processo: início, login e módulos finais
+precisam de sua própria verificação. “Coberto” abaixo significa evidência
+indicada, sem dispensar revisão da composição final. Critério 4.1.1 foi removido
+da WCAG 2.2; não é contado como passe nem como pendência. Evidência Orca da
+primeira parte é histórica desta mesma entrega, não reexecução nesta continuidade.
+
+| Critérios | Evidência no catálogo e limite da conferência |
+|---|---|
+| 1.1.1 | Ícones decorativos ocultos, IconButton nomeado, gráfico com tabela equivalente; COMP7 e inspeção do código. Toda visualização final precisa conferir a equivalência de conteúdo. |
+| 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.2.5 | Não aplicáveis ao catálogo: não contém áudio ou vídeo, ao vivo ou gravado. |
+| 1.3.1 | Labels/fieldset/legend, cabeçalhos/caption, tabs e regiões; testes COMP7 e ensaio Orca. |
+| 1.3.2 | Ordem DOM inspecionada; percurso integral por teclado/leitor em cada estado da composição final ainda em conferência. |
+| 1.3.3 | Instruções/erros textuais, sem depender só de forma/posição/cor; inspeção do catálogo. |
+| 1.3.4 | Não há bloqueio de orientação no código; matriz com troca efetiva de orientação ainda pendente. |
+| 1.3.5 | Campos sintéticos não coletam dados pessoais do usuário; propósito/autocomplete nos formulários reais exige conferência própria. |
+| 1.4.1 | Badges e erros têm texto; precisão/ausência descritas. COMP7, sem inferir equivalência de todos os gráficos finais. |
+| 1.4.2 | Não aplicável ao catálogo: não reproduz áudio. |
+| 1.4.3, 1.4.11 | Oito pares de tokens >=4,5:1 e variantes efetivamente renderizadas testadas; inventário de todos os pares/estados reais (inclusive hover/seleção) ainda em conferência. |
+| 1.4.4, 1.4.10 | Zoom nativo 200%/400%, seis cenários aprovados; remoção do overflow do body e comparação com clientWidth. Não transfere aceite para outros módulos. |
+| 1.4.5 | Textos em DOM, sem imagem de texto no catálogo; código e capturas inspecionados. |
+| 1.4.12 | Espaçamento customizado e ausência de scroll global testados; inspeção integral de todo conteúdo/estado ainda pendente. |
+| 1.4.13 | Tooltip abre por foco e fecha por Escape; permanência/alcance pelo ponteiro e todos os estados de hover ainda exigem conferência. |
+| 2.1.1, 2.1.2 | Busca, seleção, checkbox/radio/data, tabs e diálogos exercitados por teclado; Escape e retorno de foco em COMP7 e zoom nativo. Percurso completo dos módulos não está incluído. |
+| 2.1.4 | Nenhum atalho de caractere isolado no catálogo; handlers locais de setas/Enter/Escape inspecionados. |
+| 2.2.1, 2.2.2, 2.3.1 | Catálogo sem limite de tempo, atualização automática, movimento ou flashes; não se aplica ao motor experimental, que fica fora desta superfície. Sessão autenticada exige análise própria, sem alterar prazos de segurança por inferência. |
+| 2.4.1, 2.4.2, 2.4.4, 2.4.5 | Título pt-BR e landmark main no catálogo; skip link, títulos por rota e navegação do App inspecionados, mas a jornada pública/profissional completa ainda precisa de conferência nesta ficha. |
+| 2.4.3, 2.4.6, 2.4.7, 2.4.11 | Labels/títulos e foco do diálogo exercitados; capturas ampliadas mostram foco visível. Ordem integral e foco não obscurecido em todos os componentes/estados ainda pendentes. |
+| 2.5.1, 2.5.4, 2.5.7 | Sem gesto multiponto, movimento do dispositivo ou arrastar obrigatório; alternativas por controles convencionais no catálogo. |
+| 2.5.2, 2.5.3 | Ações em click/teclas e nomes visíveis compatíveis inspecionados; cancelamento por ponteiro em todas as ações ainda em conferência. |
+| 2.5.8 | Alvos de botões/checkboxes medidos >=24px em COMP7; inventário de tabs, tooltip, summary e outros controles ainda precisa medição/justificativa de espaçamento. |
+| 3.1.1, 3.1.2 | HTML pt-BR, conteúdo textual em português e códigos/nomes técnicos. Não há trecho de prosa em outro idioma no catálogo. |
+| 3.2.1, 3.2.2 | Foco abre opções sem navegar; busca não muda seleção, edição não aplica consulta; COMP7/QUERY7. |
+| 3.2.3, 3.2.4, 3.2.6 | Catálogo usa componentes com identificação consistente; consistência entre telas e posição da ajuda ainda requer revisão das páginas completas. |
+| 3.3.1, 3.3.2, 3.3.3 | Erro associado/anunciado e valor preservado, instruções e período inválido; Vitest, COMP7 e evidência Orca. |
+| 3.3.4, 3.3.7, 3.3.8 | Catálogo não efetua escrita, transação ou autenticação; confirmação é sintética. Fluxos reais de correção, prevenção de entrada redundante e login/gerenciador de senha ainda precisam sua conferência própria. |
+| 4.1.2, 4.1.3 | Nome/papel/valor, aria-expanded/selected/invalid e anúncios de erro/status testados, com ensaio Orca registrado. Demais composições precisam conferir sua própria árvore acessível. |
+
+Próximo trabalho independente de WEB-048: fechar as verificações indicadas e as
+superfícies públicas/login da ficha, sem promover catálogo a conformidade global.
+Não há bloqueio técnico externo para essas verificações. WEB-049 permanece
+PENDENTE até o aceite completo, e WEB-055 mantém a campanha integrada própria.
+
 ### WEB-049 — Consolidar sidebar responsiva nos três eixos profissionais
 
 - Marco: M8. Prioridade: P1. Complexidade: G. Estado: PENDENTE.
@@ -4098,6 +4144,53 @@ aprovado. Frontend não alterado nesta correção; nova CI integral obrigatória
 Commit da correção identificável por `git log -1 --format=%H
 --grep='fix(deps): corrige vulnerabilidade OpenTelemetry no gate M8'`.
 Push/verify/merge novos serão registrados após observação, sem antecipar aceites.
+
+### Fechamento verificável da continuidade M8, 2026-11-14
+
+Correção do gate em commit identificável pela consulta
+`git log -1 --format=%H --grep='fix(deps): corrige vulnerabilidade OpenTelemetry no gate M8'`.
+Correção de reflow/ensaio nativo em
+**`0d7e26ff532bb2832b721c8b2ede085c2cb0a2d8`**, ambos enviados ao upstream
+`origin/feat/m8-componentes-consulta-integrada`, PR
+[#20](https://github.com/thiagorraposo/stroop-test-web/pull/20), sem auto-merge.
+A execução [43666167540](https://github.com/thiagorraposo/stroop-test-web/actions/runs/43666167540)
+foi cancelada por nova revisão; não é aprovação. A execução
+[43666709804](https://github.com/thiagorraposo/stroop-test-web/actions/runs/43666709804)
+da SHA `0d7e26f` passou pela auditoria e estava em navegadores quando este
+fechamento foi preparado; sua conclusão deve ser consultada, sem promover a CI
+em andamento a passe. Novo commit documental exige o verify na sua própria SHA.
+
+Integração **após a correção CSS**, React/FastAPI/PostgreSQL/HTTPS reais:
+`TEST_DATABASE_URL` no banco descartável próprio já descrito;
+`npm --prefix web run test:integration -- e2e/integrated/analysis-query.spec.ts
+ e2e/integrated/trial-filters.spec.ts e2e/integrated/participant.spec.ts`:
+**20/20 aprovados**, 7,5 min, Chromium/Firefox, zero skips. Abrange consulta
+normalizada, faixas/erros, mesma tentativa e métricas completas, recuperação de
+recibo perdido, reenvio/duplo clique idempotentes, prefixo incremental,
+interrupção/invalidação tardia, logout e isolamento. Nenhuma fórmula/protocolo,
+CSV, grant ou schema alterado. Banco/container de teste próprio removido depois
+da suíte; o outro container sintético preexistente foi preservado. Xephyr/Vite
+criados para o ensaio nativo foram encerrados. Artefatos sintéticos ignorados.
+
+Validação documental final: 90 documentos, 746 links, 118 âncoras, 56 tarefas,
+75 requisitos e 37 aceitos; sete testes do verificador e diff check aprovados.
+Scanner oficial: **452 fontes**, aprovado; prova negativa preservada da correção.
+Matriz REQ-UX-014 vinculada ao ensaio real; checklist acima explicita limites.
+Progresso permanece **37/56**, M8 **2/12**. Nenhum aceite concedido por push/PR.
+
+Commit documental identificável por `git log -1 --format=%H
+--grep='docs(web): consolida evidências de segurança e zoom nativo de M8'`;
+conferir seu envio pela igualdade HEAD/upstream/remoto. A conclusão remota
+**da revisão final** e o merge são verificáveis, sem autorreferência, por
+`gh pr view 20 --json state,headRefOid,mergeCommit,statusCheckRollup` e
+`gh pr checks 20`. A integração só pode ocorrer com verify aprovado na SHA
+revisada, via Merge Commit tradicional e sem bypass; depois atualizar main local
+por fast-forward. Não interpretar este procedimento como merge já executado.
+
+Próxima ação funcional: encerrar as verificações restantes de WEB-048 descritas
+na conferência A/AA, e completar o catálogo residual de WEB-050. WEB-049/051
+aguardam seus pré-requisitos; WEB-031 continua dependente de autorização externa.
+Não autoriza M9, recursos externos, pesquisa real ou deploy.
 
 ### Retomada anterior — integração GitHub Flow das pendências, 2026-11-12
 
