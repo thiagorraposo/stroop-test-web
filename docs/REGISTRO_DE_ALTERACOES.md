@@ -4,6 +4,14 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-14 — Correção pontual da auditoria de dependências M8
+
+Pin e lock API atualizados para opentelemetry-api 1.45.2 em resposta ao
+CVE-2026-126360 detectado no verify do PR #20. Preservados os demais pins,
+auditoria obrigatória e contratos científicos. Validada compatibilidade dos
+locks, suíte Python/PostgreSQL sintética e imagem API; evidências e resultado
+de integração por SHA ficam no backlog canônico.
+
 ## 2026-11-14 — Fundação visual e ampliação da consulta aplicada
 
 Marca pública Stroop Test Web aplicada ao shell, início, títulos/metadados e

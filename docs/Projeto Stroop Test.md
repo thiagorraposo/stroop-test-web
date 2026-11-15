@@ -4021,6 +4021,35 @@ verify na SHA exata e integrar por Merge Commit tradicional se todos os checks
 passarem; prosseguir nos critérios pendentes elegíveis de M8. Estado remoto
 novo somente quando observado; resultado de #19 conferido em EV-M8-048.
 
+### Continuidade — correção do gate de segurança do PR #20, 2026-11-14
+
+Novo `continue o projeto` preserva o escopo M8 e renova a execução das tarefas
+elegíveis. Fetch confirmou main/origin/main em `b185e7c` e HEAD/upstream limpos
+em `c9340e36518090efef0ba36ed41826b7d037da26`. PR #20 já estava aberto, sem
+auto-merge; `verify` falhou na auditoria da execução
+[43648570497](https://github.com/thiagorraposo/stroop-test-web/actions/runs/43648570497),
+por `opentelemetry-api==1.45.1` / CVE-2026-126360. Não houve merge com check falho.
+O [aviso do mantenedor](https://github.com/open-telemetry/opentelemetry-python/security/advisories/GHSA-mf5v-w3w3-f6cg)
+indica correção em 1.45.2. Pin pontual em `api/requirements.txt` e lock, sem
+resolver outras versões; é correção necessária ao gate M8, não atualização
+incidental. Nenhuma supressão de auditoria, mudança de runtime científico,
+schema ou credencial operacional.
+
+Validação local com locks sincronizados: `pip check` aprovado; runner `audit`
+com npm e pip-audit aprovado, nenhuma vulnerabilidade conhecida reportada.
+`TEST_DATABASE_URL` aponta exclusivamente para PostgreSQL 17.6 próprio,
+`stroop_etapa4_test_m8_security_20261114`, banco `stroop_etapa4_test_m8_security`,
+tmpfs/loopback 32773, credencial sintética. Runner `python`: **475/475**,
+171,843 s, zero skips. Mensagens negativas de deploy/skip-ci são doubles dos
+testes existentes; nenhuma operação externa executada. Build
+`docker build -f Dockerfile.api -t stroop-m8-security-api:local .` e `pip check`
+na imagem aprovados. Scanner de 450 fontes e prova negativa aprovados.
+Validador documental e sete testes aprovados, sem ciclos; `git diff --check`
+aprovado. Frontend não alterado nesta correção; nova CI integral obrigatória.
+Commit da correção identificável por `git log -1 --format=%H
+--grep='fix(deps): corrige vulnerabilidade OpenTelemetry no gate M8'`.
+Push/verify/merge novos serão registrados após observação, sem antecipar aceites.
+
 ### Retomada anterior — integração GitHub Flow das pendências, 2026-11-12
 
 Solicitação explícita do proprietário: executar o GitHub Flow completo até o
