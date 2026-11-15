@@ -54,3 +54,39 @@ HTML title/description/application-name usam **Stroop Test Web**. O texto
 permanece; “cores” nas instruções é conteúdo experimental aprovado. Referências
 a Cores e Correspondência em registros históricos/metodológicos permanecem
 contextualizadas. `test_code`, protocolo, versões, CSV e motor não são marca.
+
+## Ensaio local de zoom nativo
+
+O [roteiro opt-in](../../web/e2e/manual/native-zoom.mjs) usa Chromium/Firefox
+reais, XTest e o [adaptador X11](../../web/e2e/manual/native-zoom-key.py).
+Pré-requisitos já disponíveis no ambiente validado: Linux, Xephyr, xwininfo,
+libX11/libXtst, Python do sistema com PyGObject/Gdk 3 e navegadores Playwright.
+Não instala ferramentas. Executar somente com display dedicado livre entre
+`:90` e `:99`, em terminais separados, na raiz:
+
+```bash
+Xephyr :94 -screen 1920x1200 -ac -nolisten tcp
+npm --prefix web run dev -- --host 127.0.0.1 --port 4294 --strictPort
+STROOP_ZOOM_DISPLAY=:94 WEB_TEST_PORT=4294 node web/e2e/manual/native-zoom.mjs
+```
+
+O script não usa o desktop padrão: recusa display fora do intervalo e exige
+uma única janela com o título do catálogo. Usa somente a fixture sintética
+local, sem App/API, credenciais ou dados. Ao terminar, encerrar os dois processos
+criados nesses terminais. Navegadores e perfis temporários são fechados pelo
+roteiro inclusive em falha. Não reutilizar display de outro trabalho.
+
+A janela começa com **largura interna CSS comprovada** de 1366/1920 a 100%;
+Ctrl+mais é enviado pelo XTest até 200%. Na largura 1280, chega a 400% e exige
+320 CSS px. Não altera CSS zoom, deviceScaleFactor ou preferências de escala.
+Confere fator via devicePixelRatio relativo à origem, scroll global, abertura
+por Enter, limites do diálogo, Tab/Escape e retorno de foco. Corrige a diferença
+entre decoração X11 e largura interna Firefox antes de ampliar; não reduz o
+zoom ou tolera viewport incorreta para fazer o ensaio passar.
+
+Capturas X11 da janela ampliada/diálogo ficam em `web/test-results/native-zoom/`,
+ignorado. A captura ocorre exclusivamente na raiz do Xephyr dedicado, sem
+redimensionar a página; o screenshot do driver com zoom nativo pode recortar
+coordenadas incorretamente. Revisar visualmente os PNGs. O teste automatizado
+não comprova todos os critérios de UX7-AA, nem os módulos que ainda não usam a
+fundação. Checklist, evidências e aceite permanecem no backlog canônico.

@@ -62,7 +62,7 @@ test('COMP7: catálogo reflow, zoom, espaçamento e isolamento dos tokens', asyn
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ui-action'))).toBe('')
   for (const width of [360, 768, 1024, 1366, 1920, 320]) {
     await page.setViewportSize({ width, height: 900 })
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `scroll global em ${width}`).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `scroll global em ${width}`).toBe(true)
     await page.getByText('Tabela de coletas sintéticas', { exact: true }).click()
     await expect(page.getByRole('table', { name: 'Avaliações sintéticas por projeto' })).toHaveCount(2)
     await page.getByText('Tabela de coletas sintéticas', { exact: true }).click()
@@ -77,7 +77,7 @@ test('COMP7: catálogo reflow, zoom, espaçamento e isolamento dos tokens', asyn
   for (const [width, zoom] of [[1366, 2], [1920, 2], [1280, 4]]) {
     await page.setViewportSize({ width: width!, height: 900 })
     await page.evaluate(scale => { document.documentElement.style.zoom = String(scale) }, zoom)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width} / ${zoom}`).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width} / ${zoom}`).toBe(true)
   }
   await page.evaluate(() => {
     document.documentElement.style.zoom = ''
@@ -85,7 +85,7 @@ test('COMP7: catálogo reflow, zoom, espaçamento e isolamento dos tokens', asyn
     style.textContent = '.professional-theme, .professional-theme * { line-height: 1.5 !important; letter-spacing: .12em !important; word-spacing: .16em !important; } .professional-theme p { margin-bottom: 2em !important; }'
     document.head.append(style)
   })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await expect(page.getByRole('button', { name: 'Validar exemplo', exact: true })).toBeVisible()
 })
 

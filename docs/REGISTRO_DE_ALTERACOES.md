@@ -4,6 +4,14 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-14 — Ensaio de zoom nativo e correção de reflow
+
+Roteiro local reproduzível com Chromium/Firefox, Xephyr dedicado e XTest,
+sem alterar CSS zoom. Removida largura mínima fixa do body que gerava scroll
+horizontal em 400% com barra vertical. Asserções passam a usar clientWidth,
+incluindo teste negativo da regra anterior. Preservada apresentação científica;
+evidências, limites e checklist de acessibilidade ficam em EV-M8-048.
+
 ## 2026-11-14 — Correção pontual da auditoria de dependências M8
 
 Pin e lock API atualizados para opentelemetry-api 1.45.2 em resposta ao

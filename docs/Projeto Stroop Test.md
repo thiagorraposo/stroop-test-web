@@ -2322,9 +2322,58 @@ A sondagem temporária foi preservada para diagnóstico; não equivale à matriz
 manual. Revisão de screenshots não é aprovação visual do proprietário.
 
 WEB-048 permanece **EM_VALIDACAO**: falta encerrar checklist A/AA aplicável por
-superfície e matriz visual/manual, incluindo zoom nativo comprovado; CSS zoom
-não é substituído por inferência. Nenhuma conformidade global ou aceite de
+superfície e matriz visual/manual, incluindo revisão critério a critério; o ensaio nativo complementar abaixo
+supre o zoom do catálogo, sem transferir conformidade para os módulos. Nenhuma conformidade global ou aceite de
 WEB-055. WEB-049 continua dependente desse aceite. Progresso **37/56**, M8 **2/12**.
+
+#### Continuidade — zoom nativo e correção de reflow do catálogo, 2026-11-14
+
+WEB-048 permanece EM_VALIDACAO. Adicionado roteiro opt-in em
+`web/e2e/manual/native-zoom.mjs` e adaptador Python X11, reproduzível conforme
+[COMPONENTES_WEB](desenvolvimento/COMPONENTES_WEB.md#ensaio-local-de-zoom-nativo).
+Não entra na aplicação/bundle nem é alegado como campanha automática da CI.
+Xephyr :94 próprio, Vite loopback 4294 e perfis de browser temporários; nenhum
+acesso ao desktop operacional, API, dados reais, VPS ou credenciais. Sem nova
+dependência ou instalação. Ambiente Linux `7.0.0-43-generic`, Chromium
+156.0.8078.4 / Firefox 157.0, Python 3.12.3 e Node 24.15.0.
+
+Matriz nativa final: **6/6**, 200% a partir de larguras internas comprovadas
+1366 e 1920, 400% a partir de 1280, nos dois browsers. Ctrl+mais/0 enviados via
+XTest, sem CSS zoom/deviceScaleFactor/pref de escala. DevicePixelRatio relativo
+comprova fatores 2 e 4; viewport final 683/960/320 CSS px. Abertura de diálogo
+por Enter, limites, Tab/Escape e retorno ao acionador aprovados. ScrollWidth
+não excede **clientWidth**: Chromium 675/952/316 (barra vertical ocupa espaço),
+Firefox 683/960/320. Capturas X11 de conteúdo/diálogo, 12 PNGs sintéticos em
+`web/test-results/native-zoom/`, ignorados; amostras Chromium 400% e Firefox
+200% inspecionadas pelo agente. Não é aprovação visual do proprietário.
+
+A inspeção visual revelou falha real antes da correção: `body min-width:320px`
+criava scroll horizontal global quando a barra vertical reduzia clientWidth
+a 316. Comparação anterior com innerWidth mascarava os quatro pixels. Roteiro
+endurecido reproduziu **falha** na regra antiga, seguida de retirada da largura
+mínima fixa do body e **6/6 aprovados**. Nenhuma dimensão/tempo/estímulo/HUD foi
+alterada; geometria nas resoluções experimentais revalidada. E2E do catálogo
+também passou a comparar clientWidth, sem esconder overflow ou reduzir zoom.
+
+Falhas do harness preservadas: sondagem inicial escolheu janela clipboard,
+depois passou a identificar título via xwininfo; Firefox incluiu decoração na
+largura, corrigida por medição real antes do zoom; eventos rápidos não chegavam
+a 400%, corrigidos por sincronização X11/pausas e verificação do fator atingido.
+Click por coordenada do driver Firefox e screenshot com zoom nativo foram
+inconsistentes; interação final usa teclado e captura X11 isolada, sem forçar
+click nem declarar captura vazia como revisão visual. Só o ensaio final é aceite
+dessa matriz específica; nenhuma dessas falhas é apresentada como passe.
+
+Validação após a correção: Vitest **366/366**, zero skips, tipos/build aprovados
+(aviso histórico de bundle 570,69 kB >500 kB preservado). Em `web/`,
+`WEB_TEST_PORT=4295 npx playwright test e2e/component-catalog.spec.ts
+ e2e/presentation.spec.ts --workers=2 --trace=off
+ --output=test-results/m8-native-regression-final`: **16/16**, 18,4 s;
+cinco larguras/reflow/contraste/estados e dez cores, contorno, centro e HUD
+preservados. Python científico não alterado; regressão completa de 475 testes
+na correção de dependência abaixo. Checklist A/AA aplicável por superfície e
+revisão integral dos estados permanecem por fechar; WEB-048 não concede aceite
+a WEB-049/055. WEB-050 segue EM_ANDAMENTO, WEB-031 bloqueada externamente.
 
 ### WEB-049 — Consolidar sidebar responsiva nos três eixos profissionais
 
@@ -4000,7 +4049,7 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 Novo pedido de continuidade em sequência autoriza tarefas elegíveis de M8 até
 seu limite. Branch `feat/m8-componentes-consulta-integrada` sobre main/origin/main
 `b185e7c`, sem alterações preexistentes; `.deploy-hostgator/` ignorado e preservado.
-WEB-048 EM_VALIDACAO (componentes/marca/Orca; checklist e matriz visual por fechar);
+WEB-048 EM_VALIDACAO (componentes/marca/Orca e zoom nativo; checklist por fechar);
 WEB-050 EM_ANDAMENTO (novas faixas/erros e multisseleção; catálogo residual/UX7-AA).
 Evidências em EV-M8-048 e continuação de EV-M8-050 de 2026-11-14. Progresso
 37/56, M8 2/12; WEB-049/051 continuam dependentes dos aceites, WEB-031 BLOQUEADA
@@ -4016,9 +4065,9 @@ Entrega identificável por `git log -1 --format=%H
 --grep='feat(web): integra componentes acessíveis e filtros Go/No-Go'`.
 Push/PR/check/merge serão registrados somente após observação real.
 
-Próxima ação: concluir conferência/registro desta unidade, abrir PR, aguardar
-verify na SHA exata e integrar por Merge Commit tradicional se todos os checks
-passarem; prosseguir nos critérios pendentes elegíveis de M8. Estado remoto
+Próxima ação: concluir o PR #20 com verify na SHA exata e Merge Commit
+tradicional, então fechar checklist A/AA por superfície de WEB-048 e continuar
+catálogo residual de WEB-050. Não avançar WEB-049/051 sem os aceites respectivos. Estado remoto
 novo somente quando observado; resultado de #19 conferido em EV-M8-048.
 
 ### Continuidade — correção do gate de segurança do PR #20, 2026-11-14
