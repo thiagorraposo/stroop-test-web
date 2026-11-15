@@ -4,6 +4,18 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-15 — Revalidação sintética de recuperação e integração parcial de M8
+
+Reexecutados backup/restore/replicação SSH local/agenda/alertas e recuperação de
+autenticação em ambiente descartável. Gate de verificação independente da
+hostkey da VPS preservado, sem conexão remota. Antes da limitação final de
+escopo, integrados shell profissional de três eixos, exploração descritiva e
+exportação vinculada à consulta aplicada, eliminando fallback writer e leitura
+nominal no caminho de exportação. CSV21 passa a reutilizar também o catálogo
+canônico, sem modificar fórmulas ou o exportador científico. Contrato e matriz
+registram capacidade parcial e testes; evidências/limites somente no backlog.
+Sem CI, PR, merge, publicação ou mudança operacional de produção.
+
 ## 2026-11-15 — Acessibilidade de ajuda, login e superfícies públicas
 
 Tooltip passa a atender Escape durante hover; foco de data e rolagem de

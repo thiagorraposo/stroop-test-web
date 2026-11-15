@@ -155,6 +155,9 @@ export function ResearchFilters({
   if (instruments.length) {
     activeChips.push({ label: `Instrumentos: ${instruments.join(', ')}`, onRemove: () => setInstruments([]) })
   }
+  if (draft.assessmentIds?.length) {
+    activeChips.push({ label: `${draft.assessmentIds.length} avaliações selecionadas`, onRemove: () => update({ ...draft, assessmentIds: [] }) })
+  }
   if (status !== 'valid') {
     activeChips.push({ label: `Status: ${status === 'all' ? 'Todas' : 'Inválidas'}`, onRemove: () => setAdvanced('status', 'valid') })
   }

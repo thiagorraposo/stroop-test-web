@@ -24,6 +24,7 @@ export type AdvancedFilterValues = {
 export type ResearchQuery = {
   projects: string[]
   filters: AssessmentOptions
+  assessmentIds?: string[]
   advanced?: AdvancedFilterValues
 }
 
@@ -52,6 +53,7 @@ export function normalizeQuery(query: ResearchQuery): ResearchQuery {
   }
   return {
     projects: [...new Set(query.projects)].sort(), filters,
+    ...(query.assessmentIds?.length ? { assessmentIds: [...new Set(query.assessmentIds)].sort() } : {}),
     advanced: { ...defaultAdvanced, ...query.advanced,
       condition: [...new Set(query.advanced?.condition ?? [])].sort(),
       responseType: [...new Set(query.advanced?.responseType ?? [])].sort(),
@@ -67,7 +69,7 @@ export function queryKey(query: ResearchQuery): string {
 /** O agregado atual só suporta dimensões básicas. Falha fechada até WEB-051/053. */
 export function supportsLegacyExport(query: ResearchQuery): boolean {
   const a = normalizeQuery(query).advanced!
-  return !a.searchText && a.status === 'valid' && a.accuracyRange === 'all'
+  return !query.assessmentIds?.length && !a.searchText && a.status === 'valid' && a.accuracyRange === 'all'
     && a.goAccuracyRange === 'all' && a.noGoAccuracyRange === 'all'
     && a.hasCommissionErrors === 'all' && a.hasOmissionErrors === 'all'
     && a.rtRange === 'all' && a.includeNullRt && !a.condition.length && !a.responseType.length
@@ -107,6 +109,6 @@ export function analysisQueryBody(query: ResearchQuery, cursor?: string): Analys
   if (bounds?.[0] !== undefined) filters.rt_median_min_ms = bounds[0]
   if (bounds?.[1] !== undefined) filters.rt_median_max_ms = bounds[1]
   const sort = { date: 'started_at', participant: 'participant_code', accuracy: 'accuracy', response_time: 'response_time' }[a.sortBy]
-  return { query: { projects: normalized.projects, filters }, grouping: { level: 'assessment', dimension: 'project' },
+  return { query: { projects: normalized.projects, filters, ...(normalized.assessmentIds?.length ? { assessment_ids: normalized.assessmentIds } : {}) }, grouping: { level: 'assessment', dimension: 'project' },
     page: { size: 100, sort: `${sort}_${a.sortOrder}`, ...(cursor ? { cursor } : {}) } }
 }

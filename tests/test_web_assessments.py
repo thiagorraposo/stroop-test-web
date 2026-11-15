@@ -609,7 +609,7 @@ class WebAssessmentsTests(unittest.TestCase):
         self.assertEqual(result['counts'], {'participants': 1, 'visits': 1, 'assessments': 2, 'trials': 32})
         self.assertEqual(len(result['items']), 1)
         self.assertEqual(result['aggregates'][0]['assessments'], 2)
-        self.assertFalse(result['capabilities']['exports'])
+        self.assertTrue(result['capabilities']['exports'])
         self.assertEqual(response.headers['cache-control'], 'no-store')
         body['page']['cursor'] = result['next_cursor']
         other = self.h.consulta.post('/api/v1/analysis/query', json=body)

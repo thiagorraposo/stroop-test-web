@@ -32,8 +32,8 @@ class AnalysisSchemaTests(unittest.TestCase):
                         {'include_null_rt': 'false'}, {'platform': ['legacy']}, {'visit': ['A'] * 101}):
             with self.subTest(filters=filters), self.assertRaises(ValidationError):
                 AnalysisRequest.model_validate({**base, 'query': {'projects': [project], 'filters': filters}})
-        for grouping in ({'level': 'trial', 'dimension': 'condition'},
-                         {'level': 'assessment', 'dimension': 'project', 'metric_code': 'accuracy'}):
+        for grouping in ({'level': 'unknown', 'dimension': 'condition'},
+                         {'level': 'assessment', 'dimension': 'project', 'metric_code': 'unknown'}):
             with self.subTest(grouping=grouping), self.assertRaises(ValidationError):
                 AnalysisRequest.model_validate({**base, 'grouping': grouping})
 

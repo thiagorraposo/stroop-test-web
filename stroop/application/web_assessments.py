@@ -143,12 +143,12 @@ def session_status(database_url, project_id, session_id, actor):
     return item
 
 
-def analysis_query(database_url, actor, *, query, filters, sort, offset, size, snapshot=None):
+def analysis_dataset(database_url, actor, *, query, filters, snapshot=None, connection=None):
     """Projeção de A/T sem combinar métricas oficiais entre instrumentos."""
     from stroop.domain.stroop import expected_outcome
     allowed, rows, trials, content, sources = persistence.analysis_selection(
         database_url, [UUID(project) for project in query['projects']], actor.issuer, actor.subject,
-        filters=filters, assessment_ids=query.get('assessment_ids'))
+        filters=filters, assessment_ids=query.get('assessment_ids'), connection=connection)
     if not allowed:
         raise MissingError
     if snapshot is not None and snapshot != content:
@@ -193,6 +193,12 @@ def analysis_query(database_url, actor, *, query, filters, sort, offset, size, s
             if outcome is None or outcome[2] not in filters['response_type']:
                 continue
         selected_trials.append(trial)
+    return rows, selected_trials, content, sources
+
+
+def analysis_query(database_url, actor, *, query, filters, sort, offset, size, snapshot=None, grouping=None):
+    rows, selected_trials, content, sources = analysis_dataset(database_url, actor, query=query,
+                                                              filters=filters, snapshot=snapshot)
     counts = {
         'participants': len({(str(row['project_id']), row['participant_id']) for row in rows}),
         'visits': len({(str(row['project_id']), row['participant_id'], row['visit']) for row in rows}),
@@ -222,5 +228,7 @@ def analysis_query(database_url, actor, *, query, filters, sort, offset, size, s
         ids = {row['assessment_id'] for row in scoped}
         aggregates.append({'project_id': project, 'assessments': len(scoped),
                            'trials': sum(trial['assessment_id'] in ids for trial in selected_trials)})
-    return {'content_fingerprint': content, 'legacy_snapshots': sources, 'counts': counts, 'aggregates': aggregates,
+    from stroop.domain.web_analytics import descriptive_groups
+    analytics = descriptive_groups(rows, selected_trials, grouping or {'level': 'assessment', 'dimension': 'project'})
+    return {'content_fingerprint': content, 'legacy_snapshots': sources, 'counts': counts, 'aggregates': aggregates, 'analytics': analytics,
             'items': [{**_base(row), 'project_id': str(row['project_id'])} for row in rows[offset:offset + size]]}

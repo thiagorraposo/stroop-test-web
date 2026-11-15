@@ -9,10 +9,12 @@ from uuid import UUID, uuid4
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
-from pydantic import Field
+from pydantic import Field, model_validator
+from stroop.domain.stroop import METRIC_DEFINITIONS
 
 from api.assessments import _filters, _signed, _verified
 from api.errors import APIError
+from api.analysis_context import remember
 from api.models import RequestModel
 from api.sessions import _professional_write, _reject_query
 from stroop.application import web_assessments as application
@@ -56,9 +58,20 @@ class QuerySelection(RequestModel):
 
 
 class Grouping(RequestModel):
-    # Demais agrupamentos/métricas serão habilitados com o seletor WEB-051/052.
-    level: Literal['assessment']
-    dimension: Literal['project']
+    level: Literal['project', 'instrument', 'participant', 'assessment', 'trial']
+    dimension: Literal['date', 'project', 'visit', 'evaluator', 'instrument_version', 'condition', 'go_nogo', 'response_type']
+    time_bucket: Literal['day', 'week', 'month'] | None = None
+    metric_code: str | None = None
+
+    @model_validator(mode='after')
+    def validate_grouping(self):
+        if self.time_bucket is not None and self.dimension != 'date':
+            raise ValueError('Agrupamento incompatível.')
+        if self.metric_code is not None and self.metric_code not in {*METRIC_DEFINITIONS, 'assessments', 'trials'}:
+            raise ValueError('Indicador indisponível.')
+        if self.level == 'trial' and self.metric_code not in (None, 'trials'):
+            raise ValueError('Métrica de avaliação não é métrica de tentativa.')
+        return self
 
 
 class QueryPage(RequestModel):
@@ -147,9 +160,12 @@ async def analysis_query(request: Request, body: AnalysisRequest):
     _reject_query(request)
     actor = _professional_write(request, 'view_dashboard')
     query, filters = normalize(body.query)
+    if body.grouping.metric_code in METRIC_DEFINITIONS or body.grouping.dimension in ('condition', 'response_type', 'go_nogo'):
+        if query['filters'].get('test_code') != ['stroop_go_nogo_ptbr']:
+            raise APIError('invalid_request')
     config = request.app.state.config
     fingerprint = _fingerprint(config, query)
-    scope = json.dumps(['analysis-page-v1', actor.issuer, actor.subject, fingerprint, body.page.sort], separators=(',', ':'))
+    scope = json.dumps(['analysis-page-v1', actor.issuer, actor.subject, fingerprint, body.page.sort, body.grouping.model_dump(exclude_none=True)], separators=(',', ':'))
     now = int(datetime.now(timezone.utc).timestamp())
     query_id, offset, expected, expires = str(uuid4()), 0, None, now + 900
     if body.page.cursor:
@@ -165,7 +181,7 @@ async def analysis_query(request: Request, body: AnalysisRequest):
             raise APIError('state_conflict')
     try:
         result = application.analysis_query(config.read_database_url, actor, query=query, filters=filters,
-                                            sort=body.page.sort, offset=offset, size=body.page.size, snapshot=expected)
+                                            sort=body.page.sort, offset=offset, size=body.page.size, snapshot=expected, grouping=body.grouping.model_dump(exclude_none=True))
     except application.MissingError:
         raise APIError('not_found') from None
     except application.SnapshotConflict:
@@ -187,6 +203,8 @@ async def analysis_query(request: Request, body: AnalysisRequest):
             {'project_id': project, 'snapshot': _signed(config, json.dumps(
                 ['assessment-snapshot-v1', project, actor.issuer, actor.subject, filters], sort_keys=True), [source, expires])}
             for project, source in sources]}
+    remember(request, actor, query_id, query=query, filters=filters, fingerprint=fingerprint,
+             content=content, counts=result['counts'], expires=expires)
     more = offset + body.page.size < result['counts']['assessments']
     return {
         'query_id': query_id, 'normalized_query': query, 'query_fingerprint': fingerprint,
@@ -202,9 +220,9 @@ async def analysis_query(request: Request, body: AnalysisRequest):
                                      'has_commission_errors', 'has_omission_errors',
                                      'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt'],
                          'status': ['valid'], 'trial_filters': {'stroop_go_nogo_ptbr': ['condition', 'response_type']},
-                         'grouping': [{'level': 'assessment', 'dimension': 'project'}],
+                         'grouping': [body.grouping.model_dump(exclude_none=True)],
                          'sort': ['started_at_desc', 'started_at_asc', 'participant_code_asc', 'participant_code_desc', 'visit_asc',
                                   'accuracy_asc', 'accuracy_desc', 'response_time_asc', 'response_time_desc'],
                          'platform': ['web', 'psychopy_local'], 'max_assessments': 5000, 'max_projects': 20,
-                         'exports': False, 'nominal_search': False},
+                         'exports': True, 'nominal_search': False},
     }

@@ -970,78 +970,84 @@ Além da exportação individual oficial de 21 colunas (`GET /api/v1/projects/{p
 
 ## Consulta e exportação integradas — alvo CHG-007
 
-**ALVO PARCIALMENTE IMPLEMENTADO.** Complementa ADR-007/008 e a seção CHG-005;
-o recorte de capacidade implementado está descrito abaixo; o restante continua
-planejado. Não descreve rotas existentes como já corrigidas. Runtime auditado e evidências
-ficam no backlog. `api/exports.py` atual aceita `filters: dict` e token v1 reduzido;
-isso não implementa este contrato. Individual e agregado existentes permanecem
-compatíveis; novos recortes não suportados nunca fazem fallback para exportar tudo.
+**PARCIALMENTE IMPLEMENTADO, sem aceite integrado.** O backlog registra as
+provas e os gates restantes. Desde 2026-11-15, a consulta aplicada também
+alimenta a prévia/download v2; clientes antigos sem consulta validada recebem
+422, nunca uma exportação irrestrita. O exportador individual e o agregado v1
+preservam seus contratos. Nominal permanece recusado com 403 em todos os perfis,
+até implementação da habilitação institucional de WEB-041/DEC-03.
 
 ### Consulta normalizada e seleção
 
-Implementação parcial de `POST /api/v1/analysis/query` (WEB-050): corpo fechado
-conforme estrutura abaixo, somente `grouping={level: assessment, dimension: project}`,
-status `valid`, dimensões categoriais do GET existente, datas e seleção explícita.
-`participant_code` é a chave canônica; `participant_id`, `start_date/end_date` e
-`psychopy` são aliases de entrada. Aliases contraditórios retornam 422. Plataforma
-de saída da consulta canônica é `psychopy_local`; a projeção `items` preserva
-`psychopy` por compatibilidade com detalhe/CSV existentes. `legacy` é recusada
-por falta de proveniência distinta. Condição/resposta, faixas métricas e exclusão
-de RT ausente requerem seleção explícita e exclusiva de Stroop.
+`POST /api/v1/analysis/query` aceita as dimensões categoriais existentes, datas,
+seleção explícita `assessment_ids`, condição/resposta e faixas oficiais já
+implementadas em WEB-050. Aliases equivalentes são normalizados; contraditórios
+retornam 422. Status disponível continua somente `valid`. Busca `patient_search`
+continua sendo substring literal do código, sem leitura de nome/iniciais.
+RT mediano de entrada em ms seleciona métrica oficial da avaliação completa;
+`include_null_rt` é explícito e ausência não vira zero. Precisão geral/Go/No-Go
+e presença de omissões/comissões conservam os limites documentados na seção 5.
+RT médio, IDs cadastrais, busca nominal e status operacionais seguem indisponíveis:
+campos não suportados são recusados, sem aplicação parcial silenciosa.
 
-Capacidades adicionais: `patient_search` (até 120 caracteres) busca **somente
-substring literal do código do participante**, sem distinção de maiúsculas,
-espaços externos removidos, controles recusados; nomes/iniciais não são lidos,
-mesmo no perfil administrativo. Não é busca nominal autorizada. Precisão:
-`accuracy_min/max`, `go_accuracy_min/max` e `no_go_accuracy_min/max` em 0..100;
-RT: `rt_median_min/max_ms` não negativos e finitos.
-Limites inferiores inclusivos e superiores exclusivos; par invertido/vazio
-retorna 422. Selecionam métricas oficiais da avaliação completa. Com faixa de RT,
-`include_null_rt=true` inclui a população sem RT separadamente da comparação
-numérica; `false` a exclui, inclusive sem faixa. Ausência não vira zero. Estado
-canônico sempre explicita `include_null_rt` (padrão true). Ordenações disponíveis:
-`started_at_asc/desc`, `participant_code_asc/desc`, `visit_asc`,
-`accuracy_asc/desc`, `response_time_asc/desc`; ausentes ao fim em ambas direções,
-desempate estável por projeto/assessment_id. Precisão Go/No-Go ausente por
-denominador zero não atende a faixa alguma, inclusive limite zero.
-`has_commission_errors` e `has_omission_errors` são booleanos estritos opcionais:
-true seleciona avaliação com contagem oficial positiva, false com contagem zero;
-omitir não restringe. Esses quatro recortes exigem Stroop exclusivo e combinam-se
-por AND sobre as métricas da avaliação completa, enquanto condição/resposta
-continuam qualificando a mesma tentativa. Não cria fórmula científica.
+`grouping` já admite os níveis e dimensões da estrutura alvo abaixo, com
+`time_bucket` restrito à dimensão date e `metric_code` restrito às 12 métricas
+oficiais ou às contagens `assessments`/`trials`. Métrica oficial e dimensão de
+tentativa exigem instrumento Stroop explicitamente selecionado. Nível trial
+aceita somente contagem de tentativas. A tabela `items` permanece paginada por
+avaliação; o nível controla os grupos descritivos e não altera a seleção A/T.
 
-Resposta identifica capacidades disponíveis e `exports=false` para o contrato
-v2 de prévia/download. `aggregates` contém somente contagens operacionais por
-projeto. Identidades de participante/visita são qualificadas por projeto/código,
-explicitadas em `indicator_definitions`; não há deduplicação cadastral entre
-projetos. `items` usa a projeção pseudonimizada existente com `project_id`.
-`completeness=complete` só é emitido após conferir todo A/T a partir de uma única
-transação REPEATABLE READ/READ ONLY; erro/limite não publica prefixo parcial.
-O limite de 5.000 aplica-se também aos candidatos antes das faixas métricas
-hidratadas: acima há recusa explícita, exigindo reduzir datas/dimensões/códigos;
-não é truncamento nem caminho de volume maior homologado. Cursor assinado vincula
-identidade, consulta, ordenação, conteúdo e prazo de 15 minutos. O contexto fica
-somente em RAM; `query_id` não habilita prévia/download v2.
+Campo adicional `analytics` contém `grouping`, `timezone`, `week_start`,
+`population`, `compatibility`, `groups` e `indicators`. Cada grupo retorna chave
+estratificada por instrumento/versão/protocolo/plataforma, rótulo, contagens de
+avaliações/tentativas, valor, disponíveis, ausentes e unidade. As médias usam
+valores oficiais da avaliação completa; não recomputam as métricas em T.
+`indicators` referencia `stroop.domain.stroop.METRIC_DEFINITIONS` e a fonte de
+cálculo, população, agregação, ausência e denominador. Datas WEB são UTC e semanas
+iniciam segunda-feira; legado sem fuso conserva a data registrada, sem atribuir
+um instante UTC. A interface explicita essa limitação.
 
-Campo transitório adicional `legacy_export_context` é null nos recortes novos
-(busca/faixas/tentativas/exclusão de RT/seleção explícita). Somente para filtros
-básicos aceitos pelo CSV v1 retorna `{projects: [{project_id, snapshot}], filters}`,
-com tokens assinados do **mesmo snapshot de leitura**, identidade, filtros e prazo.
-A rota de CSV existente reautoriza e verifica suas próprias fontes de resumo em
-cada download. Isso preserva exportação básica e não implementa EXPORT7 ou token
-v2. Não buscar snapshots por GET nem retirar filtros para gerar um CSV maior.
+`completeness=complete` continua exigindo A/T íntegros em REPEATABLE READ/READ
+ONLY, sem fallback writer. O teto de 5.000 vale também para os candidatos antes
+das faixas hidratadas; excesso é 422 e exige reduzir o recorte, nunca truncamento.
+`legacy_export_context` existe somente para o CSV v1 com filtros compatíveis,
+gerado no mesmo snapshot. Recortes avançados usam o v2 abaixo.
 
-O React aplica e pagina pelo POST único; só publica o conjunto depois de conferir
-todas as páginas, IDs, contagens, consulta canônica, fingerprints e prazo iguais.
-Sem fallback GET nem aplicação local dos filtros avançados. Ao expirar, descarta
-resultados/detalhe/downloads e exige reaplicação. Rascunho e navegação mantêm o
-mesmo contexto em RAM. Opções de filtro ainda usam GET autorizado; detalhe e CSV
-individual preservam contratos existentes. Estados operacionais ficam desabilitados
-na UI e continuam recusados na API. Agrupamento Go/No-Go, RT médio, IDs
-cadastrais, busca nominal, demais agrupamentos e campos sem capacidade retornam
-422. Catálogo integral, dicionário/agregações, busca nominal e exportação v2 seguem
-nas fichas WEB-050/051/052/053 e nos gates próprios; não há aceite integrado.
-Evidências e limites de execução: EV-M8-050 no backlog canônico.
+### Capacidade v2 já materializada e limites
+
+`capabilities.exports=true` sinaliza o caminho v2 desidentificado. O servidor
+mantém no máximo 256 contextos efêmeros em RAM por processo, por até 15 minutos,
+com consulta canônica e fingerprints, vinculados ao principal e hash da sessão.
+Evicção/restart/expiração ou sessão diferente causam 409. Nenhum contexto ou
+resultado é persistido no navegador. A prévia/download exige os campos do
+contrato alvo abaixo e reexecuta o seletor comum com o fingerprint original.
+
+Todas as cinco projeções têm caminho implementado; pacientes recusa conjunto
+sem vínculo WEB explícito, sem inventar cadastro ou ler o cadastro inteiro.
+Vínculos de legado ainda precisam de cobertura antes do aceite integral.
+Métricas continuam sendo as da avaliação completa. CSV21 usa a ordem de
+`CANONICAL_COLUMNS` e o exportador oficial individual; filtro de tentativa é
+incompatível (422). Seu catálogo anterior divergente foi alinhado a essa fonte,
+sem alterar o exportador científico canônico.
+
+Colunas vazias/duplicadas/desconhecidas são recusadas; a amostra contém somente
+as colunas selecionadas, mascaradas e serializadas como no CSV. Token v2 vincula
+consulta/conteúdo/sessão/projetos/colunas/modo/granularidade/versão/prazo. Leitura
+e serialização ocorrem no mesmo snapshot RO; conexão writer separada mantém as
+travas de credencial/conta/sessão/projeto/vínculo até a decisão final de download.
+Nenhum byte é transmitido antes dessa decisão. Nominal é sempre negado nesta
+capacidade. Nome seguro, no-store e ausência de termo/nominal em token/URL são
+obrigatórios. A auditoria detalhada de fingerprints/projeção ainda é alvo,
+além da auditoria de autorização existente; não declarar EXPORT7 integral aceito.
+
+O React usa a consulta publicada em todas as seções, invalida prévia ao mudar
+coluna/granularidade/consulta/rascunho, descarta respostas canceladas e bloqueia
+arquivo expirado. A busca/página/ordem/colunas da tabela só apresentam o recorte;
+a seleção de avaliações edita `assessment_ids` no rascunho e exige Aplicar.
+Agrupamento visual não altera o fingerprint da seleção. A campanha de volume,
+checklist AA completo, quatro contagens cadastrais, status operacionais, auditoria
+detalhada e jornadas integradas completas continuam exigidos nas fichas próprias.
+As definições seguintes preservam o alvo completo, não um aceite por existência.
 
 `POST /api/v1/analysis/query` é a operação alvo única de aplicação analítica,
 necessária para não enviar busca nominal em query string. Corpo fechado:

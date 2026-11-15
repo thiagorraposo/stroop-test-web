@@ -29,6 +29,8 @@ REQUIRED_COLUMNS = {
         "assessment_id", "block", "trial_number", "word", "ink_color", "condition",
         "correct_response", "key_pressed", "reaction_time", "correct", "error_type",
     },
+    "web_patients": {"id", "participant_code", "active", "created_at"},
+    "web_evaluators": {"id", "evaluator_code"},
     "web_projects": {"project_id", "code", "active"},
     "web_legacy_project_links": {"legacy_project", "project_id", "active"},
     "web_csv_imports": {"operation_id", "project_id", "status", "assessment_id"},
@@ -36,7 +38,7 @@ REQUIRED_COLUMNS = {
     "app_users": {"issuer", "subject", "role", "active"},
     "web_assessments": {
         "assessment_id", "session_id", "project_id", "platform", "protocol_id",
-        "app_version", "frame_period_ms", "completed_at",
+        "app_version", "frame_period_ms", "completed_at", "patient_id", "evaluator_uuid",
     },
     "web_session_invalidations": {"session_id", "reason", "recorded_at", "source", "event_at_ms"},
     "web_session_checkpoints": {"session_id", "confirmed_through", "prefix_hash", "received_at"},
@@ -272,6 +274,15 @@ def _hydrate(connection, rows, project_id):
             values = {metric["metric_code"]: metric["metric_value"]
                       for metric in _recalculate(trials_by_id.get(item["assessment_id"], []))}
         item["summary"] = _summary(item["test_code"], values)
+        item['official_metrics'] = dict(values)
+        if item['test_code'] == 'stroop_go_nogo_ptbr':
+            if not values.get('hits'):
+                item['official_metrics']['response_time'] = None
+            if not values.get('total_go_trials'):
+                for code in ('accuracy_go_trials', 'omission_errors_percentage'):
+                    item['official_metrics'][code] = None
+            if not values.get('total_no_go_trials'):
+                item['official_metrics']['accuracy_no_go_trials'] = None
         item.pop("import_status", None)
         result.append(item)
     return result
@@ -506,45 +517,57 @@ def session_status(database_url, project_id, session_id, issuer, subject):
         raise PersistenceError from exc
 
 
-def analysis_selection(database_url, projects, issuer, subject, *, filters, assessment_ids=None):
+def analysis_selection(database_url, projects, issuer, subject, *, filters, assessment_ids=None, connection=None):
     """Universo autorizado em uma transação RO; nunca publicar prefixo de 5.001."""
     if not 1 <= len(projects) <= 20:
         raise FacetLimitError
-    try:
-        with _connect(database_url) as connection:
-            _validate_schema(connection)
-            # Reautorizar TODOS antes de ler/popular qualquer resultado.
-            if not all(_authorized_project(connection, project, issuer, subject) for project in projects):
-                return False, [], [], None, []
-            selected, sources = [], []
-            for project in projects:
-                base, params = _scoped_query(project, issuer, subject, filters)
-                if assessment_ids is not None:
-                    base += ' AND a.assessment_id=ANY(%s)'
-                    params.append(assessment_ids)
-                rows, fingerprint = _snapshot(connection, base, params)
-                selected.extend((project, row) for row in rows)
-                sources.append((str(project), fingerprint))
-                if len(selected) > 5000:
-                    raise FacetLimitError
-            if len({row['assessment_id'] for _, row in selected}) != len(selected):
-                # Vínculos legados ambíguos não podem duplicar o universo A/T.
-                raise SnapshotConflict
-            eligible = {row['assessment_id'] for _, row in selected}
-            if assessment_ids is not None:
-                if not set(assessment_ids) <= eligible:
-                    raise SnapshotConflict
-                selected = [(project, row) for project, row in selected if row['assessment_id'] in assessment_ids]
-            result = []
-            for project in projects:
-                result.extend(_hydrate(connection, [row for scope, row in selected if scope == project], project))
-            # Apenas colunas pseudonimizadas disponíveis ao papel SELECT.
-            ids = sorted({row['assessment_id'] for row in result})
-            trials = connection.execute('''SELECT assessment_id,trial_number,condition,word,ink_color,
-                correct_response,key_pressed,reaction_time,correct,error_type FROM trial_results
-                WHERE assessment_id=ANY(%s) AND block='main' ORDER BY assessment_id,trial_number''', (ids,)).fetchall() if ids else []
-            content = hashlib.sha256(json.dumps([sources, result, trials], sort_keys=True, default=str,
-                                               separators=(',', ':')).encode()).hexdigest()
-            return True, result, trials, content, sources
-    except psycopg.Error as exc:
-        raise PersistenceError from exc
+    if connection is None:
+        try:
+            with _connect(database_url) as owned:
+                return analysis_selection(database_url, projects, issuer, subject, filters=filters,
+                                          assessment_ids=assessment_ids, connection=owned)
+        except psycopg.Error as exc:
+            raise PersistenceError from exc
+    _validate_schema(connection)
+    # Reautorizar TODOS antes de ler/popular qualquer resultado.
+    if not all(_authorized_project(connection, project, issuer, subject) for project in projects):
+        return False, [], [], None, []
+    selected, sources = [], []
+    for project in projects:
+        base, params = _scoped_query(project, issuer, subject, filters)
+        if assessment_ids is not None:
+            base += ' AND a.assessment_id=ANY(%s)'
+            params.append(assessment_ids)
+        rows, fingerprint = _snapshot(connection, base, params)
+        selected.extend((project, row) for row in rows)
+        sources.append((str(project), fingerprint))
+        if len(selected) > 5000:
+            raise FacetLimitError
+    if len({row['assessment_id'] for _, row in selected}) != len(selected):
+        # Vínculos legados ambíguos não podem duplicar o universo A/T.
+        raise SnapshotConflict
+    eligible = {row['assessment_id'] for _, row in selected}
+    if assessment_ids is not None:
+        if not set(assessment_ids) <= eligible:
+            raise SnapshotConflict
+        selected = [(project, row) for project, row in selected if row['assessment_id'] in assessment_ids]
+    result = []
+    for project in projects:
+        result.extend(_hydrate(connection, [row for scope, row in selected if scope == project], project))
+    # Apenas colunas pseudonimizadas disponíveis ao papel SELECT.
+    ids = sorted({row['assessment_id'] for row in result})
+    trials = connection.execute('''SELECT tr.assessment_id,tr.trial_number,tr.block,tr.condition,tr.word,tr.ink_color,
+        tr.correct_response,tr.key_pressed,tr.reaction_time,tr.correct,tr.error_type
+        FROM trial_results tr WHERE tr.assessment_id=ANY(%s) AND tr.block='main'
+        ORDER BY tr.assessment_id,tr.trial_number''', (ids,)).fetchall() if ids else []
+    links = connection.execute('''SELECT wa.assessment_id,wa.patient_id,wa.evaluator_uuid,
+        p.participant_code,p.active,p.created_at,e.evaluator_code
+        FROM web_assessments wa LEFT JOIN web_patients p ON p.id=wa.patient_id
+        LEFT JOIN web_evaluators e ON e.id=wa.evaluator_uuid
+        WHERE wa.assessment_id=ANY(%s) ORDER BY wa.assessment_id''', (ids,)).fetchall() if ids else []
+    by_id = {link['assessment_id']: link for link in links}
+    for row in result:
+        row['registry'] = dict(by_id[row['assessment_id']]) if row['assessment_id'] in by_id else None
+    content = hashlib.sha256(json.dumps([sources, result, trials], sort_keys=True, default=str,
+                                       separators=(',', ':')).encode()).hexdigest()
+    return True, result, trials, content, sources

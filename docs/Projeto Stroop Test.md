@@ -2070,7 +2070,7 @@ no fechamento desta sessão; hash do próprio registro consultável no Git.
 - Responsável: Codex na execução; responsável do produto/metodológico nas aprovações externas indicadas.
 - Critérios de aceite: Massa sintética restaurada isoladamente, schema/dados/recibo conferidos; réplica+agenda+alerta e retorno de imagem ensaiados, RPO/RTO medidos e limites aceitos.
 - Testes/verificação: `scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`, `scripts/smoke_local_auth_restore.py`, `tests/test_web_backup_replication.py`, `tests/test_vps_rollback.py`. EV-M8-031-MINT comprova restauração positiva/negativa, conteúdo em 21 tabelas, cadastros/vínculos/auditoria, SSH local/idempotência/hostkey incorreta, timer com cópia/atraso/indisponibilidade e rollback. Réplica VPS→notebook ainda não ensaiada.
-- Evidências: EV-M8-029/031 histórica preservada; EV-M8-031-MINT, 2026-11-12: receptor Mint instalado, 36 testes locais, 14 migrations/uma avaliação/16 tentativas/12 métricas restauradas. Cópia 2,079 s/118.821 bytes; restore da cópia 9,285 s, exclusivamente locais. Sem RPO/RTO externo comprovado.
+- Evidências: EV-M8-031-LOCAL-20261115 (Retomada vigente): ensaios locais reexecutados; acesso remoto condicionado a hostkey independente não comprovada. EV-M8-029/031 histórica preservada; EV-M8-031-MINT, 2026-11-12: receptor Mint instalado, 36 testes locais, 14 migrations/uma avaliação/16 tentativas/12 métricas restauradas. Cópia 2,079 s/118.821 bytes; restore da cópia 9,285 s, exclusivamente locais. Sem RPO/RTO externo comprovado.
 - Riscos/bloqueios: R08/R09. Notebook autorizado como destino temporário e identidade SSH exclusiva preparada. Proprietário/operador deve fornecer host/porta/usuário e fingerprint confiável, aprovar instalação restrita da chave/exportador na VPS e comprovar custódia AES separada. Depois medir ensaio externo e recuperação ponta a ponta. Notebook intermitente não garante RPO 24 h em desligamentos prolongados; RTO 4 h não presumido nem limite dispensado. Procedimento concreto no runbook; nenhuma alteração/conexão à VPS nesta execução. WEB-032 permanece dependente.
 - Referências: REQ-INF-003; [arquitetura](ARQUITETURA_WEB.md).
 - Git da entrega parcial: branch `test/m6-m8-validacao-isolada`; commit/envio/CI no fechamento desta sessão.
@@ -2540,7 +2540,7 @@ metodológica, migration, acesso a coletas ou deploy.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: NAV7: Vitest de rotas/perfis/transições; Playwright teclado, voltar/avançar, logout, viewport e ausência de dados/segredos em URLs; tipos/build.
 - Testes manuais/visuais exigidos: Percorrer três eixos sem mouse; transição de análise→Gestão→análise sem reaplicar consulta; perfil sem acesso não vê ação e requisição direta também nega.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R15: fragmentação reaparece em submenus. Ajustes dependentes da consulta única completam-se em WEB-050/052.
 - Decisões externas necessárias: Nenhuma para navegação; expansão de operações administrativas exige novo escopo.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -3275,7 +3275,7 @@ WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: DATA7: unittest domínio/aplicação e API/PG sintético stroop_etapa4_test*, paridade oficial, filtros combinados, mapas de legado, isolamento/revogação, cardinalidades, todos os status, paginação e 5.000/5.001; EXPLAIN e medição sintética com volume/ambiente; regressão grants.
 - Testes manuais/visuais exigidos: Confrontar dicionário com domínio Python e tabela analítica/fixture; revisar plano medido antes de escolher índices/cache; conferir contagens sem confundir cadastros e participantes.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R14/R13; índices novos dependem de evidência e migration aditiva revisada na tarefa, jamais alterar migrations existentes. Não reduzir gates por custo de consulta.
 - Decisões externas necessárias: DEC-03 para uso nominal real; nenhuma para testes sintéticos desidentificados. Incompatibilidade científica sem regra existente exige decisão metodológica antes de comparação.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -3298,7 +3298,7 @@ WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: ANALYTICS7: Vitest de mapeamento/unidades/ausência e contratos, Playwright Chromium/Firefox com tabelas equivalentes, drill-down, agrupamento e mudança de contexto; tipos/build e paridade de valores com fixture oficial.
 - Testes manuais/visuais exigidos: Comparar gráficos, tabela e KPIs com fixture conhecida em cada nível; testar teclado/zoom/tamanhos UX7-AA e UX7-J1; aferir a definição exibida de média por avaliação versus proporção por tentativa.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R14/R15: gráficos podem comunicar agregação errada. Biblioteca futura só após avaliação documentada de licença/manutenção/peso/acessibilidade/testes; ausência de biblioteca não dispensa interações exigidas.
 - Decisões externas necessárias: Nenhuma para exploração descritiva existente; comparação metodologicamente incompatível é bloqueada e exige responsável.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -3321,7 +3321,7 @@ WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: EXPORT7: API/PG real sintético combinando filtros/cinco granularidades, conteúdo/ordem/ausência/paridade, concorrência e revogação; token adulterado/reutilizado com colunas diferentes; pacientes sem vínculo; projeção nominal e deidentified; CSV injection incluindo delimitadores/aspas/controles; roundtrip CSV21 com consumidores; Vitest e Playwright HTTPS Chromium/Firefox da jornada completa.
 - Testes manuais/visuais exigidos: UX7-J1 com arquivo parseado e conjuntos comparados; testar prévia sem nominal, CSV individual e agregado preservados, troca rápida de projeto/colunas, erro 409 e nova prévia explícita.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R14 P0; riscos adicionais de pacientes globais, reader fallback, amostra nominal e DEC-03 por verificar com PG. Corrigir por esta ficha sem reabrir WEB-020; nenhum aceite de segurança com doubles.
 - Decisões externas necessárias: DEC-03/WEB-041 para habilitação nominal real; testes negativos e positivos institucionais somente sintéticos e configuração de teste explícita, sem habilitar research real.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -4192,7 +4192,154 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 
 ## Retomada
 
-### Retomada vigente — acessibilidade das superfícies de M8, 2026-11-15
+### Retomada vigente — encerramento solicitado e gate WEB-031, 2026-11-15
+
+A missão iniciou com pedido de fechar pendências de M8 sem CI/merge. Pedidos
+posteriores autorizaram WEB-031 sintética VPS→Mint, condicionando expressamente
+**antes da primeira conexão SSH** a verificar ED25519 no painel/console confiável
+da HostGator, sem considerar a conversa ou known_hosts autenticação independente.
+O último pedido limita a execução à próxima tarefa em andamento e encerramento;
+nenhuma nova tarefa será iniciada nesta sessão após as verificações locais.
+
+**WEB-031 permanece BLOQUEADA**, não concluída com ressalva. Não há sessão de
+painel/console HostGator disponível nas ferramentas conectadas nem endpoint de
+controle de navegador autenticado acessível em loopback 9222/9223. A chave pública
+local prévia tem fingerprint `SHA256:68X+z6XAelG7mbSz+NW/ASck8h+d9fhgoaA5wXan8To`,
+mas sua presença e o mesmo valor na conversa não cumprem a verificação independente.
+Não foi feita conexão, instalação, transferência ou alteração na VPS. Não há
+recurso temporário remoto criado para remover. Não foram acessados PostgreSQL,
+backups, chave AES operacional, deploy ou serviços públicos de produção.
+
+Custódia sintética: somente metadados conferidos por stat, sem ler a chave.
+`synthetic-recovery.key` preexistente 0600/raposo, em
+`/home/raposo/.config/stroop-web-replica` 0700; ciphertext de qualificação em
+`/home/raposo/.local/share/stroop-web-replica/qualification` 0700 separado.
+Os três harnesses desta sessão usam chaves/ciphertexts sintéticos efêmeros
+próprios, eliminados com seus recursos descartáveis; recursos locais anteriores
+preservados. Nenhum segredo ou backup é versionado.
+
+Evidência atual **EV-M8-031-LOCAL-20261115**: 36 testes backup/replicação/rollback/
+monitor/configuração, zero falhas/skips; smoke recovery aprovado, restore **6,988 s**;
+smoke replication aprovado, SSH exclusivamente loopback, **118.823 bytes**, cópia
+**1,060 s**, restore **6,546 s**, checksum/idempotência, shell negado, hostkey errada
+recusada, timer com cópia/alertas de atraso e indisponibilidade comprovados.
+Idade pontual **44,054 s** é observação local, **não RPO externo**. Auth restore
+aprovado: senha/token anteriores negados, recuperação fechada até operador,
+login novo 200, vínculos/16 trials/12 métricas/16 observações/recibo preservados.
+Hashes de conteúdo e contagens em **21 tabelas** conferidos, 14 migrations.
+Comandos: `.venv/bin/python -m unittest tests.test_backup_web
+ tests.test_web_backup_replication tests.test_vps_rollback tests.test_monitor_web
+ tests.test_hardening_producao.BackupEncryptionTests
+ tests.test_hardening_producao.ProductionConfigurationTests -v` e
+`scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`,
+`scripts/smoke_local_auth_restore.py` por `.venv/bin/python`, cada qual com
+`--api-image stroop-web-api:web031-20261112 --proxy-image
+stroop-web-proxy:deploy-6196c39`. Imagens históricas explicitamente reexecutadas:
+API `sha256:0fa1ea4db088e76a7602cb4d28051294b827a8eb5b63bbd71437fe34ca59ff1f`, proxy
+`sha256:fad12ab57fae24a7f3da5ebe0eb44d0e188d2e218751b8178da72654f62be366`.
+Não são imagens da nova implementação CHG-007 nem candidata desta branch.
+Limites de 24 h/4 h externos continuam sem medição/aceite; benchmark sintético
+local não valida operação contínua em notebook intermitente.
+
+Antes da limitação final, o ramo CHG-007 recebeu implementação parcial em
+**EV-M8-INTEGRADA-20261115**, abaixo. Código preservado sem conceder aceites por
+existência ou teste focado. Progresso permanece **37/56**, M8 **2/12**.
+WEB-048 EM_VALIDACAO; WEB-050 EM_ANDAMENTO; demais fichas mantêm dependências
+formais/aceites pendentes. Nenhum avanço a M9 ou encerramento fictício de M8.
+
+Git: base limpa main/origin/main `a0723d3`, fetch conferido; branch
+`feat/m8-entregaveis-integrados`. Commits e envio identificados no fechamento
+posterior; sem PR para não disparar CI, sem workflow_dispatch, sem pipeline CI
+local/remoto, sem merge/tag/release/deploy. Testes locais discriminados não
+são aprovação Actions. Não foi consultada CI para alegar resultado atual.
+Próxima ação exata, somente em futura continuidade autorizada: comprovar hostkey
+por painel/console confiável e então ensaiar WEB-031 externamente dentro do
+escopo sintético aprovado, ou retomar o ramo CHG-007 independente. WEB-032
+permanece PENDENTE, inclusive verify da candidata expressamente não executado.
+
+### EV-M8-INTEGRADA-20261115 — implementação parcial preservada
+
+WEB-049: shell com três eixos por capacidade, seções secundárias de análise e
+Gestão, sidebar expandida/recolhida e drawer com Escape/retorno de foco. Consulta
+e posição em RAM, hash de navegação só contém destino. Emissão saiu da abertura
+analítica. WEB-050/052: seleção explícita de avaliações edita rascunho e exige
+Aplicar; tabela com ordenação estável, paginação, colunas/densidade/busca local
+rotuladas como apresentação, sem exportar página como universo.
+
+WEB-051/052: agregações descritivas no servidor, níveis/dimensões/períodos,
+unidades/disponíveis/ausentes e catálogo de 12 indicadores referenciando o domínio;
+valores oficiais da avaliação completa, estratificados por instrumento/versão/
+protocolo/plataforma. Tabela de grupos permite edição explícita do filtro.
+Não há fórmula científica nova em TypeScript nem alteração do motor.
+
+WEB-053: corrigido caminho inseguro que ignorava filtros e podia ler nominal/
+usar writer em fallback. API v2 exige contexto efêmero da consulta e fingerprints,
+mesmo seletor/snapshot RO; token vincula sessão/projetos/consulta/conteúdo/colunas/
+modo/granularidade/versão/prazo. Download mantém travas de acesso até decisão
+final. Amostra só contém projeção selecionada e mascarada; nominal sempre 403,
+clientes sem consulta validada 422. Mutação do conteúdo retorna 409. CSV21 usa
+exportador/catálogo científicos oficiais inalterados; colunas do catálogo
+multi anterior divergente foram corrigidas para a fonte canônica. Leitura de
+cadastros apenas em colunas técnicas explicitamente concedidas ao reader pelo
+provisionador; nenhum grant/schema operacional foi aplicado.
+
+Limites concretos que impedem aceite integral: checklist AA autenticado/zoom
+nativo/leitor de tela por processo; catálogo residual e status operacionais;
+quatro contagens cadastrais e reconciliação de vínculo legado na projeção paciente;
+auditoria detalhada de exportação; campanha completa de concorrência/revogação,
+volume 5.000/20 e EXPLAIN/p95; gráficos/interações/histograma/longitudinal completos;
+WEB-054 (atomicidade/idempotência/handoff/QR) e jornadas WEB-055 não executadas.
+Não marcar WEB-048..055 CONCLUIDAS. Referências no contrato HTTP e matriz
+atualizadas para distinguir capacidade parcial e alvo.
+
+Ambiente: Linux 7.0.0-43-generic, Node 24.15.0, npm 11.16.0, Python 3.12.3;
+Playwright 1.64.1, Chromium 156.0.8078.4/Firefox 157.0. Banco criado nesta sessão:
+`stroop_etapa4_test_m8_entregaveis`, PG 17.6 tmpfs/loopback exclusivo. Sem acesso
+a coletas reais, alteração de dependências/locks ou migrations existentes.
+Validação local final (sem execução do runner CI):
+
+- `npm --prefix web test -- --maxWorkers=2`: **367/367**, 30 arquivos, sem skips.
+- `npm --prefix web run build`: tipos/build aprovados; aviso de chunk >500 kB
+  preservado, sem alterar configuração/dependências para escondê-lo.
+- `TEST_DATABASE_URL` exclusivamente descartável e `.venv/bin/python -m unittest
+  tests.test_web_query_exports tests.test_web_assessments tests.test_analysis_query
+  tests.test_web_multi_export tests.test_nucleo_compartilhado tests.test_web_export
+  -q`: **58/58**, sem skips. Novo EXPORT7/DATA7 confere projeções, colunas,
+  token adulterado/divergente, nominal negado, reader sem acesso a full_name,
+  paciente não vinculado excluído, contexto perdido/expirado, mutação com mesmo
+  ID/total, revogação, CSV21 idêntico ao individual, média oficial/nulos e unidade.
+- Em web, `WEB_TEST_PORT=4273 npx playwright test e2e/professional-shell.spec.ts
+  e2e/component-catalog.spec.ts e2e/accessibility-surfaces.spec.ts
+  e2e/presentation.spec.ts --workers=1 --trace=off`: primeira rodada **33/34**.
+  Firefox leu status inicial antes da consulta; teste passa a aguardar geração 1,
+  e aplicação publica loading na aplicação dos filtros. Rodada focada final de
+  `professional-shell.spec.ts`: **2/2**. Outros 32 casos da primeira rodada
+  aprovados (catálogo, superfícies, contraste, dez cores, DOM/prática); não são
+  checklist AA integral nem medição física. Sidebar/drawer/teclado/histórico/
+  preservação sem nova consulta/reflow em 360/768/1024/1366/1920 e 320 conferidos.
+- Em web, `TEST_DATABASE_URL` descartável, `npx playwright test --config
+  playwright.integration.config.ts e2e/integrated/query-exports.spec.ts
+  e2e/integrated/analysis-query.spec.ts --workers=1 --trace=off`: final **8/8**,
+  HTTPS/FastAPI/PG e credenciais reader/writer reais, Chromium/Firefox, sem mocks.
+  Interface prepara/baixa CSV do mesmo recorte, arquivo lido e coluna omitida
+  invalida prévia; busca/faixas/ausência e transições entre seções conferidas.
+- Documentação: `python3 scripts/verify_web_docs.py` e sete testes do validador
+  aprovados; 11 marcos/56 tarefas/75 requisitos/15 riscos/5 decisões/37 aceitos,
+  90 documentos/747 links/118 âncoras; `git diff --check` limpo.
+
+Falhas intermediárias preservadas: Vitest sem limite teve 246 aprovações e 11
+erros de inicialização de workers; máximo de dois resolveu, sem afrouxar teste.
+Asserções do menu antigo/capacidade exports=false foram atualizadas para o novo
+contrato. Um teste PG inicial criou paciente sem campos obrigatórios: corrigida
+fixture sintética. A primeira rodada integrada teve 4 aprovações/4 falhas:
+mensagem esperada de exportação desabilitada ficou obsoleta e o decoder de nome
+de arquivo recusava T/Z maiúsculos do timestamp, impedindo download. Corrigidos
+expectativa e regex fechada do filename; rodada final 8/8 acima. Suites de todos
+os antigos módulos/fluxos e a campanha completa de volume/AA/jornadas não foram
+reexecutadas, portanto não há aceite transversal de WEB-055.
+
+
+### Retomada anterior — acessibilidade das superfícies de M8, 2026-11-15
 
 Novo `continue o projeto e depois faça o github flow` autoriza a continuidade
 em M8 e a integração da unidade validada por PR/checks/Merge Commit tradicional.

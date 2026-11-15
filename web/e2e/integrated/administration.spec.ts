@@ -24,7 +24,8 @@ test('administra perfil sintetico/projeto, prepara sessao e acesso depende do vi
   await context.addCookies([{ name: admin.cookie_name, value: admin.token, domain: '127.0.0.1', path: '/',
     secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
-  await page.getByRole('button', { name: 'Administração', exact: true }).click()
+  await page.getByRole('button', { name: 'Gestão', exact: true }).click()
+  await page.getByRole('tab', { name: 'Administração', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Cadastrar conta' })).toHaveCount(0)
   const accounts = page.getByRole('table', { name: 'Contas cadastradas' })
   await expect(accounts.getByRole('row').filter({ hasText: memberUserId })).toBeVisible()

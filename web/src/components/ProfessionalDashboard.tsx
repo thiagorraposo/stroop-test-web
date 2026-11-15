@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { AnalysisExplorer } from './AnalysisExplorer'
+import type { AnalysisBody } from '../api/analysis'
+import { ProfessionalShell } from './ProfessionalShell'
 import type { ProfessionalProfile } from '../api/client'
 import { SessionInvitation } from './SessionInvitation'
 import { ResearchFilters } from './ResearchFilters'
@@ -8,6 +11,7 @@ import { PatientsPanel } from './PatientsPanel'
 import { EvaluatorsPanel } from './EvaluatorsPanel'
 import { AdministrationPanel } from './AdministrationPanel'
 import { ExportHubPanel } from './ExportHubPanel'
+import type { ResultsTableState } from './ResultsTable'
 import type { ScopedAssessment } from './ResultsTable'
 import type { ResearchQuery } from './ResearchFilters'
 import { ApiError, apiErrorMessage } from '../api/client'
@@ -50,63 +54,6 @@ const filterLabels: Record<string, string> = {
   test_code: 'Instrumento',
 }
 
-const navIcons = {
-  dashboard: (
-    <svg className="nav-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="9" />
-      <rect x="14" y="3" width="7" height="5" />
-      <rect x="14" y="12" width="7" height="9" />
-      <rect x="3" y="16" width="7" height="5" />
-    </svg>
-  ),
-  pacientes: (
-    <svg className="nav-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  ),
-  avaliadores: (
-    <svg className="nav-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-      <path d="m9 14 2 2 4-4" />
-    </svg>
-  ),
-  preparar: (
-    <svg className="nav-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="m22 2-7 20-4-9-9-4Z" />
-      <path d="M22 2 11 13" />
-    </svg>
-  ),
-  historico: (
-    <svg className="nav-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  ),
-  resultados: (
-    <svg className="nav-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="18" y1="20" x2="18" y2="10" />
-      <line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" />
-    </svg>
-  ),
-  exportacoes: (
-    <svg className="nav-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  ),
-  administracao: (
-    <svg className="nav-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ),
-}
 
 export function ProfessionalDashboard({
   profile,
@@ -115,7 +62,8 @@ export function ProfessionalDashboard({
   profile: ProfessionalProfile
   initialModule?: AdministrativeModule
 }) {
-  const [activeModule, setActiveModule] = useState<AdministrativeModule>(initialModule)
+  const [activeModule, setActiveModule] = useState<AdministrativeModule>(profile.role === 'consulta' && ['preparar', 'administracao'].includes(initialModule) ? 'dashboard' : initialModule)
+  const [grouping, setGrouping] = useState<AnalysisBody['grouping']>({ level: 'project', dimension: 'project' })
   const [analyticsTab, setAnalyticsTab] = useState<'geral' | 'visitas' | 'condicoes' | 'operacional' | 'tabela'>('geral')
   const [projects, setProjects] = useState<Project[]>([])
   const [project, setProject] = useState('')
@@ -138,6 +86,7 @@ export function ProfessionalDashboard({
   const [aggregateContext, setAggregateContext] = useState<ExportContext | null>(null)
   const [aggregateBusy, setAggregateBusy] = useState(false)
   const [aggregateMessage, setAggregateMessage] = useState<string | null>(null)
+  const [tableState, setTableState] = useState<ResultsTableState>({ page: 1, size: 25, search: '', sort: 'started_at', direction: 'desc', compact: false, columns: [] })
   const [registeredPatientsCount, setRegisteredPatientsCount] = useState<number | null>(null)
 
   const queryIO = useRef<AbortController | null>(null)
@@ -155,7 +104,7 @@ export function ProfessionalDashboard({
   function applyQuery(next: ResearchQuery) {
     queryIO.current?.abort(); detailIO.current?.abort()
     downloadIO.current?.abort(); aggregateIO.current?.abort()
-    setRows([]); setAnalysisContext(null); setAggregateContext(null); setAggregateMessage(null)
+    setRows([]); setAnalysisContext(null); setAggregateContext(null); setAggregateMessage(null); setLoading(true)
     setDetail(null); setDetailId(''); setDetailError(null); setDownloadMessage(null)
     setExporting(false); setAggregateBusy(false); setError(null)
     const normalized = normalizeQuery(next)
@@ -242,13 +191,14 @@ export function ProfessionalDashboard({
         const cursors = new Set<string>(), ids = new Set<string>()
         let cursor: string | undefined, first: AnalysisPage | undefined
         do {
-          const body = analysisQueryBody(query!, cursor)
+          const body = { ...analysisQueryBody(query!, cursor), grouping }
           const page = await queryAnalysis(body, profile.csrf_token, io.signal)
           if (io.signal.aborted) return
           if (first && (page.query_id !== first.query_id || page.query_fingerprint !== first.query_fingerprint
             || page.content_fingerprint !== first.content_fingerprint || page.expires_at !== first.expires_at
             || contextKey(page.counts) !== contextKey(first.counts)
             || contextKey(page.aggregates) !== contextKey(first.aggregates)
+            || contextKey(page.analytics) !== contextKey(first.analytics)
             || contextKey(page.legacy_export_context) !== contextKey(first.legacy_export_context))) throw new ApiError('state_conflict', 409)
           first ??= page
           for (const item of page.items) {
@@ -285,7 +235,7 @@ export function ProfessionalDashboard({
       }
     })()
     return () => { io.abort(); downloadIO.current?.abort(); aggregateIO.current?.abort() }
-  }, [query, revision])
+  }, [query, revision, grouping])
 
   useEffect(() => {
     if (!analysisContext) return
@@ -508,109 +458,8 @@ export function ProfessionalDashboard({
     ) : null
 
   return (
+    <ProfessionalShell profile={profile} active={activeModule} onNavigate={setActiveModule}>
     <div className="professional-dashboard" aria-label="Painel administrativo da pesquisa">
-      {/* Barra de Navegação Modular em 8 Módulos (ADR-007 / CHG-005) */}
-      <nav aria-label="Módulos administrativos" className="professional-areas professional-modules">
-        <button
-          type="button"
-          className={`button secondary modular-nav-btn ${activeModule === 'dashboard' ? 'active' : ''}`}
-          aria-pressed={activeModule === 'dashboard'}
-          onClick={() => {
-            setActiveModule('dashboard')
-            setDetailId('')
-          }}
-        >
-          {navIcons.dashboard}
-          Visão geral (Dashboard)
-        </button>
-        <button
-          type="button"
-          className={`button secondary modular-nav-btn ${activeModule === 'pacientes' ? 'active' : ''}`}
-          aria-pressed={activeModule === 'pacientes'}
-          onClick={() => {
-            setActiveModule('pacientes')
-            setDetailId('')
-          }}
-        >
-          {navIcons.pacientes}
-          Pacientes
-        </button>
-        <button
-          type="button"
-          className={`button secondary modular-nav-btn ${activeModule === 'avaliadores' ? 'active' : ''}`}
-          aria-pressed={activeModule === 'avaliadores'}
-          onClick={() => {
-            setActiveModule('avaliadores')
-            setDetailId('')
-          }}
-        >
-          {navIcons.avaliadores}
-          Avaliadores
-        </button>
-        <button
-          type="button"
-          className={`button secondary modular-nav-btn ${activeModule === 'preparar' ? 'active' : ''}`}
-          aria-pressed={activeModule === 'preparar'}
-          onClick={() => {
-            setActiveModule('preparar')
-            setDetailId('')
-          }}
-        >
-          {navIcons.preparar}
-          Preparar avaliação
-        </button>
-        <button
-          type="button"
-          className={`button secondary modular-nav-btn ${activeModule === 'historico' ? 'active' : ''}`}
-          aria-pressed={activeModule === 'historico'}
-          onClick={() => {
-            setActiveModule('historico')
-            setDetailId('')
-          }}
-        >
-          {navIcons.historico}
-          Avaliações e histórico
-        </button>
-        <button
-          type="button"
-          className={`button secondary modular-nav-btn ${activeModule === 'resultados' ? 'active' : ''}`}
-          aria-pressed={activeModule === 'resultados'}
-          onClick={() => {
-            setActiveModule('resultados')
-            setDetailId('')
-          }}
-        >
-          {navIcons.resultados}
-          Resultados e análises
-        </button>
-        <button
-          type="button"
-          className={`button secondary modular-nav-btn ${activeModule === 'exportacoes' ? 'active' : ''}`}
-          aria-pressed={activeModule === 'exportacoes'}
-          onClick={() => {
-            setActiveModule('exportacoes')
-            setDetailId('')
-          }}
-        >
-          {navIcons.exportacoes}
-          Exportações
-        </button>
-        {profile.role === 'administracao' && (
-          <button
-            type="button"
-            className={`button secondary modular-nav-btn ${activeModule === 'administracao' ? 'active' : ''}`}
-            aria-pressed={activeModule === 'administracao'}
-            onClick={() => {
-              setActiveModule('administracao')
-              setDetailId('')
-            }}
-          >
-            {navIcons.administracao}
-            Administração
-          </button>
-        )}
-      </nav>
-
       {projects.length > 0 && query && draft && <div hidden={!analyticModule}>
         <ResearchFilters projects={projects} initialProject={project} loading={loading}
           value={draft} applied={query} refreshKey={revision} onChange={editQuery} onApply={applyQuery} />
@@ -641,7 +490,7 @@ export function ProfessionalDashboard({
 
 
         {instruments.length > 1 && <p role="status">Há instrumentos diferentes no recorte. Aplique um instrumento para comparar métricas ou exportar a visão filtrada.</p>}
-        {query && !supportsLegacyExport(query) && <p role="status">A exportação deste recorte ainda não está disponível. Os filtros avançados foram preservados; nenhum arquivo sem esses filtros será gerado.</p>}
+        {query && !supportsLegacyExport(query) && <p role="status">Para exportar os filtros avançados, use Exportações e gere uma nova prévia do recorte.</p>}
       </div>}
 
       {analyticModule && error && <>
@@ -670,21 +519,6 @@ export function ProfessionalDashboard({
             <>
 
 
-              {<>
-                <p className="quiet">Projeto de preparação: este contexto não altera a consulta aplicada.</p>
-                {renderProjectSelector()}
-              </>}
-              {/* Preparação rápida de convite integrada na visão geral */}
-              {currentProject?.active && profile.role !== 'consulta' && (
-                <SessionInvitation
-                  key={`invitation:${project}`}
-                  project={currentProject}
-                  profile={profile}
-                />
-              )}
-
-
-
               {loading && <p role="status">Carregando avaliações… {loaded} recebidas.</p>}
 
               {!loading && !error && (
@@ -693,6 +527,14 @@ export function ProfessionalDashboard({
                     <p role="status">Nenhuma avaliação corresponde aos filtros.</p>
                   ) : (
                     <>
+                      {analysisContext && <AnalysisExplorer context={analysisContext} grouping={grouping} onGrouping={setGrouping}
+                        onSelect={(dimension, value) => {
+                          if (!draft) return
+                          if (dimension === 'project') editQuery({ ...draft, projects: [value] })
+                          else if (dimension === 'condition') editQuery({ ...draft, advanced: { ...normalizeQuery(draft).advanced!, condition: [value as 'congruent' | 'incongruent'] } })
+                          else if (dimension === 'response_type') editQuery({ ...draft, advanced: { ...normalizeQuery(draft).advanced!, responseType: [value as 'hit' | 'omission' | 'commission' | 'correct_rejection'] } })
+                          else if (dimension === 'visit' || dimension === 'evaluator') editQuery({ ...draft, filters: { ...draft.filters, [dimension === 'visit' ? 'visit' : 'evaluator_id']: [value] } })
+                        }} />}
                       {/* KPIs Executivos da Visão Geral */}
                       {/* KPIs da Visão Geral (CHG-005 / REQ-REL-004) */}
                       <section className="overview-summary-kpis" aria-label="KPIs da Visão Geral">
@@ -977,6 +819,8 @@ export function ProfessionalDashboard({
 
                         <ResultsTable
                           rows={visible}
+                          state={tableState} onState={setTableState}
+                          selected={draft?.assessmentIds ?? []} onSelect={ids => draft && editQuery({ ...draft, assessmentIds: ids })}
                           projects={projects}
                           onDetail={row => {
                             aggregateIO.current?.abort()
@@ -1107,6 +951,8 @@ export function ProfessionalDashboard({
           {!loading && !error && rows.length > 0 && (
             <ResultsTable
               rows={visible}
+              state={tableState} onState={setTableState}
+              selected={draft?.assessmentIds ?? []} onSelect={ids => draft && editQuery({ ...draft, assessmentIds: ids })}
               projects={projects}
               onDetail={row => {
                 setDetailProject(row.project_id)
@@ -1178,10 +1024,7 @@ export function ProfessionalDashboard({
       {activeModule === 'exportacoes' && (
         <section aria-label="Módulo Exportações" className="export-hub-panel">
 
-          <p role="status">A exportação avançada do recorte aplicado ainda não está disponível. Use a visão filtrada na Visão geral quando habilitada.</p>
-          <fieldset disabled><legend>Exportação avançada indisponível para este recorte</legend>
-            <ExportHubPanel profile={profile} project={currentProject} />
-          </fieldset>
+          <ExportHubPanel profile={profile} context={analysisContext} dirty={dirty || loading || !!error} onExpired={expireContext} />
         </section>
       )}
 
@@ -1193,5 +1036,6 @@ export function ProfessionalDashboard({
         />
       )}
     </div>
+    </ProfessionalShell>
   )
 }

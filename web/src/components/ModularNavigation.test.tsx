@@ -87,98 +87,39 @@ afterEach(async () => {
   vi.restoreAllMocks()
 })
 
-test('exibe os 8 botões modulares para perfil administração e permite navegar entre todos eles', async () => {
-  await act(async () => {
-    root.render(<ProfessionalDashboard profile={adminProfile} />)
-  })
-
-  const nav = container.querySelector('nav[aria-label="Módulos administrativos"]')
-  expect(nav).not.toBeNull()
-
-  const buttons = Array.from(nav!.querySelectorAll('button')).map(b => b.textContent?.trim())
-  expect(buttons).toEqual([
-    'Visão geral (Dashboard)',
-    'Pacientes',
-    'Avaliadores',
-    'Preparar avaliação',
-    'Avaliações e histórico',
-    'Resultados e análises',
-    'Exportações',
-    'Administração',
-  ])
-
-  // 1. Módulo inicial é Visão geral (Dashboard)
-  expect(container.textContent).toContain('Resultados da pesquisa')
-
-  // 2. Navega para Pacientes
-  const pacientesButton = nav!.querySelectorAll('button')[1]!
-  await act(async () => {
-    pacientesButton.click()
-  })
+test('três eixos e seções preservam a consulta e respeitam o perfil', async () => {
+  await act(async () => root.render(<ProfessionalDashboard profile={adminProfile} />))
+  const nav = container.querySelector('nav[aria-label="Eixos profissionais"]')!
+  expect([...nav.querySelectorAll('button')].map(b => b.getAttribute('aria-label'))).toEqual(['Resultados e Análise Unificada', 'Nova Avaliação', 'Gestão'])
+  const move = async (label: string) => {
+    const button = [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.getAttribute('aria-label') === label || b.textContent?.trim() === label)!
+    expect(button).toBeDefined()
+    await act(async () => button.click())
+  }
+  const requests = () => fetchMock.mock.calls.filter(([input]) => input === '/api/v1/analysis/query').length
+  const before = requests()
+  await move('Gestão')
   expect(container.textContent).toContain('Cadastro centralizado de participantes/pacientes')
-  expect(pacientesButton.getAttribute('aria-pressed')).toBe('true')
-
-  // 3. Navega para Avaliadores
-  const avaliadoresButton = nav!.querySelectorAll('button')[2]!
-  await act(async () => {
-    avaliadoresButton.click()
-  })
+  await move('Avaliadores')
   expect(container.textContent).toContain('Cadastro centralizado de avaliadores responsáveis')
-  expect(avaliadoresButton.getAttribute('aria-pressed')).toBe('true')
-
-  // 4. Navega para Preparar avaliação
-  const prepararButton = nav!.querySelectorAll('button')[3]!
-  await act(async () => {
-    prepararButton.click()
-  })
-  expect(container.textContent).toContain('Emissão de convites de uso único para aplicação da Tarefa de Correspondência de Cores')
-  expect(prepararButton.getAttribute('aria-pressed')).toBe('true')
-
-  // 5. Navega para Avaliações e histórico
-  const historicoButton = nav!.querySelectorAll('button')[4]!
-  await act(async () => {
-    historicoButton.click()
-  })
-  expect(container.textContent).toContain('Acompanhamento operacional de sessões')
-  expect(historicoButton.getAttribute('aria-pressed')).toBe('true')
-
-  // 6. Navega para Resultados e análises
-  const resultadosButton = nav!.querySelectorAll('button')[5]!
-  await act(async () => {
-    resultadosButton.click()
-  })
-  expect(container.textContent).toContain('Visualizações descritivas e análises de pesquisa')
-  expect(resultadosButton.getAttribute('aria-pressed')).toBe('true')
-
-  // 7. Navega para Exportações
-  const exportacoesButton = nav!.querySelectorAll('button')[6]!
-  await act(async () => {
-    exportacoesButton.click()
-  })
-  expect(container.textContent).toContain('Central de exportações')
-  expect(container.textContent).toContain('Granularidades e políticas de exportação (REQ-CSV-005)')
-  expect(exportacoesButton.getAttribute('aria-pressed')).toBe('true')
-
-  // 8. Navega para Administração
-  const adminButton = nav!.querySelectorAll('button')[7]!
-  await act(async () => {
-    adminButton.click()
-  })
+  await move('Administração')
   expect(container.textContent).toContain('Contas e permissões')
-  expect(adminButton.getAttribute('aria-pressed')).toBe('true')
+  await move('Nova Avaliação')
+  expect(container.textContent).toContain('Emissão de convites de uso único')
+  await move('Resultados e Análise Unificada')
+  expect(container.querySelector('form[aria-label="Preparar avaliação"]')).toBeNull()
+  expect(requests()).toBe(before)
+  expect(window.location.hash).toBe('#dashboard')
+  await move('Exportações')
+  expect(container.textContent).toContain('Central de exportações')
 })
 
-test('perfil consulta não exibe botão de Administração', async () => {
-  await act(async () => {
-    root.render(<ProfessionalDashboard profile={consultaProfile} />)
-  })
-
-  const nav = container.querySelector('nav[aria-label="Módulos administrativos"]')
-  expect(nav).not.toBeNull()
-
-  const buttons = Array.from(nav!.querySelectorAll('button')).map(b => b.textContent?.trim())
-  expect(buttons).not.toContain('Administração')
-  expect(buttons).toHaveLength(7)
+test('consulta tem apenas análise e gestão; não oferece emissão nem administração', async () => {
+  await act(async () => root.render(<ProfessionalDashboard profile={consultaProfile} />))
+  const nav = container.querySelector('nav[aria-label="Eixos profissionais"]')!
+  expect(nav.querySelectorAll('button')).toHaveLength(2)
+  await act(async () => (nav.querySelector('button[aria-label="Gestão"]') as HTMLButtonElement).click())
+  expect(container.querySelector('[role="tablist"]')!.textContent).not.toContain('Administração')
 })
 
 test('no módulo histórico exibe lista de avaliações e abre detalhe com tentativas e métricas (WEB-019)', async () => {

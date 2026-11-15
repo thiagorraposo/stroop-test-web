@@ -5,14 +5,17 @@ import type { Assessment } from './assessments'
 import type { ExportContext } from './aggregate'
 
 export type AnalysisBody = {
-  query: { projects: string[]; filters: Record<string, unknown> }
-  grouping: { level: 'assessment'; dimension: 'project' }
+  query: { projects: string[]; filters: Record<string, unknown>; assessment_ids?: string[] }
+  grouping: { level: 'project' | 'instrument' | 'participant' | 'assessment' | 'trial'; dimension: 'date' | 'project' | 'visit' | 'evaluator' | 'instrument_version' | 'condition' | 'go_nogo' | 'response_type'; time_bucket?: 'day' | 'week' | 'month'; metric_code?: string }
   page: { size: number; sort: string; cursor?: string }
 }
 export type AnalysisPage = {
   query_id: string; normalized_query: AnalysisBody['query']; query_fingerprint: string; content_fingerprint: string
   expires_at: string; completeness: 'complete'
   counts: { participants: number; visits: number; assessments: number; trials: number }
+  analytics: { grouping: AnalysisBody['grouping']; timezone: 'UTC'; week_start: 'monday'; population: string; compatibility: string
+    groups: { key: (string | number | null)[]; label: string; assessments: number; trials: number; value: number | null; present: number; missing: number; unit: string }[]
+    indicators: { code: string; label: string; unit: string; source: string; population: string; aggregation: string; missing: string; denominator: string; numerator: string }[] }
   aggregates: { project_id: string; assessments: number; trials: number }[]
   items: (Assessment & { project_id: string })[]; next_cursor: string | null
   legacy_export_context: ExportContext | null
@@ -30,7 +33,7 @@ export function contextKey(x: unknown): string {
     ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : value)
 }
 export function decodeAnalysisPage(value: unknown, body: AnalysisBody): AnalysisPage {
-  if (!closed(value, 'query_id normalized_query query_fingerprint content_fingerprint expires_at completeness counts indicator_definitions aggregates items next_cursor capabilities legacy_export_context')
+  if (!closed(value, 'query_id normalized_query query_fingerprint content_fingerprint expires_at completeness counts indicator_definitions aggregates analytics items next_cursor capabilities legacy_export_context')
     || typeof value.query_id !== 'string' || !uuid.test(value.query_id)
     || ![value.query_fingerprint, value.content_fingerprint].every(x => typeof x === 'string' && fingerprint.test(x))
     || typeof value.expires_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T.*Z$/.test(value.expires_at)
@@ -49,7 +52,7 @@ export function decodeAnalysisPage(value: unknown, body: AnalysisBody): Analysis
   }
   if (contextKey(value.indicator_definitions) !== contextKey(expectedDefinitions)
     || !closed(value.capabilities, 'filters status trial_filters grouping sort platform max_assessments max_projects exports nominal_search')
-    || value.capabilities.exports !== false || value.capabilities.nominal_search !== false
+    || value.capabilities.exports !== true || value.capabilities.nominal_search !== false
     || value.capabilities.max_assessments !== 5000 || value.capabilities.max_projects !== 20
     || contextKey(value.capabilities.status) !== '["valid"]'
     || contextKey(value.capabilities.platform) !== '["web","psychopy_local"]'
@@ -59,6 +62,17 @@ export function decodeAnalysisPage(value: unknown, body: AnalysisBody): Analysis
     || !Object.keys(body.query.filters).every(key => key === 'condition' || key === 'response_type' || (value.capabilities as Record<string, unknown[]>).filters!.includes(key))
     || !Array.isArray(value.capabilities.sort) || !value.capabilities.sort.every(x => typeof x === 'string')
     || !value.capabilities.sort.includes(body.page.sort)) return invalid()
+  if (!closed(value.analytics, 'grouping timezone week_start population compatibility groups indicators')
+    || contextKey(value.analytics.grouping) !== contextKey(body.grouping) || value.analytics.timezone !== 'UTC' || value.analytics.week_start !== 'monday'
+    || value.analytics.compatibility !== 'stratified_by_test_version_protocol_platform'
+    || value.analytics.population !== 'complete_assessment_metrics_and_selected_main_trials'
+    || !Array.isArray(value.analytics.groups) || !Array.isArray(value.analytics.indicators)
+    || value.analytics.groups.some(group => !closed(group, 'key label assessments trials value present missing unit')
+      || !Array.isArray(group.key) || group.key.some(x => x !== null && typeof x !== 'string' && !Number.isSafeInteger(x))
+      || typeof group.label !== 'string' || typeof group.unit !== 'string'
+      || ![group.assessments, group.trials, group.present, group.missing].every(count)
+      || !(group.value === null || typeof group.value === 'number' && Number.isFinite(group.value)))
+    || value.analytics.indicators.some(item => !closed(item, 'code label unit source population aggregation missing denominator numerator') || Object.values(item).some(x => typeof x !== 'string'))) return invalid()
   const items = value.items.map(item => {
     if (!record(item) || typeof item.project_id !== 'string' || !body.query.projects.includes(item.project_id)) return invalid()
     const { project_id, ...assessment } = item

@@ -2,6 +2,8 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { analysisFixture } from '../test/analysis-fixture'
+import type { AnalysisPage } from '../api/analysis'
 import { ExportHubPanel } from './ExportHubPanel'
 import type { ProfessionalProfile } from '../api/client'
 import type { Project } from '../api/assessments'
@@ -58,7 +60,7 @@ afterEach(async () => {
 
 test('renderiza as 5 granularidades e desabilita modo nominal para perfil consulta', async () => {
   await act(async () => {
-    root.render(<ExportHubPanel profile={consultaProfile} project={mockProject} />)
+    root.render(<ExportHubPanel profile={consultaProfile} />)
   })
 
   expect(container.textContent).toContain('Central de exportações avançada (REQ-CSV-005)')
@@ -74,53 +76,41 @@ test('renderiza as 5 granularidades e desabilita modo nominal para perfil consul
   expect(nominalRadio.disabled).toBe(true)
 })
 
-test('permite alternar granularidade, selecionar colunas e gerar prévia com contagem', async () => {
-  const previewData = {
-    total_rows: 42,
-    columns: ['assessment_id', 'participant_code', 'visit', 'accuracy'],
-    applied_criteria: {
-      project_id: mockProject.id,
-      granularity: 'avaliacoes',
-      identification_mode: 'deidentified',
-    },
-    sample_rows: [
-      { assessment_id: 'ASS-1', participant_code: 'PAT-001', visit: 'V1', accuracy: 87.5 },
-      { assessment_id: 'ASS-2', participant_code: 'PAT-002', visit: 'V1', accuracy: 100.0 },
-    ],
-    export_token: 'fake-export-token-12345',
-  }
+const context = analysisFixture({ query: { projects: [mockProject.id], filters: { status: 'valid', include_null_rt: true } }, grouping: { level: 'assessment', dimension: 'project' }, page: { size: 100, sort: 'started_at_desc' } }, []) as AnalysisPage
 
-  fetchMock.mockImplementation(async input => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-    if (url.includes('/api/v1/exports/preview')) {
-      return jsonResponse(previewData)
-    }
-    return jsonResponse({}, 404)
+test('prévia vincula consulta e colunas; rascunho invalida download e resposta atrasada', async () => {
+  let release!: (value: Response) => void
+  fetchMock.mockImplementation(async (_input, init) => {
+    const body = JSON.parse(init!.body as string)
+    expect(body.query_id).toBe(context.query_id)
+    expect(body.query_fingerprint).toBe(context.query_fingerprint)
+    expect(body.project_id).toBeUndefined()
+    const result = { total_rows: 1, counts: context.counts, columns: body.columns,
+      applied_criteria: { query: context.normalized_query, query_fingerprint: context.query_fingerprint, content_fingerprint: context.content_fingerprint,
+        granularity: body.granularity, identification_mode: body.identification_mode },
+      sample_rows: [Object.fromEntries(body.columns.map((col: string) => [col, col === 'assessment_id' ? 'ASS-1' : '']))],
+      export_token: 'synthetic_token', expires_at: new Date(Date.now() + 900000).toISOString() }
+    if (fetchMock.mock.calls.length === 1) return jsonResponse(result)
+    return new Promise<Response>(resolve => { release = resolve })
   })
-
-  await act(async () => {
-    root.render(<ExportHubPanel profile={adminProfile} project={mockProject} />)
-  })
-
-  // Clica no botão de pré-visualização
-  const previewBtn = Array.from(container.querySelectorAll('button')).find(
-    b => b.textContent?.includes('Pré-visualizar contagem e amostra')
-  )
-  expect(previewBtn).toBeDefined()
-
-  await act(async () => {
-    previewBtn!.click()
-  })
-
-  expect(container.textContent).toContain('42 registro(s) encontrado(s)')
-  expect(container.textContent).toContain('Amostra da exportação (avaliacoes)')
+  await act(async () => root.render(<ExportHubPanel profile={adminProfile} context={context} />))
+  const previewBtn = () => [...container.querySelectorAll('button')].find(b => b.textContent?.includes('Pré-visualizar'))!
+  const downloadBtn = () => [...container.querySelectorAll('button')].find(b => b.textContent?.includes('Baixar arquivo CSV'))!
+  await act(async () => previewBtn().click())
   expect(container.textContent).toContain('ASS-1')
-  expect(container.textContent).toContain('PAT-001')
+  expect(downloadBtn().disabled).toBe(false)
+  const column = container.querySelector('input[type="checkbox"]') as HTMLInputElement
+  await act(async () => column.click())
+  expect(downloadBtn().disabled).toBe(true)
+  expect(container.textContent).not.toContain('ASS-1')
+  await act(async () => previewBtn().click())
+  await act(async () => root.render(<ExportHubPanel profile={adminProfile} context={context} dirty />))
+  await act(async () => release(jsonResponse({ error: 'old' })))
+  expect(downloadBtn().disabled).toBe(true)
+  expect(container.querySelector('[role="alert"]')).toBeNull()
+})
 
-  // Botão de download deve estar habilitado com o total de registros
-  const downloadBtn = Array.from(container.querySelectorAll('button')).find(
-    b => b.textContent?.includes('Baixar arquivo CSV (42 registros)')
-  )
-  expect(downloadBtn).toBeDefined()
-  expect((downloadBtn as HTMLButtonElement).disabled).toBe(false)
+test('admin também aguarda habilitação institucional para nominal', async () => {
+  await act(async () => root.render(<ExportHubPanel profile={adminProfile} context={context} />))
+  expect((container.querySelector('input[value="nominal"]') as HTMLInputElement).disabled).toBe(true)
 })
