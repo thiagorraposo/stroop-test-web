@@ -4,6 +4,16 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-15 — Acessibilidade de ajuda, login e superfícies públicas
+
+Tooltip passa a atender Escape durante hover; foco de data e rolagem de
+controles administrativos ficam consistentes. Login associa erro às credenciais
+sem invalidá-las em falha de serviço e anuncia envio fora da região ocupada,
+preservando a limpeza da senha. Corrigidos contraste de textos neutros e reflow
+do início com texto ampliado. Roteiro de zoom nativo inclui início e login;
+regressões e uso efetivo de Orca registrados em EV-M8-048. Sem alteração
+científica, contrato HTTP, schema, grants ou dependências do projeto.
+
 ## 2026-11-14 — Ensaio de zoom nativo e correção de reflow
 
 Roteiro local reproduzível com Chromium/Firefox, Xephyr dedicado e XTest,

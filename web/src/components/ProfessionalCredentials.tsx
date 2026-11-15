@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, apiErrorMessage, changeProfessionalPassword, loginProfessional } from '../api/client'
 import type { ProfessionalProfile } from '../api/client'
@@ -9,11 +9,12 @@ function credentialMessage(error: unknown): string {
 }
 
 export function ProfessionalLogin({ onAuthenticated }: { onAuthenticated: (profile: ProfessionalProfile) => void }) {
+  const errorId = useId()
   const username = useRef<HTMLInputElement>(null)
   const password = useRef<HTMLInputElement>(null)
   const operation = useRef<AbortController | null>(null)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ message: string; credentials: boolean } | null>(null)
   useEffect(() => {
     const input = password.current
     const clear = () => { if (input) input.value = ''; operation.current?.abort() }
@@ -34,21 +35,25 @@ export function ProfessionalLogin({ onAuthenticated }: { onAuthenticated: (profi
       const profile = await pending
       if (!io.signal.aborted) onAuthenticated(profile)
     } catch (cause) {
-      if (!io.signal.aborted) setError(credentialMessage(cause))
+      if (!io.signal.aborted) setError({ message: credentialMessage(cause), credentials: cause instanceof ApiError && cause.status === 401 })
     } finally {
       if (!io.signal.aborted) setBusy(false)
     }
   }
-  return <form className="professional-credentials" onSubmit={event => void submit(event)} aria-label="Entrar na área da equipe" aria-busy={busy}>
+  // A região viva fica fora do formulário ocupado: aria-busy pode adiar seus anúncios.
+  return <><p role="status" className="professional-login-status">{busy ? 'Verificando credenciais…' : ''}</p>
+    <form className="professional-credentials" onSubmit={event => void submit(event)} aria-label="Entrar na área da equipe" aria-busy={busy}>
     <p className="lead">Entre com a conta fornecida pela equipe responsável pela pesquisa.</p>
     <label htmlFor="professional-username">Usuário</label>
-    <input id="professional-username" ref={username} name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} required maxLength={128} disabled={busy} />
+    <input id="professional-username" ref={username} name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} required maxLength={128} disabled={busy}
+      aria-invalid={error?.credentials || undefined} aria-describedby={error ? errorId : undefined} />
     <label htmlFor="professional-password">Senha</label>
-    <input id="professional-password" ref={password} name="password" type="password" autoComplete="current-password" required disabled={busy} />
-    {error && <p role="alert">{error}</p>}
-    <button className="button primary" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</button>
+    <input id="professional-password" ref={password} name="password" type="password" autoComplete="current-password" required disabled={busy}
+      aria-invalid={error?.credentials || undefined} aria-describedby={error ? errorId : undefined} />
+    {error && <p role="alert" id={errorId}>{error.message}</p>}
+    <button type="submit" className="button primary" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</button>
     <p className="quiet">O acesso é reservado à equipe autorizada. Se precisar recuperar o acesso, contate o responsável pela pesquisa.</p>
-  </form>
+  </form></>
 }
 
 export function ProfessionalPassword({ profile, onEnded }: { profile: ProfessionalProfile; onEnded: () => void }) {

@@ -79,6 +79,13 @@ test('inexistente, senha incorreta e bloqueio tem resposta generica; origem obri
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page.getByRole('alert')).toHaveText('Usuário ou senha inválidos.')
   await expect(page.getByLabel('Senha', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Usuário', { exact: true })).toHaveValue(username)
+  const errorId = await page.getByRole('alert').getAttribute('id')
+  for (const label of ['Usuário', 'Senha']) {
+    const input = page.getByLabel(label, { exact: true })
+    await expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect((await input.getAttribute('aria-describedby'))?.split(' ')).toContain(errorId)
+  }
 })
 
 test('logout pela UI revoga replay e repeticao sem cookie e idempotente', async ({ page }) => {

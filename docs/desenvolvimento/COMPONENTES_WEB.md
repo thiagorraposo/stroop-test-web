@@ -32,7 +32,7 @@ Todos os botões usam `type=button` por padrão: declarar `type=submit` no formu
 | Card / MetricCard | Card usa title, children/actions; MetricCard usa label, value, description. | Sem elevação de cartão; altura mínima de métrica; ausente deve ser texto “Sem medida”, nunca zero; loading via LoadingState. |
 | DataTable | `caption`, `columns[{key,label,render}]`, rows e rowKey estável. | caption/headers; região rotulada focável com scroll local; vazio textual; ordenação/página são controles do chamador e não alteram população. |
 | StatusBadge | `tone` neutral/success/warning/error e texto obrigatório. | Texto distingue estado sem depender de cor; não é live region automática. |
-| Tooltip | children é rótulo do botão de ajuda; `label` contém explicação complementar. | Hover ou foco mostra; ponteiro pode alcançar conteúdo; Escape dispensa; não usar para informação essencial ou controle interativo. |
+| Tooltip | children é rótulo do botão de ajuda; `label` contém explicação complementar. | Hover ou foco mostra; ponteiro pode alcançar conteúdo; Escape dispensa também quando aberto só pelo ponteiro; não usar para informação essencial ou controle interativo. |
 | Dialog / Drawer | `open/title/onClose/children`; modal nativo com label, Escape e trap adicional de Tab/Shift+Tab. | Abre por ação explícita; retorna foco ao acionador conectado; conteúdo desmontado ao fechar; Drawer usa o mesmo ciclo. Não repetir escrita incerta. |
 | Accordion | `title/children`, details/summary nativo. | Enter/Espaço alternam; metadados acessíveis sem cartões aninhados. |
 | EmptyState / LoadingState / ErrorState | Mensagem específica, ação opcional; LoadingState anuncia polite, ErrorState anuncia erro e aceita onRetry. | Diferenciar vazio inicial, recorte sem resultados, atualização e falha; retry somente quando seguro. Não mostrar sucesso para escrita incerta. |
@@ -71,16 +71,18 @@ STROOP_ZOOM_DISPLAY=:94 WEB_TEST_PORT=4294 node web/e2e/manual/native-zoom.mjs
 ```
 
 O script não usa o desktop padrão: recusa display fora do intervalo e exige
-uma única janela com o título do catálogo. Usa somente a fixture sintética
-local, sem App/API, credenciais ou dados. Ao terminar, encerrar os dois processos
+uma única janela com o título Stroop Test Web. Percorre catálogo, início e
+login. O catálogo não importa App; início/login usam o App com auth/me
+sintetizado como 401 pelo roteiro, sem API real, credenciais ou dados. Ao terminar, encerrar os dois processos
 criados nesses terminais. Navegadores e perfis temporários são fechados pelo
 roteiro inclusive em falha. Não reutilizar display de outro trabalho.
 
 A janela começa com **largura interna CSS comprovada** de 1366/1920 a 100%;
 Ctrl+mais é enviado pelo XTest até 200%. Na largura 1280, chega a 400% e exige
 320 CSS px. Não altera CSS zoom, deviceScaleFactor ou preferências de escala.
-Confere fator via devicePixelRatio relativo à origem, scroll global, abertura
-por Enter, limites do diálogo, Tab/Escape e retorno de foco. Corrige a diferença
+Confere fator via devicePixelRatio relativo à origem e scroll global nas três
+superfícies; no catálogo, abertura por Enter, limites do diálogo, Tab/Escape e
+retorno de foco; no login, campo de usuário sintético operável e limpo depois. Corrige a diferença
 entre decoração X11 e largura interna Firefox antes de ampliar; não reduz o
 zoom ou tolera viewport incorreta para fazer o ensaio passar.
 
@@ -90,3 +92,11 @@ redimensionar a página; o screenshot do driver com zoom nativo pode recortar
 coordenadas incorretamente. Revisar visualmente os PNGs. O teste automatizado
 não comprova todos os critérios de UX7-AA, nem os módulos que ainda não usam a
 fundação. Checklist, evidências e aceite permanecem no backlog canônico.
+
+A conferência automatizada de estados e superfícies está em
+[accessibility-surfaces.spec.ts](../../web/e2e/accessibility-surfaces.spec.ts).
+O login mantém região de status fora do formulário com aria-busy; um ancestral
+ocupado pode adiar anúncios. Erro de credencial é genérico e associado a ambos
+os campos; falha de serviço não declara credenciais inválidas. Autocomplete
+nativo e limpeza imediata de senha permanecem obrigatórios. Nenhum componente
+deve bloquear colagem ou substituir o gerenciador de senhas do navegador.

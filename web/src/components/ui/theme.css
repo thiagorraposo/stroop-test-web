@@ -56,6 +56,9 @@
 }
 .professional-theme :is(.ui-card, .ui-field, .ui-tabs, .ui-date-range, .ui-multiselect) { min-width: 0; }
 .professional-theme :is(button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+.professional-theme :is(button, input, select, textarea, summary, [tabindex]) { scroll-margin: var(--ui-space-2); }
+/* Segmentos nativos de data podem receber foco no shadow DOM do navegador. */
+.professional-theme .ui-field input[type='date']:focus-within { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
 .professional-theme .ui-button, .professional-theme .ui-tooltip > button, .professional-theme [role='tab'] {
   min-height: 44px; padding: var(--ui-space-2) var(--ui-space-4); border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius-2); font: inherit; cursor: pointer; color: var(--ui-text); background: var(--ui-surface);
