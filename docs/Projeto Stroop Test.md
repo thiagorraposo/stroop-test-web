@@ -4209,11 +4209,20 @@ implementado nesta unidade. WEB-049/051 aguardam seus pré-requisitos; WEB-031
 segue bloqueada por autorização externa. Progresso **37/56**, M8 **2/12**.
 Sem autorização de M9, dados reais, configuração externa ou deploy.
 
-Git da unidade: commit de implementação identificável por
-`git log -1 --format=%H --grep='fix(web): corrige acessibilidade de ajuda e login'`.
-Push/PR/verify/merge novos serão registrados somente depois de observados.
-Não transferir o sucesso da CI de f33749d à nova revisão. Auto-merge deve ficar
-desabilitado; merge exclusivamente tradicional após verify da SHA exata.
+Git da unidade: implementação em **`16aaabf523fa8be4dd55c32321edb0207c6f5f3c`**,
+push com upstream confirmado em `origin/fix/m8-acessibilidade-superficies`.
+PR [#21](https://github.com/thiagorraposo/stroop-test-web/pull/21) aberto para main,
+sem auto-merge. verify inicial
+[43683652687](https://github.com/thiagorraposo/stroop-test-web/actions/runs/43683652687)
+observado QUEUED; não é aprovação. Fechamento documental identificável por
+`git log -1 --format=%H --grep='docs(web): registra entrega acessível e fluxo do PR 21'`;
+conferir seu envio por HEAD/upstream/remoto. Essa revisão final exige seu próprio
+verify e pode cancelar o anterior; nenhuma aprovação transferida de f33749d ou
+16aaabf por inferência. Status final/CI/merge são verificáveis sem autorreferência
+por `gh pr view 21 --json state,headRefOid,mergeCommit,statusCheckRollup` e
+`gh pr checks 21`. Integração autorizada somente por Merge Commit tradicional
+após verify da SHA revisada; depois atualizar main local por fast-forward.
+No preparo deste fechamento o merge ainda não havia sido executado.
 
 Evidências em EV-M8-048, continuação de 2026-11-15. Próxima ação após o GitHub
 Flow desta unidade: conferir os estados da área autenticada e composições
