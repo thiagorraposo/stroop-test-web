@@ -1040,6 +1040,14 @@ capacidade. Nome seguro, no-store e ausência de termo/nominal em token/URL são
 obrigatórios. A auditoria detalhada de fingerprints/projeção ainda é alvo,
 além da auditoria de autorização existente; não declarar EXPORT7 integral aceito.
 
+A projeção `pacientes` também reconhece o mapa legado explícito ativo de
+`web_legacy_entity_links`, associado ao participante do projeto autorizado.
+Coincidência de pseudônimo ou `patient_id` isolado não estabelece esse vínculo.
+Mais de um mapa ativo é conflito (409); desativação do mapa altera o fingerprint
+de conteúdo e invalida a prévia. Sem vínculo central para qualquer avaliação do
+recorte, a projeção é recusada (422), sem omissão silenciosa. A leitura continua
+restrita a colunas técnicas, sem nome/iniciais e sem fallback writer.
+
 O React usa a consulta publicada em todas as seções, invalida prévia ao mudar
 coluna/granularidade/consulta/rascunho, descarta respostas canceladas e bloqueia
 arquivo expirado. A busca/página/ordem/colunas da tabela só apresentam o recorte;

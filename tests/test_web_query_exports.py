@@ -28,6 +28,9 @@ class QueryExportTests(unittest.TestCase):
     complete = _complete
     analysis_body = _analysis_body
 
+    legacy = WebAssessmentsTests.legacy
+    link_legacy = WebAssessmentsTests.link_legacy
+
     def context(self, filters=None):
         response = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body(filters))
         self.assertEqual(response.status_code, 200, response.text)
@@ -157,6 +160,53 @@ class QueryExportTests(unittest.TestCase):
         with psycopg.connect(self.read_url) as connection:
             with self.assertRaises(psycopg.errors.InsufficientPrivilege):
                 connection.execute('SELECT full_name FROM web_patients')
+
+    def test_export7_legado_so_exporta_paciente_com_mapa_explicito_ativo_do_projeto(self):
+        assessment_id = self.legacy()
+        self.link_legacy()
+        with psycopg.connect(self.database_url) as connection:
+            pseudonym = connection.execute('SELECT participant_id FROM assessments WHERE assessment_id=%s', (assessment_id,)).fetchone()[0]
+            actor = connection.execute('SELECT issuer,subject FROM app_users LIMIT 1').fetchone()
+            patient, participant = uuid4(), uuid4()
+            connection.execute("INSERT INTO web_patients(id,participant_code,full_name,normalized_name,created_by_issuer,created_by_subject) VALUES (%s,'PAT-20261115-000001','SYNTHETIC_LEGACY','synthetic_legacy',%s,%s)", (patient, *actor))
+            # Mesmo patient_id no participante não basta sem o mapa auditado ativo.
+            connection.execute('INSERT INTO web_project_participants(participant_uuid,project_id,pseudonym,patient_id) VALUES (%s,%s,%s,%s)', (participant, self.h.project_id, pseudonym, patient))
+        context = self.context()
+        self.preview(self.body(context, 'pacientes'), 422)
+        linked = self.h.admin.post('/api/v1/admin/legacy-links', json={
+            'entity_type': 'patient', 'legacy_participant_uuid': str(participant),
+            'patient_id': str(patient), 'reason_code': 'SYNTHETIC_EXPORT7'})
+        self.assertEqual(linked.status_code, 201, linked.text)
+        context = self.context()
+        body = self.body(context, 'pacientes')
+        preview = self.preview(body)
+        rows = list(csv.DictReader(io.StringIO(self.download(body, preview).text)))
+        self.assertEqual([row['patient_id'] for row in rows], [str(patient)])
+        self.assertNotIn('SYNTHETIC_LEGACY', str(preview))
+        with psycopg.connect(self.database_url) as connection:
+            duplicate = uuid4()
+            connection.execute("INSERT INTO web_legacy_entity_links(link_id,entity_type,legacy_participant_uuid,patient_id,reason_code,linked_by_issuer,linked_by_subject) VALUES (%s,'patient',%s,%s,'SYNTHETIC_AMBIGUOUS',%s,%s)", (duplicate, participant, patient, *actor))
+        self.download(body, preview, 409)
+        self.assertEqual(self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body()).status_code, 409)
+        with psycopg.connect(self.database_url) as connection:
+            connection.execute('UPDATE web_legacy_entity_links SET active=false WHERE link_id=%s', (duplicate,))
+        unlinked = self.h.admin.post('/api/v1/admin/legacy-links/' + linked.json()['link_id'] + '/deactivate', json={'reason_code': 'SYNTHETIC_REVOKED'})
+        self.assertEqual(unlinked.status_code, 200, unlinked.text)
+        self.download(body, preview, 409)
+        self.preview(self.body(self.context(), 'pacientes'), 422)
+
+    def test_export7_mapa_legado_de_outro_projeto_nao_autoriza_identidade(self):
+        assessment_id = self.legacy()
+        self.link_legacy()
+        with psycopg.connect(self.database_url) as connection:
+            pseudonym = connection.execute('SELECT participant_id FROM assessments WHERE assessment_id=%s', (assessment_id,)).fetchone()[0]
+            actor = connection.execute('SELECT issuer,subject FROM app_users LIMIT 1').fetchone()
+            patient, participant, other_project = uuid4(), uuid4(), uuid4()
+            connection.execute("INSERT INTO web_projects(project_id,code,name,created_by_issuer,created_by_subject) VALUES (%s,'SYNTHETIC_OTHER','Sintético',%s,%s)", (other_project, *actor))
+            connection.execute("INSERT INTO web_patients(id,participant_code,full_name,normalized_name,created_by_issuer,created_by_subject) VALUES (%s,'PAT-20261115-000001','SYNTHETIC_OTHER','synthetic_other',%s,%s)", (patient, *actor))
+            connection.execute('INSERT INTO web_project_participants(participant_uuid,project_id,pseudonym) VALUES (%s,%s,%s)', (participant, other_project, pseudonym))
+            connection.execute("INSERT INTO web_legacy_entity_links(entity_type,legacy_participant_uuid,patient_id,reason_code,linked_by_issuer,linked_by_subject) VALUES ('patient',%s,%s,'SYNTHETIC_OTHER',%s,%s)", (participant, patient, *actor))
+        self.preview(self.body(self.context(), 'pacientes'), 422)
 
 
 del WebAssessmentsTests

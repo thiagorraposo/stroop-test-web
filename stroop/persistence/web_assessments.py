@@ -31,6 +31,8 @@ REQUIRED_COLUMNS = {
     },
     "web_patients": {"id", "participant_code", "active", "created_at"},
     "web_evaluators": {"id", "evaluator_code"},
+    "web_project_participants": {"participant_uuid", "project_id", "pseudonym"},
+    "web_legacy_entity_links": {"link_id", "entity_type", "legacy_participant_uuid", "patient_id", "active"},
     "web_projects": {"project_id", "code", "active"},
     "web_legacy_project_links": {"legacy_project", "project_id", "active"},
     "web_csv_imports": {"operation_id", "project_id", "status", "assessment_id"},
@@ -560,14 +562,34 @@ def analysis_selection(database_url, projects, issuer, subject, *, filters, asse
         tr.correct_response,tr.key_pressed,tr.reaction_time,tr.correct,tr.error_type
         FROM trial_results tr WHERE tr.assessment_id=ANY(%s) AND tr.block='main'
         ORDER BY tr.assessment_id,tr.trial_number''', (ids,)).fetchall() if ids else []
-    links = connection.execute('''SELECT wa.assessment_id,wa.patient_id,wa.evaluator_uuid,
-        p.participant_code,p.active,p.created_at,e.evaluator_code
-        FROM web_assessments wa LEFT JOIN web_patients p ON p.id=wa.patient_id
+    # WEB tem vínculo por avaliação. Legado só ganha identidade central pelo
+    # mapa ativo explícito do projeto; pseudônimo sozinho nunca autoriza fusão.
+    links = connection.execute('''SELECT a.assessment_id,scope.project_id,
+        COALESCE(wa.patient_id,l.patient_id) AS patient_id,wa.evaluator_uuid,
+        p.participant_code,p.active,p.created_at,e.evaluator_code,l.link_id
+        FROM unnest(%s::uuid[],%s::text[]) AS scope(project_id,assessment_id)
+        JOIN assessments a ON a.assessment_id=scope.assessment_id
+        LEFT JOIN web_assessments wa ON wa.assessment_id=a.assessment_id AND wa.project_id=scope.project_id
+        LEFT JOIN web_project_participants pp ON pp.project_id=scope.project_id AND pp.pseudonym=a.participant_id
+        LEFT JOIN web_legacy_entity_links l ON wa.assessment_id IS NULL
+            AND l.legacy_participant_uuid=pp.participant_uuid AND l.entity_type='patient' AND l.active
+        LEFT JOIN web_patients p ON p.id=COALESCE(wa.patient_id,l.patient_id)
         LEFT JOIN web_evaluators e ON e.id=wa.evaluator_uuid
-        WHERE wa.assessment_id=ANY(%s) ORDER BY wa.assessment_id''', (ids,)).fetchall() if ids else []
-    by_id = {link['assessment_id']: link for link in links}
+        ORDER BY scope.project_id,a.assessment_id,l.link_id''',
+        ([row['project_id'] for row in result], [row['assessment_id'] for row in result])).fetchall() if ids else []
+    by_id = {}
+    selected_keys = {(str(row['project_id']), row['assessment_id']) for row in result}
+    for link in links:
+        key = (str(link['project_id']), link['assessment_id'])
+        if key not in selected_keys:
+            continue
+        if key in by_id:
+            # Nem mesmo dois mapas ativos para o mesmo paciente são resolvidos
+            # por ordem arbitrária; o operador precisa reconciliar a ambiguidade.
+            raise SnapshotConflict
+        by_id[key] = dict(link)
     for row in result:
-        row['registry'] = dict(by_id[row['assessment_id']]) if row['assessment_id'] in by_id else None
+        row['registry'] = by_id.get((str(row['project_id']), row['assessment_id']))
     content = hashlib.sha256(json.dumps([sources, result, trials], sort_keys=True, default=str,
                                        separators=(',', ':')).encode()).hexdigest()
     return True, result, trials, content, sources

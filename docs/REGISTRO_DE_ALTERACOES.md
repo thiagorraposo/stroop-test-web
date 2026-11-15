@@ -4,6 +4,15 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-15 — Projeção de pacientes legados na consulta integrada
+
+Corrigida a projeção de pacientes da exportação integrada para reconhecer somente
+mapas legados explícitos ativos no projeto autorizado. Ambiguidade é recusada e
+desvinculação invalida a prévia pelo fingerprint de conteúdo. Acrescentada leitura
+das colunas técnicas dos mapas ao provisionador existente, sem aplicar grants
+operacionais, ler nomes ou alterar migrations. Testes API/PostgreSQL sintéticos
+e evidências na retomada do backlog; sem CI, PR, merge, VPS ou deploy.
+
 ## 2026-11-15 — Revalidação sintética de recuperação e integração parcial de M8
 
 Reexecutados backup/restore/replicação SSH local/agenda/alertas e recuperação de

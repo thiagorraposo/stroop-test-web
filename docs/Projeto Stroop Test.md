@@ -3323,6 +3323,7 @@ WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 - Testes manuais/visuais exigidos: UX7-J1 com arquivo parseado e conjuntos comparados; testar prévia sem nominal, CSV individual e agregado preservados, troca rápida de projeto/colunas, erro 409 e nova prévia explícita.
 - Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R14 P0; riscos adicionais de pacientes globais, reader fallback, amostra nominal e DEC-03 por verificar com PG. Corrigir por esta ficha sem reabrir WEB-020; nenhum aceite de segurança com doubles.
+- Complemento: EV-M8-053-LEGADO-20261115 comprova mapa explícito ativo, isolamento por projeto, ambiguidade e invalidação da prévia ao desvincular; demais critérios/dependências continuam pendentes.
 - Decisões externas necessárias: DEC-03/WEB-041 para habilitação nominal real; testes negativos e positivos institucionais somente sintéticos e configuração de teste explícita, sem habilitar research real.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
 - Referências: CHG-007; [UX](experimento/UX_DECISIONS.md#interface-profissional-integrada--chg-007); [contrato](desenvolvimento/CONTRATO_API_WEB.md#consulta-e-exportação-integradas--alvo-chg-007); [ADR-008](arquitetura/ADR-008-simplificacao-estrutural-e-fluxo-direto-sessao.md).
@@ -4192,7 +4193,65 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 
 ## Retomada
 
-### Retomada vigente — encerramento solicitado e gate WEB-031, 2026-11-15
+### Retomada vigente — continuidade de M8 e vínculo legado na exportação, 2026-11-15
+
+Pedido atual renova a execução autônoma de M8 até conclusão ou impedimento real,
+priorizando WEB-048..055/031/032, sem CI ou deploy. Supera a limitação de encerrar
+após a próxima tarefa da sessão anterior. Inicialização limpa em
+`feat/m8-entregaveis-integrados`, HEAD/upstream `c02909d`; fetch confirmou
+main/origin/main `a0723d3`. Branch preservada, sem integração do PR #18.
+
+**EV-M8-053-LEGADO-20261115**: corrigida lacuna objetiva de WEB-053 sem antecipar
+aceite integral/dependências. A projeção de pacientes agora resolve o mapa
+legado ativo explícito no projeto autorizado, além do vínculo WEB por avaliação.
+Não usa `patient_id` isolado no participante nem coincidência textual como
+autorização; dois mapas ativos produzem 409, mesmo para o mesmo paciente.
+Desvinculação muda o fingerprint e impede download da prévia anterior. Sem mapa
+central, projeção pacientes continua recusada (422), sem excluir linhas
+silenciosamente ou acrescentar cadastros sem avaliação. Reader recebe somente
+colunas técnicas dos mapas pelo provisionador já existente; nenhuma leitura
+nominal, migration ou grant operacional executado.
+
+Verificação API/PG real exclusivamente no banco descartável
+`stroop_etapa4_test_m8_fechamento`, PostgreSQL 17.6 tmpfs/loopback. Testes e Git
+desta unidade:
+
+- `TEST_DATABASE_URL` exclusivamente descartável e `.venv/bin/python -m unittest
+  tests.test_web_query_exports tests.test_web_assessments
+  tests.test_web_database_provision -q`: **47/47**, 89,096 s, zero falhas/skips.
+  Inclui API real com reader SELECT, privilégios do provisionador, isolamento de
+  projeto, mapa explícito, duplicidade, revogação, CSV parseado e regressão das
+  consultas. Primeira rodada focada: sete passes/um erro em fixture de projeto
+  sem `created_by_issuer/subject`; corrigidos campos obrigatórios sintéticos,
+  sem alteração de restrições, seguida da rodada final acima.
+- `python3 scripts/verify_web_docs.py` e sete testes do validador aprovados:
+  11 marcos/56 tarefas/75 requisitos/15 riscos/5 decisões/37 aceitos,
+  90 documentos/747 links/118 âncoras. `git diff --check` aprovado.
+- Entrega identificável por `git log -1 --format=%H
+  --grep='fix(web): reconhece vínculo legado explícito na exportação'`.
+  Push da branch isolada sem PR, CI, merge, tag/release ou deploy; resultado
+  conferido no encerramento. Nenhum aceite Actions atribuído a esta SHA.
+
+Nenhuma suíte de
+browser/frontend ou recuperação repetida: esta unidade não altera UI/motor,
+serializadores científicos ou ferramentas de restore. Sem dependência instalada.
+
+Impedimentos preservados: WEB-031 exige fingerprint ED25519 comprovado por
+painel/console confiável antes de SSH; as ferramentas desta sessão não fornecem
+esse acesso autenticado. Solicitada a comprovação ao responsável, sem presumir
+resposta. Nenhum acesso à VPS. WEB-032 depende dessa réplica e do `verify` real
+na candidata, que a instrução atual proíbe executar. WEB-055 também exige revisão
+humana das três jornadas; não foi inventada aprovação. Os trabalhos locais
+restantes discriminados em EV-M8-INTEGRADA-20261115 continuam pendentes e não
+são classificados como impedidos pelo fingerprint. Progresso **37/56**, M8
+**2/12**, sem novos aceites integrais.
+
+Próxima ação local: catálogo/status de WEB-050 e checklist AA de WEB-048;
+seguir as dependências até WEB-055. Ação externa: obter comprovação independente
+da hostkey para WEB-031. WEB-032 só pode fechar após essas dependências e
+autorização de CI na candidata; nenhuma redução de gate ou avanço a M9.
+
+### Retomada anterior — encerramento solicitado e gate WEB-031, 2026-11-15
 
 A missão iniciou com pedido de fechar pendências de M8 sem CI/merge. Pedidos
 posteriores autorizaram WEB-031 sintética VPS→Mint, condicionando expressamente
