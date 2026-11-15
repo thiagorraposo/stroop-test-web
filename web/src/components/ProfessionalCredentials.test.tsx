@@ -34,11 +34,13 @@ test('login acessivel envia senha integra em JSON, limpa imediatamente e abre pe
   await submit()
   expect(input('password').value).toBe('')
   expect(container.querySelector('button')?.disabled).toBe(true)
+  expect(container.querySelector('[role="status"]')?.textContent).toBe('Verificando credenciais…')
   expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/auth/login')
   expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'POST', credentials: 'same-origin', cache: 'no-store', body: JSON.stringify({ username: ' Synthetic ', password: secret }) })
   expect(authenticated).not.toHaveBeenCalled()
   await act(async () => resolve(response(profile)))
   expect(authenticated).toHaveBeenCalledWith(profile)
+  expect(container.querySelector('[role="status"]')?.textContent).toBe('')
   expect(container.innerHTML).not.toContain(secret)
 })
 
@@ -49,6 +51,11 @@ test('falha de login usa erro generico e nao ecoa resposta nem conserva senha', 
   input('username').value = 'synthetic'; input('password').value = secret
   await submit()
   expect(container.querySelector('[role="alert"]')?.textContent).toBe('Usuário ou senha inválidos.')
+  const error = container.querySelector('[role="alert"]')!
+  for (const name of ['username', 'password']) {
+    expect(input(name).getAttribute('aria-invalid')).toBe('true')
+    expect(input(name).getAttribute('aria-describedby')?.split(' ')).toContain(error.id)
+  }
   expect(input('password').value).toBe('')
   expect(document.activeElement).toBe(input('password'))
   expect(authenticated).not.toHaveBeenCalled()

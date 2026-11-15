@@ -1,6 +1,6 @@
 # Projeto Stroop Test — backlog canônico da plataforma WEB
 
-Última verificação documental: **2026-11-14**. Missão e limites:
+Última verificação documental: **2026-11-15**. Missão e limites:
 [arquitetura](ARQUITETURA_WEB.md); inventário: [auditoria](AUDITORIA_REPLANEJAMENTO.md);
 especificação: [requisitos e matriz](REQUISITOS_E_RASTREABILIDADE.md).
 Este é o único registro executável de marcos, tarefas, estados, dependências,
@@ -50,7 +50,7 @@ de legados sem merge automático (WEB-027, EV-M7-027), e cobertura operacional e
 
 ## Painel visual de acompanhamento
 
-Atualizado em **2026-11-14**, a partir das fichas deste backlog.
+Atualizado em **2026-11-15**, a partir das fichas deste backlog.
 
 | Entregáveis aceitos | Ainda sem aceite | Marco autorizado | Próxima ação |
 |---|---|---|---|
@@ -2421,6 +2421,108 @@ superfícies públicas/login da ficha, sem promover catálogo a conformidade glo
 Não há bloqueio técnico externo para essas verificações. WEB-049 permanece
 PENDENTE até o aceite completo, e WEB-055 mantém a campanha integrada própria.
 
+#### Continuidade — acessibilidade de catálogo, início e login, 2026-11-15
+
+Execução de M8 na branch `fix/m8-acessibilidade-superficies`, base `f33749d`.
+Conferência dirigida às lacunas do inventário A/AA acima, sem repetir baseline
+ou auditoria global. WEB-048 permanece EM_VALIDACAO: esta evidência cobre
+catálogo/início/login, não concede conformidade às composições autenticadas,
+aos módulos ainda não migrados ou a WEB-055. Nenhum novo aceite pelo código.
+
+Correções observáveis:
+
+- Tooltip agora atende Escape também quando aberto pelo ponteiro, sem exigir
+  foco no botão de ajuda. Listener existe somente durante hover/foco visível e
+  é removido ao dispensar/sair/desmontar. Permanência ao passar ao conteúdo e
+  cancelamento de clique por saída do ponteiro exercitados nos dois browsers.
+- Campos de data recebem contorno também quando o segmento nativo no shadow DOM
+  tem foco; controles administrativos têm scroll-margin para preservar o
+  contorno na rolagem por teclado. Percurso compara todos os controles realmente
+  tabuláveis/visíveis, sem contar conteúdo de details fechado ou radio não
+  selecionado como parada obrigatória, e verifica retorno por Shift+Tab.
+- Login associa erro genérico 401 aos dois campos, sem revelar qual credencial
+  falhou. Erro de serviço tem descrição associada, mas não invalida credenciais.
+  Senha continua limpa imediatamente, usuário mantido em RAM, autocomplete e
+  cancelamento/pagehide preservados. Status persistente de envio fica **fora**
+  do formulário com aria-busy, para não adiar o anúncio assistivo; nenhum novo
+  dado/contrato HTTP/cookie/grant/armazenamento foi introduzido.
+- Textos neutros pequenos do início/login e etapas tiveram contraste corrigido:
+  #697287/#f4f3ed media 4,335:1 e #687184/#f4f3ed 4,410:1; agora usam #475569.
+  Tokens de estímulo, palavras, tintas, tempos e HUD não foram alterados.
+- Conteúdo inicial deixa cartões encolherem na grade; etapas, cabeçalho e
+  exemplos públicos acomodam ampliação de texto e espaçamento. Exemplos podem
+  mudar de linha sem quebrar as palavras de cor. Sem overflow:hidden ou redução
+  de fonte para ocultar transbordamento; apresentação experimental preservada.
+
+| Critérios do inventário anterior | Conferência desta unidade e alcance |
+|---|---|
+| 1.3.2, 2.1.1/2, 2.4.3/7/11, 2.5.8 | Catálogo: todas as paradas tabuláveis alcançadas, foco/centro não cobertos, limites e alvos >=24px; Tab/Shift+Tab, nativos de data/radio e controles compostos. Login: foco no campo após erro e skip link do App operável. Não é percurso completo da área autenticada. |
+| 1.3.4, 1.4.12 | Retrato/paisagem e espaçamento customizado; catálogo nas cinco larguras e 320, sem corte de texto; início/login com texto 200% e espaçamento, sem scroll global. |
+| 1.4.3/11 | Contraste computado dos componentes normal/hover/foco/seleção/erro/tooltip, labels/hints/badges, inputs/bordas e textos públicos/login. Sem recolorir estímulos. Pares de módulos futuros exigem conferência própria. |
+| 1.4.4/10 | Roteiro nativo ampliado a catálogo/início/login, 200% em 1366/1920 e 400% em 1280, nos dois navegadores; texto 200% separado usa duplicação dos tamanhos computados, sem alegar zoom nativo de texto. |
+| 1.4.13, 2.5.2 | Ajuda por foco/hover permanece ao alcançar conteúdo, Escape dispensa sem foco; pointerdown/saída/pointerup não executam ação; click completo executa uma vez. |
+| 1.3.5, 3.3.1/3, 4.1.2/3 | Autocomplete username/current-password preservado; estados de envio/erro, descrição e valor/foco verificados. Ensaio Orca/Firefox confirma anúncio real de envio e erro. Não reexecuta gerenciador externo de senhas nem toda jornada autenticada. |
+
+Validação final local, somente fixtures sintéticas; Linux `7.0.0-43-generic`,
+Python 3.12.3, Node 24.15.0, Chromium 156.0.8078.4 e Firefox 157.0:
+
+- `npm --prefix web test -- --reporter=dot`: **366/366**, 30 arquivos, zero
+  skips. Tipos e build Vite aprovados; aviso histórico de bundle >500 kB mantido.
+- Em `web/`, `WEB_TEST_PORT=4296 node node_modules/@playwright/test/cli.js test
+  e2e/accessibility-surfaces.spec.ts e2e/component-catalog.spec.ts
+  e2e/presentation.spec.ts e2e/navigation.spec.ts --workers=2 --trace=off
+  --output=test-results/m8-aa-validated`: **48/48**, 58,9 s, sem skips.
+  Inclui oito novos casos por navegador, cinco larguras/reflow, orientação,
+  contraste, teclado, estados e regressão das dez cores/contorno/centro/HUD.
+  Após a última revisão de seletores/contraste, repetição isolada de
+  `e2e/accessibility-surfaces.spec.ts --output=test-results/m8-aa-spec-final`:
+  **16/16**, 24,3 s, sem skips.
+- Com `TEST_DATABASE_URL` no PostgreSQL 17.6 próprio
+  `stroop_etapa4_test_m8_aa_20261115`, banco `stroop_etapa4_test_m8_aa`, tmpfs,
+  loopback 32774 e credencial sintética: em `web/`,
+  `node node_modules/@playwright/test/cli.js test --config
+  playwright.local-auth.config.ts`: **10/10**, 40,4 s, sem skips,
+  React/API/PostgreSQL/HTTPS reais. Inclui novas asserções de erro associado e
+  usuário preservado, login, logout/replay, senha e privilégios preservados.
+  Python completo não repetido localmente para alterações somente frontend;
+  verify remoto continua obrigatório e executa a suíte integral.
+- `STROOP_ZOOM_DISPLAY=:96 WEB_TEST_PORT=4297 node
+  web/e2e/manual/native-zoom.mjs`: **18/18**, exit 0 em rodada isolada;
+  catálogo/início/login, duas ampliações de 200% e uma de 400% por browser,
+  viewport 320 no último caso. auth/me do App é double 401 no roteiro nativo,
+  distinguindo-o da integração HTTPS real acima. Campo do login operável e
+  limpo; diálogo mantém teclado/retorno; scroll global não excede clientWidth.
+  Capturas X11 sintéticas por superfície/dialog, ignoradas, amostras de início
+  400% e login 200%/360 px inspecionadas pelo agente. Rodada anterior em paralelo
+  encerrou com SIGTERM/exit 143 após 18 medições: preservada como interrompida,
+  não como comando aprovado; causa não determinada, sem reduzir gates.
+- Scanner oficial e prova negativa aprovados: **453 fontes**. Validador
+  documental e seus sete testes aprovados, com 90 documentos, 747 links e
+  118 âncoras; diff check aprovado. Nenhum log/PNG/coleta versionado. Banco
+  descartável e Xephyr/Vite próprios encerrados, demais recursos preservados.
+- Orca 46.1 + Firefox em Xephyr :95 e D-Bus/config/cache temporários próprios:
+  catálogo (campo/erro, tabs, diálogo) e navegação início→login. Saída de fala e
+  braille conferidas pelo agente: “Usuário entry obrigatório”, “Verificando
+  credenciais…” e “Usuário ou senha inválidos.” Região sob aria-busy não havia
+  anunciado envio; movida para fora e anúncio comprovado em repetição. Não é
+  escuta humana/aprovação do proprietário. Logs/capturas sintéticos temporários,
+  não versionados. Orca foi encerrado pelo harness; exit 1 e avisos de serviços
+  GTK/portal no encerramento preservados, sem tratá-los como falha funcional
+  dos anúncios nem como conclusão global de acessibilidade.
+
+Falhas preservadas: rodada inicial **6 aprovados/6 falhos** (Escape hover,
+contorno externo de data/percurso e status de envio). Rodadas intermediárias
+**10/12**, **10/14**, **13/14**, mais dois casos de texto ampliado inicialmente
+falhos. Corrigidos fatos reais acima e defeitos do harness: contagem arbitrária
+substituída pelo conjunto real de paradas, details fechado não é parada apesar
+de possuir geometria, rolagem de foco tem margem, e skip link é alcançado a
+partir do foco inicial no main. Sem reduzir contraste/zoom/reflow. Primeira
+invocação a partir da raiz acionou npx e resolução de Playwright 1.65.1 em cache,
+falhando por mistura de versões; nenhuma dependência/manifests/locks do projeto
+mudaram. Comandos seguintes usam diretamente o executável 1.64.1 já instalado
+em web; artefato sintético acidental na raiz foi removido. Não houve alteração
+metodológica, migration, acesso a coletas ou deploy.
+
 ### WEB-049 — Consolidar sidebar responsiva nos três eixos profissionais
 
 - Marco: M8. Prioridade: P1. Complexidade: G. Estado: PENDENTE.
@@ -4090,7 +4192,35 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 
 ## Retomada
 
-### Retomada vigente — fundação visual e catálogo aplicado de M8, 2026-11-14
+### Retomada vigente — acessibilidade das superfícies de M8, 2026-11-15
+
+Novo `continue o projeto e depois faça o github flow` autoriza a continuidade
+em M8 e a integração da unidade validada por PR/checks/Merge Commit tradicional.
+Inicialização limpa em main/origin/main `f33749d6ac8738e4b8bca74bbf9cc134cdc22548`
+após fetch; PR #20 MERGED e CI pós-merge
+[43669323090](https://github.com/thiagorraposo/stroop-test-web/actions/runs/43669323090)
+SUCCESS, observados nesta sessão, sem transferir aceites funcionais.
+Branch de trabalho `fix/m8-acessibilidade-superficies`, sem alterações
+preexistentes. Recursos operacionais ignorados preservados.
+
+WEB-048 EM_VALIDACAO: esta unidade corrige falhas observáveis e amplia a
+conferência ao início e login. WEB-050 continua EM_ANDAMENTO, sem novo escopo
+implementado nesta unidade. WEB-049/051 aguardam seus pré-requisitos; WEB-031
+segue bloqueada por autorização externa. Progresso **37/56**, M8 **2/12**.
+Sem autorização de M9, dados reais, configuração externa ou deploy.
+
+Git da unidade: commit de implementação identificável por
+`git log -1 --format=%H --grep='fix(web): corrige acessibilidade de ajuda e login'`.
+Push/PR/verify/merge novos serão registrados somente depois de observados.
+Não transferir o sucesso da CI de f33749d à nova revisão. Auto-merge deve ficar
+desabilitado; merge exclusivamente tradicional após verify da SHA exata.
+
+Evidências em EV-M8-048, continuação de 2026-11-15. Próxima ação após o GitHub
+Flow desta unidade: conferir os estados da área autenticada e composições
+restantes de WEB-048, antes do aceite/WEB-049; WEB-050 mantém catálogo residual,
+sem promover agregações/exportação v2 de WEB-051/053 a capacidades existentes.
+
+### Retomada anterior — fundação visual e catálogo aplicado de M8, 2026-11-14
 
 Novo pedido de continuidade em sequência autoriza tarefas elegíveis de M8 até
 seu limite. Branch `feat/m8-componentes-consulta-integrada` sobre main/origin/main

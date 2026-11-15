@@ -29,8 +29,17 @@ export function Accordion({ title, children }: { title: string; children: ReactN
 }
 export function Tooltip({ label, children }: { label: string; children: ReactNode }) {
   const id = useId(), [dismissed, setDismissed] = useState(false)
+  const [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false)
+  useEffect(() => {
+    if ((!hovered && !focused) || dismissed) return
+    const dismiss = (event: KeyboardEvent) => { if (event.key === 'Escape') setDismissed(true) }
+    document.addEventListener('keydown', dismiss)
+    return () => document.removeEventListener('keydown', dismiss)
+  }, [hovered, focused, dismissed])
   return <span className={`ui-tooltip ${dismissed ? 'ui-tooltip-dismissed' : ''}`}
-    onMouseEnter={() => setDismissed(false)} onFocus={() => setDismissed(false)} onKeyDown={event => { if (event.key === 'Escape') setDismissed(true) }}>
+    onMouseEnter={() => { setHovered(true); setDismissed(false) }} onMouseLeave={() => setHovered(false)}
+    onFocus={() => { setFocused(true); setDismissed(false) }}
+    onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
     <button type="button" aria-describedby={dismissed ? undefined : id}>{children}</button>
     {!dismissed && <span id={id} role="tooltip">{label}</span>}
   </span>
