@@ -2071,9 +2071,9 @@ no fechamento desta sessão; hash do próprio registro consultável no Git.
 - Critérios de aceite: Massa sintética restaurada isoladamente, schema/dados/recibo conferidos; réplica+agenda+alerta e retorno de imagem ensaiados, RPO/RTO medidos e limites aceitos.
 - Testes/verificação: `scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`, `scripts/smoke_local_auth_restore.py`, `tests/test_web_backup_replication.py`, `tests/test_vps_rollback.py`. EV-M8-031-MINT comprova restauração positiva/negativa, conteúdo em 21 tabelas, cadastros/vínculos/auditoria, SSH local/idempotência/hostkey incorreta, timer com cópia/atraso/indisponibilidade e rollback. Réplica VPS→notebook ainda não ensaiada.
 - Evidências: EV-M8-031-LOCAL-20261115 (Retomada vigente): ensaios locais reexecutados; acesso remoto condicionado a hostkey independente não comprovada. EV-M8-029/031 histórica preservada; EV-M8-031-MINT, 2026-11-12: receptor Mint instalado, 36 testes locais, 14 migrations/uma avaliação/16 tentativas/12 métricas restauradas. Cópia 2,079 s/118.821 bytes; restore da cópia 9,285 s, exclusivamente locais. Sem RPO/RTO externo comprovado.
-- Riscos/bloqueios: R08/R09. Notebook autorizado como destino temporário e identidade SSH exclusiva preparada. Proprietário/operador deve fornecer host/porta/usuário e fingerprint confiável, aprovar instalação restrita da chave/exportador na VPS e comprovar custódia AES separada. Depois medir ensaio externo e recuperação ponta a ponta. Notebook intermitente não garante RPO 24 h em desligamentos prolongados; RTO 4 h não presumido nem limite dispensado. Procedimento concreto no runbook; nenhuma alteração/conexão à VPS nesta execução. WEB-032 permanece dependente.
+- Riscos/bloqueios: R08/R09. Autorização de 2026-11-15 permite ensaio exclusivamente sintético entre HostGator `108.174.145.177:22022`, usuário `raposo`, e notebook Mint, incluindo instalação temporária restrita e limpeza remota. Condição expressa ainda não satisfeita: verificar ED25519 pelo painel/console confiável antes da primeira conexão; valor da conversa/known_hosts não autentica independentemente. Não há sessão autenticada acessível nesta execução, portanto nenhuma conexão remota foi feita. Metadados comprovam AES sintética 0600 em diretório 0700 separado do ciphertext; chave operacional preservada. Após comprovar hostkey, executar transferência/restauração externas e medir/aceitar RPO/RTO. Notebook intermitente não garante 24 h em desligamentos prolongados; RTO 4 h não presumido nem dispensado. WEB-032 permanece dependente.
 - Referências: REQ-INF-003; [arquitetura](ARQUITETURA_WEB.md).
-- Git da entrega parcial: branch `test/m6-m8-validacao-isolada`; commit/envio/CI no fechamento desta sessão.
+- Git da entrega parcial: histórico em `test/m6-m8-validacao-isolada`; revalidação atual em `feat/m8-entregaveis-integrados`, commit `a3ef4aab9d0d484d52a0d759a65456fecaed15d3`, push confirmado. CI e merge não executados por instrução; ver fechamento na Retomada.
 - CHG-004: Réplica externa independente continua obrigatória; após evolução de schema local, WEB-032 revalida restauração de hashes/sessões com custódia e invalidação de sessões restauradas para não ressuscitar acessos. RPO/RTO externo requer medição e aceite, não conta Google.
 - CHG-005: Como o backup PostgreSQL passará a incluir tabelas cadastrais nominais (`web_patients` e `web_evaluators` da migration `0014`), o ensaio de restauração e réplica criptografada deve comprovar integridade dos cadastros, vínculos e trilhas de auditoria sem expor nomes em logs operacionais.
 
@@ -4252,7 +4252,7 @@ Git: base limpa main/origin/main `a0723d3`, fetch conferido; branch
 posterior; sem PR para não disparar CI, sem workflow_dispatch, sem pipeline CI
 local/remoto, sem merge/tag/release/deploy. Testes locais discriminados não
 são aprovação Actions. Não foi consultada CI para alegar resultado atual.
-Próxima ação exata, somente em futura continuidade autorizada: comprovar hostkey
+Próxima ação exata, em futura retomada e sem repetir autorização já concedida: comprovar hostkey
 por painel/console confiável e então ensaiar WEB-031 externamente dentro do
 escopo sintético aprovado, ou retomar o ramo CHG-007 independente. WEB-032
 permanece PENDENTE, inclusive verify da candidata expressamente não executado.
@@ -4338,6 +4338,28 @@ expectativa e regex fechada do filename; rodada final 8/8 acima. Suites de todos
 os antigos módulos/fluxos e a campanha completa de volume/AA/jornadas não foram
 reexecutadas, portanto não há aceite transversal de WEB-055.
 
+
+### Fechamento verificável — WEB-031 local e unidade parcial, 2026-11-15
+
+Entrega em **`a3ef4aab9d0d484d52a0d759a65456fecaed15d3`**, branch
+`feat/m8-entregaveis-integrados`, push com upstream confirmado. Comando do
+commit: `feat(web): integra consulta e exportação com navegação em três eixos`.
+Os ensaios WEB-031, provas locais da unidade e falhas intermediárias estão nas
+evidências acima, sem aceites adicionais. A imagem histórica reexecutada pela
+WEB-031 não é a imagem desse commit; nova interface foi validada separadamente
+pelo frontend/HTTPS/API/PG atuais. Árvore inicial limpa, nenhuma alteração
+preexistente descartada. PG tmpfs `stroop_etapa4_test_m8_entregaveis` removido após
+todos os testes; recursos de outras sessões preservados. Harnesses encerrados.
+
+Registro final é identificável por `git log -1 --format=%H
+--grep='docs(web): encerra ensaios locais de WEB-031 e registra bloqueio remoto'`;
+conferir seu envio por igualdade HEAD/upstream/referência remota da branch.
+Sem PR, CI local/remota, merge, acesso à VPS ou deploy nesta sessão.
+**Encerrada a execução conforme pedido**, sem iniciar outra tarefa após o gate.
+WEB-031 continua bloqueada e M8 não encerrado; não apresentar verificação local
+como conclusão da réplica externa. Nenhuma nova confirmação é exigida para as
+ações sintéticas já autorizadas, mas a comprovação independente da hostkey
+continua condição obrigatória antes de qualquer acesso remoto.
 
 ### Retomada anterior — acessibilidade das superfícies de M8, 2026-11-15
 
