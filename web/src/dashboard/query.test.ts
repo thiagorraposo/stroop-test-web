@@ -48,6 +48,26 @@ test('QUERY7: tipo Go/No-Go tem identidade canônica e não perde recorte no POS
   expect(() => assessmentQueryFilters(query)).toThrow('Go/No-Go exige a consulta POST normalizada.')
 })
 
+test('QUERY7: IDs cadastrais normalizam UUIDs, integram POST e bloqueiam transporte/exportação legados', () => {
+  const pidA = '11111111-1111-4111-8111-111111111111', pidB = '22222222-2222-4222-8222-222222222222'
+  const evalUuid = '33333333-3333-4333-8333-333333333333'
+  const query = defaultQuery('a')
+  query.filters = { patient_id: [pidB.toUpperCase(), pidA, pidA], evaluator_id: [evalUuid.toUpperCase(), 'EVA-000001'] }
+  const canonical = defaultQuery('a')
+  canonical.filters = { patient_id: [pidA, pidB], evaluator_id: [evalUuid, 'EVA-000001'] }
+  expect(queryKey(query)).toBe(queryKey(canonical))
+  expect(analysisQueryBody(query).query.filters).toMatchObject({
+    patient_id: [pidA, pidB],
+    evaluator_id: [evalUuid, 'EVA-000001'],
+  })
+  expect(supportsLegacyExport(query)).toBe(false)
+  expect(() => assessmentQueryFilters(query)).toThrow('IDs cadastrais exigem a consulta POST normalizada.')
+  const evalOnlyUuid = defaultQuery('a')
+  evalOnlyUuid.filters = { evaluator_id: [evalUuid] }
+  expect(supportsLegacyExport(evalOnlyUuid)).toBe(false)
+  expect(() => assessmentQueryFilters(evalOnlyUuid)).toThrow('IDs cadastrais exigem a consulta POST normalizada.')
+})
+
 test('QUERY7: condição/resposta são conjuntos canônicos e chegam integralmente ao servidor', () => {
   const query = defaultQuery('a')
   query.filters.test_code = ['stroop_go_nogo_ptbr']

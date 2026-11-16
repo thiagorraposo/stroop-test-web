@@ -46,6 +46,7 @@ export type AdministrativeModule =
 const filterLabels: Record<string, string> = {
   start_date: 'Data inicial',
   end_date: 'Data final',
+  patient_id: 'Pacientes (UUID)',
   participant_id: 'Participantes',
   visit: 'Visitas',
   evaluator_id: 'Avaliadores',
@@ -88,6 +89,7 @@ export function ProfessionalDashboard({
   const [aggregateMessage, setAggregateMessage] = useState<string | null>(null)
   const [tableState, setTableState] = useState<ResultsTableState>({ page: 1, size: 25, search: '', sort: 'started_at', direction: 'desc', compact: false, columns: [] })
   const [registeredPatientsCount, setRegisteredPatientsCount] = useState<number | null>(null)
+  const [registeredPatients, setRegisteredPatients] = useState<{ id: string; participant_code: string }[]>([])
 
   const queryIO = useRef<AbortController | null>(null)
   const detailIO = useRef<AbortController | null>(null)
@@ -129,15 +131,22 @@ export function ProfessionalDashboard({
   useEffect(() => {
     if (!project) {
       setRegisteredPatientsCount(null)
+      setRegisteredPatients([])
       return
     }
     const io = new AbortController()
-    void listPatients({ page_size: 1 }, io.signal)
+    void listPatients({ page_size: 100 }, io.signal)
       .then(res => {
-        if (!io.signal.aborted) setRegisteredPatientsCount(res.total)
+        if (!io.signal.aborted) {
+          setRegisteredPatientsCount(res.total)
+          setRegisteredPatients(Array.isArray(res.items) ? res.items.map(item => ({ id: item.id, participant_code: item.participant_code })) : [])
+        }
       })
       .catch(() => {
-        if (!io.signal.aborted) setRegisteredPatientsCount(null)
+        if (!io.signal.aborted) {
+          setRegisteredPatientsCount(null)
+          setRegisteredPatients([])
+        }
       })
     return () => io.abort()
   }, [project, revision])
@@ -461,7 +470,7 @@ export function ProfessionalDashboard({
     <ProfessionalShell profile={profile} active={activeModule} onNavigate={setActiveModule}>
     <div className="professional-dashboard" aria-label="Painel administrativo da pesquisa">
       {projects.length > 0 && query && draft && <div hidden={!analyticModule}>
-        <ResearchFilters projects={projects} initialProject={project} loading={loading}
+        <ResearchFilters projects={projects} patients={registeredPatients} initialProject={project} loading={loading}
           value={draft} applied={query} refreshKey={revision} onChange={editQuery} onApply={applyQuery} />
         <p className="quiet" role="status">Consulta aplicada {generation}. {loading ? 'Carregando conjunto completo…' : error ? 'Conjunto indisponível; atualize a consulta.' : 'Consulta carregada.'}</p>
               {query && (
@@ -491,7 +500,7 @@ export function ProfessionalDashboard({
 
 
         {instruments.length > 1 && <p role="status">Há instrumentos diferentes no recorte. Aplique um instrumento para comparar métricas ou exportar a visão filtrada.</p>}
-        {query && !supportsLegacyExport(query) && <p role="status">Para exportar os filtros avançados, use Exportações e gere uma nova prévia do recorte.</p>}
+        {query && !supportsLegacyExport(query) && <p role="status">Para exportar os filtros avançados, use Exportações e gere uma nova prévia do recorte; nenhum arquivo sem esses filtros é gerado.</p>}
       </div>}
 
       {analyticModule && error && <>

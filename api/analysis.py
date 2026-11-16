@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import json
 import re
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 from urllib.parse import urlencode
 
@@ -20,6 +20,8 @@ from api.sessions import _professional_write, _reject_query
 from stroop.application import web_assessments as application
 
 router = APIRouter(prefix='/api/v1/analysis', tags=['analysis'])
+UUID_PATTERN = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+UuidStr = Annotated[str, Field(pattern=UUID_PATTERN)]
 
 
 class QueryFilters(RequestModel):
@@ -27,6 +29,7 @@ class QueryFilters(RequestModel):
     date_to: str | None = None
     start_date: str | None = None
     end_date: str | None = None
+    patient_id: list[UuidStr] = Field(default_factory=list, max_length=100)
     participant_code: list[str] = Field(default_factory=list, max_length=100)
     participant_id: list[str] = Field(default_factory=list, max_length=100)
     visit: list[str] = Field(default_factory=list, max_length=100)
@@ -98,6 +101,7 @@ def normalize(selection: QuerySelection):
         raise APIError('invalid_request')
     raw = selection.filters.model_dump(exclude_none=True)
     raw.pop('status')
+    patient_id = sorted({str(UUID(value)) for value in raw.pop('patient_id', [])})
     go_nogo = sorted(set(raw.pop('go_nogo')))
     if go_nogo and set(raw.get('test_code', [])) != {'stroop_go_nogo_ptbr'}:
         raise APIError('invalid_request')
@@ -138,12 +142,20 @@ def normalize(selection: QuerySelection):
         if not value:
             continue
         if isinstance(value, list):
-            value = sorted(set('psychopy_local' if key == 'platform' and item == 'psychopy' else item for item in value))
+            if key == 'platform':
+                value = sorted(set('psychopy_local' if item == 'psychopy' else item for item in value))
+            elif key == 'evaluator_id':
+                value = sorted(set(str(UUID(item)) if re.fullmatch(UUID_PATTERN, item) else item for item in value))
+            else:
+                value = sorted(set(value))
         normalized[key] = value
         legacy[aliases.get(key, key)] = ['psychopy' if item == 'psychopy_local' else item for item in value] if key == 'platform' else value
     # Não reproduzir regex/allowlists das rotas existentes.
     validation_request = Request({'type': 'http', 'query_string': urlencode(legacy, doseq=True).encode()})
     filters = _filters(validation_request)
+    if patient_id:
+        normalized['patient_id'] = patient_id
+        filters['patient_id'] = patient_id
     if go_nogo:
         normalized['go_nogo'] = go_nogo
         filters['go_nogo'] = go_nogo
@@ -203,9 +215,10 @@ async def analysis_query(request: Request, body: AnalysisRequest):
     # Recortes novos nunca recebem token v1 nem perdem filtros no download.
     basic = {'date_from', 'date_to', 'participant_code', 'visit', 'evaluator_id',
              'test_code', 'test_version', 'platform', 'status', 'include_null_rt'}
+    has_evaluator_uuid = any(re.fullmatch(UUID_PATTERN, item) for item in query['filters'].get('evaluator_id', []))
     legacy_context = None
     if (set(query['filters']) <= basic and query['filters']['include_null_rt']
-            and 'assessment_ids' not in query):
+            and not has_evaluator_uuid and 'assessment_ids' not in query):
         legacy_context = {'filters': filters, 'projects': [
             {'project_id': project, 'snapshot': _signed(config, json.dumps(
                 ['assessment-snapshot-v1', project, actor.issuer, actor.subject, filters], sort_keys=True), [source, expires])}
@@ -222,7 +235,7 @@ async def analysis_query(request: Request, body: AnalysisRequest):
                                             'participant_identity': ['project_id', 'participant_code'],
                                             'visit_identity': ['project_id', 'participant_code', 'visit']},
                                   'summary': {'source': 'stroop.domain.stroop.calculate_metrics', 'population': 'complete_assessment', 'rt_unit': 'seconds'}},
-        'capabilities': {'filters': ['date_from', 'date_to', 'participant_code', 'visit', 'evaluator_id', 'test_code', 'test_version', 'platform', 'status',
+        'capabilities': {'filters': ['date_from', 'date_to', 'patient_id', 'participant_code', 'visit', 'evaluator_id', 'test_code', 'test_version', 'platform', 'status',
                                      'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max',
                                      'has_commission_errors', 'has_omission_errors',
                                      'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt'],

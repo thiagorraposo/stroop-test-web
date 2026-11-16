@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
+import { analysisFixture } from '../src/test/analysis-fixture'
 
 const catalog = '/e2e/fixtures/component-catalog.html'
 const widths = [360, 768, 1024, 1366, 1920, 320]
@@ -201,5 +202,65 @@ test('UX7-AA: texto ampliado e espaçamento público preservam leitura em retrat
       await page.getByLabel('Usuário', { exact: true }).fill('SYNTHETIC_LARGE_TEXT')
       await expect(page.getByLabel('Usuário', { exact: true })).toHaveValue('SYNTHETIC_LARGE_TEXT')
     } else await expect(page.getByRole('link', { name: 'Iniciar tutorial' })).toBeVisible()
+  }
+})
+
+test('UX7-AA: orientações, 404, barra autenticada e troca de senha mantêm contraste reflow e associação de erros', async ({ page }) => {
+  for (const route of ['/instrucoes', '/rota-inexistente']) {
+    await page.goto(route)
+    await expect(page).toHaveTitle(/Stroop Test Web/)
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 }); await noOverflow(page)
+    }
+    for (const element of await page.locator('main :is(h1,h2,p,a), .site-footer, nav a').all()) {
+      if (await element.isVisible()) expect((await contrast(element)).ratio).toBeGreaterThanOrEqual(4.5)
+    }
+  }
+  const projectId = '11111111-1111-4111-8111-111111111111'
+  let authFailed = true
+  await page.route('**/api/v1/auth/me', route => authFailed
+    ? route.fulfill({ status: 503, json: { error: { code: 'service_unavailable' } } })
+    : route.fulfill({ json: { user_id: 'synthetic', role: 'administracao', csrf_token: 's'.repeat(43), expires_at: new Date(Date.now() + 3600000).toISOString() } }))
+  await page.route('**/api/v1/projects?*', route => route.fulfill({ json: { items: [{ id: projectId, code: 'PROJ_AA', name: 'Projeto Acessível', active: true, created_at: '2026-11-16T00:00:00Z' }], next_cursor: null } }))
+  await page.route('**/api/v1/patients*', route => route.fulfill({ json: { items: [{ id: '22222222-2222-4222-8222-222222222222', participant_code: 'PAT-20261116-000001' }], total: 1, page: 1, page_size: 100 } }))
+  await page.route('**/api/v1/projects/*/assessments/options*', route => route.fulfill({ json: { participant_id: ['PAT-20261116-000001'], visit: ['V1'], evaluator_id: ['EVA-000001'], test_version: ['1.0.0'], platform: ['web'], test_code: ['stroop_go_nogo_ptbr'] } }))
+  await page.route('**/api/v1/analysis/query', route => route.fulfill({ json: analysisFixture(route.request().postDataJSON(), []) }))
+  await page.goto('/equipe')
+  await expect(page.getByRole('alert')).toContainText('temporariamente indisponível')
+  authFailed = false
+  await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click()
+  await expect(page.getByText('Sua sessão está ativa.', { exact: true })).toBeVisible()
+  await page.getByText('Alterar senha', { exact: true }).click()
+  const currentPwd = page.getByLabel('Senha atual', { exact: true })
+  const newPwd = page.getByLabel('Nova senha', { exact: true })
+  const confirmPwd = page.getByLabel('Confirmar nova senha', { exact: true })
+  await expect(currentPwd).toHaveAttribute('autocomplete', 'current-password')
+  await expect(newPwd).toHaveAttribute('autocomplete', 'new-password')
+  await expect(confirmPwd).toHaveAttribute('autocomplete', 'new-password')
+  await currentPwd.fill('Frase sintética atual 2026!')
+  await newPwd.fill('Frase sintética nova 2026!')
+  await confirmPwd.fill('Frase divergente 2026!')
+  await page.getByRole('button', { name: 'Confirmar nova senha e encerrar sessões', exact: true }).click()
+  const pwdAlert = page.locator('.password-settings [role="alert"]')
+  await expect(pwdAlert).toContainText('não corresponde')
+  await expect(newPwd).toBeFocused()
+  await expect(newPwd).toHaveAttribute('aria-invalid', 'true')
+  expect((await newPwd.getAttribute('aria-describedby'))?.split(' ')).toContain(await pwdAlert.getAttribute('id'))
+  const form = page.getByRole('form', { name: 'Filtros da consulta' })
+  await form.getByLabel('Data inicial', { exact: true }).fill('2026-11-16')
+  await form.getByLabel('Data final', { exact: true }).fill('2026-11-01')
+  await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  const filterAlert = form.getByRole('alert')
+  await expect(filterAlert).toContainText('anterior ou igual')
+  await expect(form.getByLabel('Data inicial', { exact: true })).toHaveAttribute('aria-invalid', 'true')
+  expect(await form.getByLabel('Data inicial', { exact: true }).getAttribute('aria-describedby')).toBe(await filterAlert.getAttribute('id'))
+  await form.getByText('Filtros avançados e ordenação', { exact: true }).click()
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 }); await noOverflow(page)
+  }
+  for (const selector of ['.session-bar :is(p,button)', '.password-settings :is(summary,p,label,button)', '.research-filters :is(h3,p,label,legend,summary,button)']) {
+    for (const element of await page.locator(selector).all()) {
+      if (await element.isVisible()) expect((await contrast(element)).ratio, selector).toBeGreaterThanOrEqual(4.5)
+    }
   }
 })

@@ -9,10 +9,11 @@ export function analysisFixture(body: AnalysisBody, rows: (Assessment & { projec
   const filters: Record<string, unknown> = {}
   const aliases: Record<string, string> = { date_from: 'start_date', date_to: 'end_date', participant_code: 'participant_id' }
   const basic = ['date_from', 'date_to', 'participant_code', 'visit', 'evaluator_id', 'test_code', 'test_version', 'platform']
-  const legacy = Object.entries(body.query.filters).every(([key, value]) => {
+  const legacy = !body.query.assessment_ids?.length && Object.entries(body.query.filters).every(([key, value]) => {
     if (key === 'status') return value === 'valid'
     if (key === 'include_null_rt') return value === true
     if (!basic.includes(key)) return false
+    if (key === 'evaluator_id' && Array.isArray(value) && value.some(x => typeof x === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x))) return false
     filters[aliases[key] ?? key] = key === 'platform' ? (value as string[]).map(x => x === 'psychopy_local' ? 'psychopy' : x) : value
     return true
   })
@@ -31,7 +32,7 @@ export function analysisFixture(body: AnalysisBody, rows: (Assessment & { projec
     indicator_definitions: { counts: { kind: 'operational_count', population: 'official_assessments_and_main_trials', timezone: 'UTC',
       participant_identity: ['project_id', 'participant_code'], visit_identity: ['project_id', 'participant_code', 'visit'] },
     summary: { source: 'stroop.domain.stroop.calculate_metrics', population: 'complete_assessment', rt_unit: 'seconds' } },
-    capabilities: { filters: [...basic, 'status', 'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt',
+    capabilities: { filters: [...basic, 'patient_id', 'status', 'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt',
       'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max', 'has_commission_errors', 'has_omission_errors'],
       status: ['valid'], trial_filters: { stroop_go_nogo_ptbr: ['condition', 'response_type', 'go_nogo'] },
       grouping: [body.grouping],

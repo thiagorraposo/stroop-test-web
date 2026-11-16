@@ -22,6 +22,7 @@ const empty: AssessmentFacets = {
 }
 
 const labels = {
+  patient_id: 'Pacientes (cadastro central)',
   participant_id: 'Participantes (códigos)',
   visit: 'Visitas',
   evaluator_id: 'Avaliadores (identificação técnica)',
@@ -31,12 +32,14 @@ const labels = {
 
 export function ResearchFilters({
   projects,
+  patients = [],
   initialProject,
   loading,
   onApply,
   value, applied, onChange, refreshKey = 0,
 }: {
   projects: Project[]
+  patients?: { id: string; participant_code: string }[]
   initialProject: string
   loading: boolean
   onApply(query: ResearchQuery): void
@@ -56,6 +59,7 @@ export function ResearchFilters({
   const end = draft.filters.end_date ?? ''
   const instruments = toArray(draft.filters.test_code)
   const values = {
+    patient_id: toArray(draft.filters.patient_id),
     participant_id: toArray(draft.filters.participant_id),
     visit: toArray(draft.filters.visit),
     evaluator_id: toArray(draft.filters.evaluator_id),
@@ -245,11 +249,13 @@ export function ResearchFilters({
             options={projects.map(project => ({ value: project.id, label: `${project.code}${project.active ? '' : ' (inativo)'}` }))} />
           <label>
             Data inicial
-            <input type="date" value={start} onChange={event => setStart(event.target.value)} />
+            <input type="date" value={start} aria-invalid={Boolean(start && end && start > end) || undefined}
+              aria-describedby={validation ? validationId : undefined} onChange={event => setStart(event.target.value)} />
           </label>
           <label>
             Data final
-            <input type="date" value={end} onChange={event => setEnd(event.target.value)} />
+            <input type="date" value={end} aria-invalid={Boolean(start && end && start > end) || undefined}
+              aria-describedby={validation ? validationId : undefined} onChange={event => setEnd(event.target.value)} />
           </label>
           <SearchableMultiSelect label="Instrumento da consulta" value={instruments} onChange={setInstruments}
             options={[...new Set([...facets.test_code, ...instruments])].sort().map(code => ({ value: code, label: code }))} />
@@ -266,8 +272,12 @@ export function ResearchFilters({
           {(Object.keys(labels) as (keyof typeof labels)[]).map(key => (
             <SearchableMultiSelect key={key} label={labels[key]} value={values[key]}
               onChange={items => setValues({ ...values, [key]: items })}
-              options={[...new Set([...facets[key], ...values[key]])].sort().map(value => ({ value,
-                label: value === 'LEGADO_NAO_MAPEADO' && key === 'evaluator_id' ? 'Legado sem identificação técnica' : value }))} />
+              options={key === 'patient_id'
+                ? [...new Map<string, string>([...values.patient_id.map(id => [id.toLowerCase(), id.toLowerCase()] as const),
+                    ...patients.map(p => [p.id.toLowerCase(), `${p.participant_code} (${p.id.toLowerCase()})`] as const)]).entries()]
+                    .sort(([a], [b]) => a.localeCompare(b)).map(([value, label]) => ({ value, label }))
+                : [...new Set([...facets[key], ...values[key]])].sort().map(value => ({ value,
+                    label: value === 'LEGADO_NAO_MAPEADO' && key === 'evaluator_id' ? 'Legado sem identificação técnica' : value }))} />
           ))}
         </div>
 

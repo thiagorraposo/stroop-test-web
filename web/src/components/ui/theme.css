@@ -53,6 +53,7 @@
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+  container-type: inline-size;
 }
 .professional-theme :is(.ui-card, .ui-field, .ui-tabs, .ui-date-range, .ui-multiselect) { min-width: 0; }
 .professional-theme :is(button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
@@ -159,6 +160,11 @@
   .professional-theme .professional-sidebar { display: none; }
   .professional-theme .mobile-navigation { display: inline-flex; margin-bottom: 16px; }
   .professional-theme .ui-drawer nav { display: flex; flex-direction: column; gap: 16px; }
+}
+@container (max-width: 1023px) {
+  .professional-theme .professional-shell, .professional-theme .professional-shell.sidebar-collapsed { display: block; }
+  .professional-theme .professional-sidebar { display: none; }
+  .professional-theme .mobile-navigation { display: inline-flex; margin-bottom: 16px; }
 }
 .professional-theme .table-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
 .professional-theme .table-controls label { display: block; }

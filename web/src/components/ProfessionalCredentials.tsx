@@ -57,16 +57,20 @@ export function ProfessionalLogin({ onAuthenticated }: { onAuthenticated: (profi
 }
 
 export function ProfessionalPassword({ profile, onEnded }: { profile: ProfessionalProfile; onEnded: () => void }) {
+  const hintId = useId()
+  const errorId = useId()
   const form = useRef<HTMLFormElement>(null)
+  const nextRef = useRef<HTMLInputElement>(null)
   const operation = useRef<AbortController | null>(null)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ message: string; invalid: boolean } | null>(null)
   useEffect(() => {
     const element = form.current
     const clear = () => { element?.reset(); operation.current?.abort() }
     window.addEventListener('pagehide', clear)
     return () => { clear(); window.removeEventListener('pagehide', clear) }
   }, [])
+  useEffect(() => { if (!busy && error) nextRef.current?.focus() }, [busy, error])
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy || !form.current) return
@@ -74,7 +78,7 @@ export function ProfessionalPassword({ profile, onEnded }: { profile: Profession
     const next = form.current.elements.namedItem('new-password') as HTMLInputElement
     const confirmation = form.current.elements.namedItem('confirm-password') as HTMLInputElement
     if (next.value !== confirmation.value) {
-      setError('A confirmação da nova senha não corresponde.'); form.current.reset(); next.focus(); return
+      setError({ message: 'A confirmação da nova senha não corresponde.', invalid: true }); form.current.reset(); next.focus(); return
     }
     const io = new AbortController()
     operation.current = io
@@ -87,21 +91,26 @@ export function ProfessionalPassword({ profile, onEnded }: { profile: Profession
     } catch (cause) {
       if (!io.signal.aborted) {
         if (cause instanceof ApiError && cause.status === 401) onEnded()
-        else setError(apiErrorMessage(cause))
+        else setError({ message: apiErrorMessage(cause), invalid: cause instanceof ApiError && cause.status === 422 })
       }
     } finally { if (!io.signal.aborted) setBusy(false) }
   }
+  const describedBy = [hintId, error ? errorId : null].filter(Boolean).join(' ')
   return <details className="password-settings">
     <summary>Alterar senha</summary>
+    <p role="status" className="professional-login-status">{busy ? 'Alterando senha…' : ''}</p>
     <form className="professional-credentials" ref={form} onSubmit={event => void submit(event)} aria-label="Alterar senha" aria-busy={busy}>
-      <p>Use de 15 a 128 caracteres. A alteração encerra todas as sessões da conta, inclusive esta.</p>
+      <p id={hintId}>Use de 15 a 128 caracteres. A alteração encerra todas as sessões da conta, inclusive esta.</p>
       <label htmlFor="current-password">Senha atual</label>
-      <input id="current-password" name="current-password" type="password" autoComplete="current-password" required disabled={busy} />
+      <input id="current-password" name="current-password" type="password" autoComplete="current-password" required disabled={busy}
+        aria-describedby={error ? errorId : undefined} />
       <label htmlFor="new-password">Nova senha</label>
-      <input id="new-password" name="new-password" type="password" autoComplete="new-password" required disabled={busy} />
+      <input id="new-password" ref={nextRef} name="new-password" type="password" autoComplete="new-password" required disabled={busy}
+        aria-invalid={error?.invalid || undefined} aria-describedby={describedBy} />
       <label htmlFor="confirm-password">Confirmar nova senha</label>
-      <input id="confirm-password" name="confirm-password" type="password" autoComplete="new-password" required disabled={busy} />
-      {error && <p role="alert">{error}</p>}
+      <input id="confirm-password" name="confirm-password" type="password" autoComplete="new-password" required disabled={busy}
+        aria-invalid={error?.invalid || undefined} aria-describedby={describedBy} />
+      {error && <p role="alert" id={errorId}>{error.message}</p>}
       <button className="button secondary" disabled={busy}>{busy ? 'Alterando…' : 'Confirmar nova senha e encerrar sessões'}</button>
     </form>
   </details>

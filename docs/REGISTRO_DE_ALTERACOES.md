@@ -4,6 +4,20 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-16 — IDs cadastrais na consulta aplicada e acessibilidade UX7-AA de superfícies
+
+`POST /api/v1/analysis/query` e o estado aplicado React passam a suportar
+`patient_id` (UUID do cadastro central, avaliando vínculo WEB e mapa explícito
+ativo de legado em `web_legacy_entity_links` sem ler nome/iniciais e recusando
+ambiguidade com 409) e `evaluator_id` (UUID de `web_evaluators` ou código
+`EVA-...`). `legacy_export_context` (CSV v1) permanece nulo quando filtros de
+UUID cadastral são usados, preservando a exportação pelas cinco projeções v2.
+Ampliada a cobertura `UX7-AA` (`accessibility-surfaces.spec.ts`) para `/instrucoes`,
+rota desconhecida, área autenticada em três eixos e troca de senha, com correção
+de contraste em `.content-card`, container queries para `zoom = 4` em
+`.professional-theme` e recorte de `.skip-link` não focado. Evidências, comandos,
+resultados e limites em `EV-M8-050-CADASTRAIS-AA-20261116` no backlog canônico.
+
 ## 2026-11-16 — Filtro Go/No-Go e decisão sobre RT médio
 
 Consulta aplicada passa a combinar Go/No-Go, condição e resposta na mesma

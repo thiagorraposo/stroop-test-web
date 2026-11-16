@@ -786,3 +786,66 @@ class WebAssessmentsTests(unittest.TestCase):
                                (item['assessment_id'],))
         self.assertEqual(self.h.consulta.post('/api/v1/assessments/export', json={
             **response['legacy_export_context'], 'view': {'test_code': 'stroop_go_nogo_ptbr'}}).status_code, 409)
+
+    def test_analysis_ids_cadastrais_filtram_vinculo_explicito_e_recusam_ambiguidade(self):
+        web_receipt, _ = self.complete()
+        other_web, _ = self.complete()
+        legacy_id = self.legacy()
+        self.link_legacy()
+        patient_web, patient_legacy, evaluator_uuid, participant_uuid = uuid4(), uuid4(), uuid4(), uuid4()
+        with psycopg.connect(self.database_url) as connection:
+            actor = connection.execute('SELECT issuer,subject FROM app_users LIMIT 1').fetchone()
+            pseudonym = connection.execute('SELECT participant_id FROM assessments WHERE assessment_id=%s', (legacy_id,)).fetchone()[0]
+            for pid, code, name in ((patient_web, 'PAT-20261116-000001', 'SYNTHETIC_WEB'),
+                                    (patient_legacy, 'PAT-20261116-000002', 'SYNTHETIC_LEG')):
+                connection.execute(
+                    "INSERT INTO web_patients(id,participant_code,full_name,normalized_name,created_by_issuer,created_by_subject) VALUES (%s,%s,%s,%s,%s,%s)",
+                    (pid, code, name, name.lower(), *actor),
+                )
+            connection.execute(
+                "INSERT INTO web_evaluators(id,evaluator_code,full_name,normalized_name,created_by_issuer,created_by_subject) VALUES (%s,'EVA-000001','SYNTHETIC_EVAL','synthetic_eval',%s,%s)",
+                (evaluator_uuid, *actor),
+            )
+            connection.execute(
+                'UPDATE web_assessments SET patient_id=%s, evaluator_uuid=%s WHERE assessment_id=%s',
+                (patient_web, evaluator_uuid, web_receipt['assessment_id']),
+            )
+            # patient_id em web_project_participants sem web_legacy_entity_links ativo não autoriza seleção.
+            connection.execute(
+                'INSERT INTO web_project_participants(participant_uuid,project_id,pseudonym,patient_id) VALUES (%s,%s,%s,%s)',
+                (participant_uuid, self.h.project_id, pseudonym, patient_legacy),
+            )
+        by_web_patient = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'patient_id': [str(patient_web)]}))
+        self.assertEqual(by_web_patient.status_code, 200, by_web_patient.text)
+        self.assertEqual([row['assessment_id'] for row in by_web_patient.json()['items']], [web_receipt['assessment_id']])
+        self.assertIsNone(by_web_patient.json()['legacy_export_context'])
+
+        by_eval_uuid = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'evaluator_id': [str(evaluator_uuid)]}))
+        self.assertEqual(by_eval_uuid.status_code, 200, by_eval_uuid.text)
+        self.assertEqual([row['assessment_id'] for row in by_eval_uuid.json()['items']], [web_receipt['assessment_id']])
+        self.assertIsNone(by_eval_uuid.json()['legacy_export_context'])
+
+        unlinked = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'patient_id': [str(patient_legacy)]}))
+        self.assertEqual(unlinked.status_code, 200, unlinked.text)
+        self.assertEqual(unlinked.json()['counts']['assessments'], 0)
+
+        linked = self.h.admin.post('/api/v1/admin/legacy-links', json={
+            'entity_type': 'patient', 'legacy_participant_uuid': str(participant_uuid),
+            'patient_id': str(patient_legacy), 'reason_code': 'SYNTHETIC_QUERY7_LINK',
+        })
+        self.assertEqual(linked.status_code, 201, linked.text)
+        both = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'patient_id': [str(patient_web), str(patient_legacy)]}))
+        self.assertEqual(both.status_code, 200, both.text)
+        self.assertEqual({row['assessment_id'] for row in both.json()['items']}, {web_receipt['assessment_id'], legacy_id})
+        self.assertNotIn(other_web['assessment_id'], {row['assessment_id'] for row in both.json()['items']})
+
+        with psycopg.connect(self.database_url) as connection:
+            actor = connection.execute('SELECT issuer,subject FROM app_users LIMIT 1').fetchone()
+            connection.execute(
+                "INSERT INTO web_legacy_entity_links(link_id,entity_type,legacy_participant_uuid,patient_id,reason_code,linked_by_issuer,linked_by_subject) VALUES (%s,'patient',%s,%s,'SYNTHETIC_AMBIGUOUS',%s,%s)",
+                (uuid4(), participant_uuid, patient_legacy, *actor),
+            )
+        self.assertEqual(
+            self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'patient_id': [str(patient_legacy)]})).status_code,
+            409,
+        )

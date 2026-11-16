@@ -41,15 +41,19 @@ export function defaultQuery(project: string): ResearchQuery {
   return { projects: project ? [project] : [], filters: {}, advanced: { ...defaultAdvanced, condition: [], goNogo: [], responseType: [] } }
 }
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** Remove transporte, vazios e duplicatas; ordena dimensões sem mudar seus valores. */
 export function normalizeQuery(query: ResearchQuery): ResearchQuery {
   const filters: AssessmentOptions = {}
   for (const key of ['start_date', 'end_date'] as const) {
     if (query.filters[key]) filters[key] = query.filters[key]
   }
-  for (const key of ['participant_id', 'visit', 'evaluator_id', 'test_version', 'platform', 'test_code'] as const) {
+  for (const key of ['patient_id', 'participant_id', 'visit', 'evaluator_id', 'test_version', 'platform', 'test_code'] as const) {
     const raw = query.filters[key]
-    const values = [...new Set(typeof raw === 'string' ? (raw ? [raw] : []) : raw ?? [])].sort()
+    const items = typeof raw === 'string' ? (raw ? [raw] : []) : [...raw ?? []]
+    const canonical = items.map(v => (key === 'patient_id' || (key === 'evaluator_id' && uuidPattern.test(v))) ? v.toLowerCase() : v)
+    const values = [...new Set(canonical)].sort()
     if (values.length) Object.assign(filters, { [key]: values })
   }
   return {
@@ -70,8 +74,10 @@ export function queryKey(query: ResearchQuery): string {
 
 /** O agregado atual só suporta dimensões básicas. Falha fechada até WEB-051/053. */
 export function supportsLegacyExport(query: ResearchQuery): boolean {
-  const a = normalizeQuery(query).advanced!
-  return !query.assessmentIds?.length && !a.searchText && a.status === 'valid' && a.accuracyRange === 'all'
+  const normalized = normalizeQuery(query), a = normalized.advanced!
+  const hasEvaluatorUuid = (normalized.filters.evaluator_id ?? []).some(v => uuidPattern.test(v))
+  return !query.assessmentIds?.length && !normalized.filters.patient_id?.length && !hasEvaluatorUuid
+    && !a.searchText && a.status === 'valid' && a.accuracyRange === 'all'
     && a.goAccuracyRange === 'all' && a.noGoAccuracyRange === 'all'
     && a.hasCommissionErrors === 'all' && a.hasOmissionErrors === 'all'
     && a.rtRange === 'all' && a.includeNullRt && !a.condition.length && !a.responseType.length && !a.goNogo?.length
@@ -81,6 +87,9 @@ export function supportsLegacyExport(query: ResearchQuery): boolean {
 export function assessmentQueryFilters(query: ResearchQuery): AssessmentOptions {
   const normalized = normalizeQuery(query)
   if (normalized.advanced!.goNogo?.length) throw new Error('Go/No-Go exige a consulta POST normalizada.')
+  if (normalized.filters.patient_id?.length || (normalized.filters.evaluator_id ?? []).some(v => uuidPattern.test(v))) {
+    throw new Error('IDs cadastrais exigem a consulta POST normalizada.')
+  }
   return { ...normalized.filters,
     ...(normalized.advanced!.condition.length ? { condition: normalized.advanced!.condition } : {}),
     ...(normalized.advanced!.responseType.length ? { response_type: normalized.advanced!.responseType } : {}),

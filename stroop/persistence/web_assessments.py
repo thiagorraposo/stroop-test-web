@@ -148,13 +148,34 @@ def _filters(filters):
     if filters.get('patient_search'):
         clauses.append('AND position(%s in lower(a.participant_id)) > 0')
         values.append(filters['patient_search'])
+    if filters.get('patient_id'):
+        patients = [str(UUID(value)) for value in filters['patient_id']]
+        clauses.append(
+            """AND ((wa.assessment_id IS NOT NULL AND wa.patient_id=ANY(%s::uuid[]))
+                 OR (wa.assessment_id IS NULL AND EXISTS (
+                     SELECT 1 FROM web_project_participants pp
+                     JOIN web_legacy_entity_links l
+                       ON l.legacy_participant_uuid=pp.participant_uuid
+                      AND l.entity_type='patient' AND l.active
+                     WHERE pp.project_id=p.project_id
+                       AND pp.pseudonym=a.participant_id
+                       AND l.patient_id=ANY(%s::uuid[])
+                 )))"""
+        )
+        values.extend([patients, patients])
     columns = {'participant_id': 'a.participant_id', 'visit': 'a.visit', 'test_version': 'a.test_version',
-               'platform': "COALESCE(wa.platform,'psychopy')",
-               'evaluator_id': "COALESCE(CASE WHEN wa.assessment_id IS NULL THEN NULL ELSE a.evaluator END,'LEGADO_NAO_MAPEADO')"}
+               'platform': "COALESCE(wa.platform,'psychopy')"}
     for key, column in columns.items():
         if filters.get(key):
             clauses.append(f'AND {column}=ANY(%s)')
             values.append(list(filters[key]))
+    if filters.get('evaluator_id'):
+        evaluators = list(filters['evaluator_id'])
+        clauses.append(
+            """AND (COALESCE(CASE WHEN wa.assessment_id IS NULL THEN NULL ELSE a.evaluator END,'LEGADO_NAO_MAPEADO')=ANY(%s)
+                 OR (wa.assessment_id IS NOT NULL AND wa.evaluator_uuid::text=ANY(%s)))"""
+        )
+        values.extend([evaluators, evaluators])
     for key, operator in [('start_date', '>='), ('end_date', '<=')]:
         if filters.get(key):
             clauses.append(f'AND a.assessment_date {operator} %s')

@@ -21,6 +21,24 @@ def execute(value):
             connection.execute('UPDATE web_project_members SET active=false WHERE project_id=%s AND subject=%s',
                                (UUID(value['project_id']), value['subject']))
         return {}
+    if value.get('action') == 'link_patient':
+        actor_subject = primary_subject()
+        patient_id, participant_uuid = uuid4(), uuid4()
+        code = f'PAT-20261116-{patient_id.int % 900000 + 100000}'
+        with psycopg.connect(database) as connection:
+            connection.execute(
+                "INSERT INTO web_patients(id,participant_code,full_name,normalized_name,created_by_issuer,created_by_subject) VALUES (%s,%s,'SYNTHETIC_PATIENT_RESTRICTED','synthetic_patient_restricted',%s,%s)",
+                (patient_id, code, ISSUER, actor_subject),
+            )
+            connection.execute(
+                "INSERT INTO web_project_participants(participant_uuid,project_id,pseudonym,patient_id) VALUES (%s,%s,'P_SINTETICO_W15',%s)",
+                (participant_uuid, UUID(value['project_id']), patient_id),
+            )
+            connection.execute(
+                "INSERT INTO web_legacy_entity_links(entity_type,legacy_participant_uuid,patient_id,reason_code,linked_by_issuer,linked_by_subject) VALUES ('patient',%s,%s,'SYNTHETIC_E2E_QUERY7',%s,%s)",
+                (participant_uuid, patient_id, ISSUER, actor_subject),
+            )
+        return {'patient_id': str(patient_id), 'participant_code': code}
     role = value['role']
     if role not in ('consulta', 'importacao', 'administracao'):
         raise ValueError('Perfil sintetico invalido')

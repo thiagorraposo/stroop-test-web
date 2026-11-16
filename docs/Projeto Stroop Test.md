@@ -2529,6 +2529,36 @@ mudaram. Comandos seguintes usam diretamente o executável 1.64.1 já instalado
 em web; artefato sintético acidental na raiz foi removido. Não houve alteração
 metodológica, migration, acesso a coletas ou deploy.
 
+#### Continuidade — superfícies públicas complementares, área autenticada e troca de senha, 2026-11-16
+
+Ampliada a verificação de `WEB-048` em `web/e2e/accessibility-surfaces.spec.ts`
+para cobrir `/instrucoes`, rota desconhecida (`/rota-inexistente`), área
+profissional autenticada nos três eixos e formulário de alteração de senha
+(`ProfessionalPassword`). Corrigidos achados observáveis nos navegadores reais:
+
+- `ProfessionalPassword` (`web/src/components/ProfessionalCredentials.tsx`):
+  associação programática da instrução de política (`aria-describedby="new-password-hint"`)
+  e da mensagem de erro (`aria-invalid`, retorno de foco ao campo relevante e
+  limpeza imediata de ambas as senhas em qualquer erro), com `<p role="status">`
+  posicionado fora do `<form aria-busy={busy}>` para anúncio assistivo imediato.
+- Contraste em `.content-card` (`web/src/styles.css`): `.eyebrow`, `.quiet`,
+  `.example-label` e `.journey-indicator` em `/instrucoes` e `/rota-inexistente`
+  tinham contraste 4,335:1 sobre `#f4f3ed`; alinhados a `#475569` (>5,9:1).
+- Reflow com ampliação CSS 400% em 1280×1080 (`web/src/components/ui/theme.css`
+  e `web/src/styles.css`): adicionado `container-type: inline-size` em
+  `.professional-theme` e `@container (max-width: 1023px)` / `@container (max-width: 850px)`
+  para colapsar a coluna lateral de 240 px da `.professional-shell` e reduzir o
+  padding interno quando a largura efetiva cai para 320 CSS px sob `zoom: 4`.
+- Recorte de `.skip-link:not(:focus)` (`web/src/styles.css`): `clip-path: inset(50%)`
+  e `pointer-events: none` evitam que o atalho oculto posicionado em `top: -70px`
+  dentro de `.professional-shell` intercepte cliques sobre `<summary>Alterar senha</summary>`
+  acima do shell.
+- Validação em Chromium 156.0.8078.4 e Firefox 157.0: `accessibility-surfaces.spec.ts`
+  **18/18 aprovados** (e **60/60** na campanha combinada com `component-catalog`,
+  `research-filters`, `applied-query` e `presentation`, 47,5 s, zero skips).
+  `WEB-048` permanece `EM_VALIDACAO` para revisão final do checklist A/AA nos
+  módulos integrados restantes antes do aceite formal.
+
 ### WEB-049 — Consolidar sidebar responsiva nos três eixos profissionais
 
 - Marco: M8. Prioridade: P1. Complexidade: G. Estado: PENDENTE.
@@ -3263,6 +3293,42 @@ WEB-050 continua **EM_ANDAMENTO**: status operacionais segregados, IDs cadastrai
 RT médio/capacidades residuais e checklist UX7-AA continuam sem aceite integral.
 Busca nominal segue gates próprios; nenhuma habilitação por inferência.
 WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
+
+#### Continuação — IDs cadastrais (`patient_id` e `evaluator_id`) e associação acessível de período, 2026-11-16
+
+Ampliado o seletor e o contrato `POST /api/v1/analysis/query` para suportar IDs
+cadastrais tipados conforme `REQ-REL-004` e `CHG-007` (`EV-M8-050-CADASTRAIS-AA-20261116`
+na Retomada):
+
+- `QueryFilters` (`api/analysis.py`) aceita `patient_id: list[UuidStr]` (até 100
+  UUIDs normalizados para minúsculas, ordenados e sem duplicatas; strings soltas
+  ou códigos `PAT-...` são rejeitados com 422, mantendo `participant_id` como
+  alias de `participant_code`) e normaliza UUIDs em `evaluator_id` (aceitando
+  tanto UUID de `web_evaluators` quanto `evaluator_code`). `'patient_id'` passa
+  a constar em `capabilities.filters`.
+- `stroop/persistence/web_assessments.py` seleciona por `patient_id` avaliando
+  `wa.patient_id = ANY(%s::uuid[])` nas avaliações WEB ou vínculo explícito ativo
+  em `web_legacy_entity_links` (`entity_type = 'patient'`, `active = true`) para
+  participante legado do mesmo projeto autorizado, sem considerar `patient_id`
+  direto de `web_project_participants` sem mapa ativo e retornando `409 Conflict`
+  (`SnapshotConflict`) quando houver mais de um mapa ativo para o mesmo
+  participante legado. `evaluator_id` seleciona por `a.evaluator` (`evaluator_code`)
+  ou `wa.evaluator_uuid::text`. Toda a leitura ocorre exclusivamente com o papel
+  SELECT (`READER`) sobre colunas técnicas já concedidas, sem acessar `full_name`
+  ou `initials`.
+- `legacy_export_context` (CSV v1) permanece `null` quando `patient_id` é usado
+  ou quando `evaluator_id` contém UUID; prévia e download CSV v2 (`ExportHubPanel`)
+  preservam integralmente o recorte em todas as cinco granularidades.
+- `ResearchFilters.tsx` e `ProfessionalDashboard.tsx` expõem a multisseleção
+  pesquisável `Pacientes (cadastro central)` (`patient_id`) populada por
+  `{ id, participant_code }` autorizados nos projetos selecionados, sem expor
+  nomes nominais em rascunho, chips, resumo aplicado, URL ou storage, e associam
+  erro de período inválido (`aria-invalid` e `aria-describedby`) aos campos
+  `Data inicial` e `Data final`.
+- `WEB-050` permanece **EM_ANDAMENTO**: restam status operacionais segregados
+  (`invalidated`, `aborted`, `expired`, `in_progress` com contagens operacionais
+  próprias separadas de `A/T`) e fechamento integral do checklist `UX7-AA` antes
+  do aceite formal.
 
 ### WEB-051 — Consolidar seleção analítica autorizada e agregações no servidor
 
@@ -4217,7 +4283,105 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 
 ## Retomada
 
-### Retomada vigente — filtro Go/No-Go e CHG-009, 2026-11-16
+### Retomada vigente — IDs cadastrais na consulta aplicada e acessibilidade UX7-AA de superfícies, 2026-11-16
+
+Continuidade do projeto no marco **M8** (`WEB-050` e `WEB-048`), respeitando a
+instrução explícita de não executar CI, merge ou deploy. `WEB-050` permanece
+**EM_ANDAMENTO** e `WEB-048` permanece **EM_VALIDACAO**. Progresso global mantido
+em **38/56 (67,9%)**, M8 **3/12 aceitos** (`WEB-029`, `WEB-030` e `WEB-031` por
+`CHG-008`); nenhum avanço implícito a M9.
+
+**EV-M8-050-CADASTRAIS-AA-20261116**:
+
+1. **IDs cadastrais em `POST /api/v1/analysis/query` e no estado aplicado React (`WEB-050`):**
+   - `api/analysis.py` adiciona `patient_id: list[UuidStr]` (até 100 UUIDs
+     normalizados para minúsculas, sem duplicatas e ordenados; strings soltas ou
+     códigos `PAT-...` retornam 422, mantendo `participant_id` para códigos) e
+     normaliza UUIDs em `evaluator_id` (aceitando UUID de `web_evaluators` ou
+     `evaluator_code`). `'patient_id'` consta em `capabilities.filters`.
+   - `stroop/persistence/web_assessments.py` seleciona avaliações WEB por
+     `wa.patient_id = ANY(%s::uuid[])` e avaliações legadas exclusivamente por
+     mapa explícito ativo em `web_legacy_entity_links` (`entity_type = 'patient'`,
+     `active = true`) no mesmo projeto autorizado (ignorando `patient_id` direto
+     em `web_project_participants` sem mapa ativo e recusando com `409 Conflict`
+     quando houver mais de um mapa ativo para o mesmo participante legado).
+     `evaluator_id` seleciona por `a.evaluator` ou `wa.evaluator_uuid::text`.
+     Executado integralmente pelo papel `READER` (`SELECT`) em transação
+     `REPEATABLE READ READ ONLY`, sem ler `full_name`/`initials` e sem alterar
+     `REQUIRED_COLUMNS` ou migrations.
+   - `legacy_export_context` (CSV v1) permanece `null` quando `patient_id` é
+     usado ou quando `evaluator_id` contém UUID; prévia e download CSV v2
+     respeitam integralmente a seleção cadastral.
+   - `web/src/dashboard/query.ts`, `web/src/api/analysis.ts`,
+     `web/src/components/ResearchFilters.tsx` e `web/src/components/ProfessionalDashboard.tsx`
+     integram `patient_id` (`Pacientes (cadastro central)`) populado apenas por
+     `{ id, participant_code }` autorizados, preservando rascunho/aplicada, chips,
+     descarte e ausência total de nomes nominais em URL, estado ou storage, além
+     de associar `aria-invalid` e `aria-describedby` aos campos `Data inicial` e
+     `Data final`.
+2. **Acessibilidade `UX7-AA` de superfícies complementares e área autenticada (`WEB-048` / `WEB-050`):**
+   - `web/src/components/ProfessionalCredentials.tsx` associa dica de política
+     (`aria-describedby="new-password-hint"`) e erro (`aria-invalid`), devolve
+     foco ao campo relevante, limpa ambas as senhas em qualquer erro e posiciona
+     `<p role="status">` fora do `<form aria-busy={busy}>`.
+   - `web/src/styles.css` e `web/src/components/ui/theme.css` corrigem o contraste
+     de `.eyebrow`, `.quiet`, `.example-label` e `.journey-indicator` dentro de
+     `.content-card` em `/instrucoes` e `/rota-inexistente` (`#475569` sobre
+     `#f4f3ed`, >5,9:1), aplicam `container-type: inline-size` e `@container` em
+     `.professional-theme` / `.professional-shell` para evitar overflow horizontal
+     sob `zoom: 4` em `1280×1080` (320 CSS px efetivos), e recortam
+     `.skip-link:not(:focus)` para não cobrir `<summary>Alterar senha</summary>`.
+
+Validação local executada nesta sessão (Linux `7.0.0-43-generic`, Python `3.12.3`,
+Node `24.15.0`, npm `11.16.0`, Playwright `1.64.1`, Chromium `156.0.8078.4` e
+Firefox `157.0`, PostgreSQL `17.6-bookworm` descartável em tmpfs/loopback
+`stroop_etapa4_test_m8_cadastral_20261116`, removido ao término; zero skips):
+
+- `.venv/bin/python -m unittest tests.test_analysis_query -v`: **4/4 aprovados**.
+- `npm --prefix web test -- --maxWorkers=2 --reporter=dot`: **370/370 aprovados**
+  em 30 arquivos, 0 skips.
+- `npm --prefix web run build`: `tsc --noEmit` e `vite build` aprovados (aviso
+  histórico de chunk >500 kB preservado).
+- Em `web/`: `WEB_TEST_PORT=4298 node node_modules/@playwright/test/cli.js test
+  e2e/accessibility-surfaces.spec.ts e2e/component-catalog.spec.ts
+  e2e/research-filters.spec.ts e2e/applied-query.spec.ts e2e/presentation.spec.ts
+  --workers=2 --trace=off --output=test-results/m8-catalog-aa-20261116-final`:
+  **60/60 aprovados** em 47,5 s (Chromium e Firefox), incluindo `18/18` em
+  `accessibility-surfaces.spec.ts`.
+- Com `TEST_DATABASE_URL` no banco descartável `stroop_etapa4_test_m8_cadastral_20261116`:
+  `.venv/bin/python -m unittest tests.test_analysis_query tests.test_web_assessments
+  tests.test_web_query_exports tests.test_web_database_provision -v`:
+  **54/54 aprovados** em 57,510 s, 0 falhas, 0 skips.
+- Em `web/` com o mesmo PostgreSQL 17.6 descartável:
+  `node node_modules/@playwright/test/cli.js test --config
+  playwright.integration.config.ts e2e/integrated/analysis-query.spec.ts
+  e2e/integrated/trial-filters.spec.ts e2e/integrated/query-exports.spec.ts
+  --workers=1 --trace=off --output=test-results/m8-cadastral-https-20261116`:
+  **14/14 aprovados** em 47,6 s (Chromium e Firefox, HTTPS/FastAPI/PG/grants reais),
+  incluindo seleção por `patient_id` (WEB e legado com mapa explícito ativo) e
+  `evaluator_id` UUID sem expor nome nominal em URL ou storage.
+
+Falhas intermediárias diagnosticadas e corrigidas antes da aprovação final:
+inferência de tupla TypeScript em `new Map` de `ResearchFilters.tsx` (corrigida
+com `Map<string, string>`); contraste 4,335:1 em `.content-card` de `/instrucoes`
+(corrigido para `#475569`); overflow horizontal em `research-filters.spec.ts` sob
+`zoom = 4` em `1280×1080` (corrigido com `@container` em `.professional-theme`);
+asserção de exportação em `applied-query.spec.ts` atualizada para o contrato de
+prévia v2 (`a3ef4aa`); interceptação de clique por `.skip-link` não focado sobre
+`<summary>Alterar senha</summary>` (corrigida com `clip-path: inset(50%)` e
+`pointer-events: none`); primeira tentativa de subir container PostgreSQL sem
+prefixo `stroop_etapa4_test` em `POSTGRES_DB` recusada pela guarda de segurança
+do teste e repetida com `POSTGRES_DB=stroop_etapa4_test_m8_cadastral_20261116`.
+
+Git: branch `feat/m8-entregaveis-integrados` (base `f61ab85`). Commit desta
+unidade identificável por `git log -1 --format=%H --grep='feat(web): integra IDs cadastrais na consulta aplicada e amplia UX7-AA'`.
+Nenhum PR, CI (`verify_web_ci.py all` ou Actions), merge ou deploy executado,
+conforme restrição expressa da sessão. Próxima ação em M8: implementar consulta
+segregada de status operacionais (`invalidated`, `aborted`, `expired`,
+`in_progress`) e quatro contagens cadastrais (`WEB-050`/`WEB-051`), e concluir a
+conferência final dos módulos de `WEB-048`..`WEB-055`.
+
+### Retomada anterior — filtro Go/No-Go e CHG-009, 2026-11-16
 
 Novo `continue o projeto` retoma M8. Proprietário aprovou explicitamente RT
 médio indisponível nesta versão, mantendo mediana oficial (CHG-009), e pediu

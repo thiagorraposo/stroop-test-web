@@ -198,3 +198,35 @@ test('QUERY7: multisseleção de condição/resposta exige capacidade e só publ
   await act(async () => button('Descartar alterações').click())
   expect(selected()).toHaveLength(2)
 })
+
+test('QUERY7: seleção cadastral de pacientes (UUID) mantém rascunho, chip e descarte sem expor nome nominal', async () => {
+  const applied = vi.fn()
+  const patientId = '11111111-1111-4111-8111-111111111111'
+  await act(async () =>
+    root.render(
+      <ResearchFilters
+        projects={mockProjects}
+        patients={[{ id: patientId, participant_code: 'PAT-20261116-000001' }]}
+        initialProject={mockProjects[0]!.id}
+        loading={false}
+        onApply={applied}
+      />,
+    ),
+  )
+  const list = [...container.querySelectorAll('fieldset')].find(
+    node => node.querySelector('legend')?.textContent === 'Pacientes (cadastro central)',
+  )!
+  expect(list).toBeDefined()
+  expect(list.textContent).toContain('PAT-20261116-000001')
+  const checkbox = list.querySelector<HTMLInputElement>('input[type="checkbox"]')!
+  await act(async () => checkbox.click())
+  expect(container.textContent).toContain('Pacientes (cadastro central): 1 sel.')
+  expect(applied).not.toHaveBeenCalled()
+  await act(async () => button('Aplicar filtros').click())
+  expect(applied).toHaveBeenCalledTimes(1)
+  expect(applied.mock.lastCall?.[0].filters.patient_id).toEqual([patientId])
+  await act(async () => container.querySelector<HTMLButtonElement>('[aria-label^="Remover filtro Pacientes (cadastro central)"]')!.click())
+  expect(checkbox.checked).toBe(false)
+  await act(async () => button('Descartar alterações').click())
+  expect(checkbox.checked).toBe(true)
+})

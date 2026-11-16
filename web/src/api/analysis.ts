@@ -95,6 +95,7 @@ export function decodeAnalysisPage(value: unknown, body: AnalysisBody): Analysis
     for (const [key, input] of Object.entries(body.query.filters)) {
       if (key === 'status' && input === 'valid' || key === 'include_null_rt' && input === true) continue
       if (!['date_from', 'date_to', 'participant_code', 'visit', 'evaluator_id', 'test_code', 'test_version', 'platform'].includes(key)) return invalid()
+      if (key === 'evaluator_id' && Array.isArray(input) && input.some(x => typeof x === 'string' && uuid.test(x))) return invalid()
       filters[aliases[key] ?? key] = key === 'platform' ? (input as string[]).map(x => x === 'psychopy_local' ? 'psychopy' : x) : input
     }
     // GET canoniza instrumento único como string; demais dimensões são arrays.
