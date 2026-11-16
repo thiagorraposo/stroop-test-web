@@ -4,6 +4,17 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-16 — Dispensa de confirmação independente SSH e aceite local de WEB-031
+
+Por instrução explícita do proprietário, registrada em CHG-008, retirada a
+confirmação independente ED25519 por painel/console/suporte como condição de
+WEB-031 e formalizado aceite no alcance dos ensaios sintéticos locais já
+registrados. Revisados ficha, painel, dependências, riscos, REQ-INF-003/matriz,
+arquitetura e runbook, preservando o histórico. Nenhum teste externo, RPO/RTO
+externo ou identidade SSH foi declarado comprovado. Comprovação externa antes
+da publicação e checagem de chave no cliente SSH preservadas. Validação apenas
+documental; estado, evidências e próxima ação somente no backlog canônico.
+
 ## 2026-11-15 — Projeção de pacientes legados na consulta integrada
 
 Corrigida a projeção de pacientes da exportação integrada para reconhecer somente

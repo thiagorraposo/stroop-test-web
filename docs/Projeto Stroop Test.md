@@ -1,6 +1,6 @@
 # Projeto Stroop Test — backlog canônico da plataforma WEB
 
-Última verificação documental: **2026-11-15**. Missão e limites:
+Última verificação documental: **2026-11-16**. Missão e limites:
 [arquitetura](ARQUITETURA_WEB.md); inventário: [auditoria](AUDITORIA_REPLANEJAMENTO.md);
 especificação: [requisitos e matriz](REQUISITOS_E_RASTREABILIDADE.md).
 Este é o único registro executável de marcos, tarefas, estados, dependências,
@@ -40,7 +40,7 @@ de denominador exigem motivo e IDs novos, sem renumerar/remover histórico.
 Histórico legado: 87% das etapas 1–12 e aceites Wxx ficam nos arquivos congelados;
 não são transferidos, nem se declaram inválidos por esta revalidação de novo escopo.
 
-Progresso atual: **37/56 entregáveis aceitos (WEB-000 a WEB-028, WEB-029/030, WEB-042/043/044, WEB-045/046 e WEB-047)**.
+Progresso atual: **38/56 entregáveis aceitos (WEB-000 a WEB-028, WEB-029/030/031, WEB-042/043/044, WEB-045/046 e WEB-047)**.
 WEB-005 é documental; WEB-006 aceita o receptor backend e contratos em banco
 sintético. M1, M2, M3, M4, M5, M6 e M7 concluídos; atomicidade e paridade aceitas em EV-M2-007/008;
 autenticação local e revisão de segurança aceitas em EV-M6-021/024; M4 integralmente concluído (6/6);
@@ -50,14 +50,14 @@ de legados sem merge automático (WEB-027, EV-M7-027), e cobertura operacional e
 
 ## Painel visual de acompanhamento
 
-Atualizado em **2026-11-15**, a partir das fichas deste backlog.
+Atualizado em **2026-11-16**, a partir das fichas deste backlog.
 
 | Entregáveis aceitos | Ainda sem aceite | Marco autorizado | Próxima ação |
 |---|---|---|---|
-| **37 de 56 · 66,1%** | **19** | **M8 em execução (2/12 aceitos)** | WEB-050: catálogo residual e UX7-AA; WEB-048 em validação; WEB-031 bloqueada |
+| **38 de 56 · 67,9%** | **18** | **M8 em execução (3/12 aceitos)** | WEB-050: catálogo residual e UX7-AA; WEB-048 em validação; WEB-031 concluída por aceite explícito CHG-008 |
 
 ```text
-Aceites   █████████████░░░░░░░   66,1%
+Aceites   ██████████████░░░░░░   67,9%
 ```
 
 A barra global é aproximada; os números são exatos, com percentual arredondado.
@@ -82,7 +82,7 @@ A ordem da tabela segue os IDs; dependências e paralelismo estão na
 | [M5](#m5--interface-administrativa-e-analítica-react) | Interface administrativa e analítica React | 🟩🟩🟩🟩🟩 **5/5** | ✅ Concluído |
 | [M6](#m6--autenticação-permissões-e-segurança) | Autenticação, permissões e segurança | 🟩🟩🟩🟩 **4/4** | ✅ Concluído |
 | [M7](#m7--integração-compatibilidade-histórica-e-transição) | Integração, compatibilidade histórica e transição | 🟩🟩🟩🟩 **4/4** | ✅ Concluído |
-| [M8](#m8--ci-infraestrutura-e-preparação-operacional) | CI, infraestrutura e preparação operacional | 🟩🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ **2/12** | ◐ Parcial; CHG-007, réplica externa e release pendentes |
+| [M8](#m8--ci-infraestrutura-e-preparação-operacional) | CI, infraestrutura e preparação operacional | 🟩🟩🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜ **3/12** | ◐ Parcial; CHG-007 e release pendentes; WEB-031 aceita no alcance local |
 | [M9](#m9--validação-técnica-e-metodológica) | Validação técnica e metodológica | ⬜⬜⬜⬜ **0/4** | ○ Pendente |
 | [M10](#m10--implantação-controlada-e-documentação-operacional) | Implantação controlada e documentação operacional | ⬜⬜⬜⬜⬜ **0/5** | ○ Pendente |
 
@@ -128,21 +128,23 @@ Clique no ID para conferir critérios, evidências e limites do aceite.
 | ✅ [WEB-026](#web-026--comprovar-intercâmbio-histórico-por-fixtures-sintéticas) | Roundtrip de exportação canônica 21 colunas e granularidades com analisador Python e SQLite | Testes sintéticos com analisar_stroop.py e import_sqlite |
 | ✅ [WEB-027](#web-027--revalidar-vínculo-explícito-de-dados-legados) | Vínculo explícito auditado de legados a cadastros centrais sem merge automático | web_legacy_entity_links e web_registry_audit_events no PostgreSQL |
 | ✅ [WEB-028](#web-028--revisar-cobertura-e-plano-de-substituição-operacional) | Cobertura operacional em 3 eixos (ADR-008/CHG-006) e paridade com Streamlit/PsychoPy | ADR-008, TRANSICAO_WEB.md e preservação total de launchers/CLIs |
+| ✅ [WEB-031](#web-031--ensaiar-restauração-réplica-e-retorno-compatível) | Recuperação sintética local e encerramento por decisão do proprietário (CHG-008) | Ensaios locais históricos; réplica externa e RPO/RTO externos não comprovados |
 
 ### Foco do marco atual
 
 Novo `continue o projeto` de **2026-11-11** autoriza **M8 — CI, infraestrutura e
-preparação operacional**, com 2/12 aceitos. WEB-050 está EM_ANDAMENTO; WEB-048
-EM_VALIDACAO após a continuidade de 2026-11-14. A preparação de WEB-031 continua bloqueada por destino externo/custódia
-não autorizados; isso impede WEB-032 e o encerramento de M8, sem bloquear
-CHG-007 independente. M7 permanece integralmente aceito (4/4). PR #18 deve
+preparação operacional**, com 3/12 aceitos. WEB-050 está EM_ANDAMENTO; WEB-048
+EM_VALIDACAO após a continuidade de 2026-11-14. WEB-031 foi encerrada por
+aceite explícito do proprietário em CHG-008, com alcance local e dispensa da
+confirmação independente da hostkey. WEB-032 ainda depende de WEB-055 e CI
+autorizada; M8 permanece aberto. M7 permanece integralmente aceito (4/4). PR #18 deve
 permanecer aberto sem merge, inclusive por ancestralidade de outra branch.
 
 | ✅ Aceito | ✅ Aceito | ✅ Aceito | ✅ Aceito |
 |---|---|---|---|
 | [WEB-025](#web-025--revalidar-importação-minimizada-e-status-idempotente): retirada upload CSV | [WEB-026](#web-026--comprovar-intercâmbio-histórico-por-fixtures-sintéticas): roundtrip 21 colunas/SQLite | [WEB-027](#web-027--revalidar-vínculo-explícito-de-dados-legados): vínculo auditado legados | [WEB-028](#web-028--revisar-cobertura-e-plano-de-substituição-operacional): paridade 3 eixos |
 
-M1, M2, M3, M4, M5, M6 e M7 permanecem 100% concluídos. M8 com 2/12 aceitos (WEB-029/030), após ampliação CHG-007.
+M1, M2, M3, M4, M5, M6 e M7 permanecem 100% concluídos. M8 com 3/12 aceitos (WEB-029/030/031), incluindo aceite explícito CHG-008.
 
 **Acompanhar impedimentos:** [riscos](#registro-de-riscos) ·
 [decisões externas](#decisões-externas-e-condições-de-desbloqueio).
@@ -177,7 +179,7 @@ Não antecipa M4/M5 nem cria marco de redesign.
 Ramo CHG-007 em M8 (somente após nova autorização): WEB-048 → WEB-049;
 WEB-050 → WEB-051; WEB-048/049/050/051 → WEB-052 e WEB-053;
 WEB-049 → WEB-054; WEB-052/053/054 → WEB-055 → WEB-032 → WEB-035 → WEB-036.
-WEB-031 segue ramo externo independente e converge em WEB-032. WEB-050/051/053
+WEB-031 converge em WEB-032 e foi aceita no alcance local por CHG-008; o ramo externo não é mais gate de M8. WEB-050/051/053
 (P0: integridade/autorização) antecedem o aceite visual integrado; não há RC
 apenas com redesign. WEB-048/050 são PRONTAS, não autorizadas a implementar nesta
 missão. M9 rehomologa a candidata; M10 atualiza documentação da interface final.
@@ -2034,7 +2036,7 @@ no fechamento desta sessão; hash do próprio registro consultável no Git.
 - Testes necessários: Build/smoke isolados, pipeline local e Actions autorizado, recuperação e benchmark limitados ao ambiente medido; casos COMP7/NAV7/QUERY7/DATA7/ANALYTICS7/EXPORT7/PREP7/UX7-AA e jornadas UX7-J1..J3.
 - Critérios de aceite: Sem skip obrigatório; WEB-048..055 aceitas; consulta, gráficos, prévia e CSV consistentes; restauração íntegra e runbooks executáveis por SHA no escopo autorizado.
 - Riscos: R08, R09, R14, R15.
-- Decisões externas: Destino de réplica e chaves sob custódia; teste externo só com autorização específica; CI verify em PR conforme workflow vigente, sem mudar proteções.
+- Decisões externas: WEB-031 aceita no alcance local por CHG-008; réplica externa permanece requisito antes da publicação, sem bloquear M8 por essa tarefa. Chaves sob custódia; teste externo só com autorização específica; CI verify conforme autorização vigente, sem mudar proteções.
 - Encerramento: todas as tarefas do marco CONCLUIDAS, critérios acima comprovados e evidência consolidada por SHA; sem aceite presumido por documentação ou código existente.
 
 ### WEB-029 — Revalidar imagens e Compose isolado em HTTPS
@@ -2065,19 +2067,23 @@ no fechamento desta sessão; hash do próprio registro consultável no Git.
 
 ### WEB-031 — Ensaiar restauração, réplica e retorno compatível
 
-- Marco: M8. Prioridade: P0. Complexidade: G. Estado: BLOQUEADA.
-- Dependências: WEB-029; destino externo de teste autorizado se necessário.
-- Responsável: Codex na execução; responsável do produto/metodológico nas aprovações externas indicadas.
-- Critérios de aceite: Massa sintética restaurada isoladamente, schema/dados/recibo conferidos; réplica+agenda+alerta e retorno de imagem ensaiados, RPO/RTO medidos e limites aceitos.
-- Testes/verificação: `scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`, `scripts/smoke_local_auth_restore.py`, `tests/test_web_backup_replication.py`, `tests/test_vps_rollback.py`. EV-M8-031-MINT comprova restauração positiva/negativa, conteúdo em 21 tabelas, cadastros/vínculos/auditoria, SSH local/idempotência/hostkey incorreta, timer com cópia/atraso/indisponibilidade e rollback. Réplica VPS→notebook ainda não ensaiada.
-- Evidências: EV-M8-031-LOCAL-20261115 (Retomada vigente): ensaios locais reexecutados; acesso remoto condicionado a hostkey independente não comprovada. EV-M8-029/031 histórica preservada; EV-M8-031-MINT, 2026-11-12: receptor Mint instalado, 36 testes locais, 14 migrations/uma avaliação/16 tentativas/12 métricas restauradas. Cópia 2,079 s/118.821 bytes; restore da cópia 9,285 s, exclusivamente locais. Sem RPO/RTO externo comprovado.
-- Riscos/bloqueios: R08/R09. Autorização de 2026-11-15 permite ensaio exclusivamente sintético entre HostGator `108.174.145.177:22022`, usuário `raposo`, e notebook Mint, incluindo instalação temporária restrita e limpeza remota. Condição expressa ainda não satisfeita: verificar ED25519 pelo painel/console confiável antes da primeira conexão; valor da conversa/known_hosts não autentica independentemente. Não há sessão autenticada acessível nesta execução, portanto nenhuma conexão remota foi feita. Metadados comprovam AES sintética 0600 em diretório 0700 separado do ciphertext; chave operacional preservada. Após comprovar hostkey, executar transferência/restauração externas e medir/aceitar RPO/RTO. Notebook intermitente não garante 24 h em desligamentos prolongados; RTO 4 h não presumido nem dispensado. WEB-032 permanece dependente.
-- Referências: REQ-INF-003; [arquitetura](ARQUITETURA_WEB.md).
-- Git da entrega parcial: histórico em `test/m6-m8-validacao-isolada`; revalidação atual em `feat/m8-entregaveis-integrados`, commit `a3ef4aab9d0d484d52a0d759a65456fecaed15d3`, push confirmado. CI e merge não executados por instrução; ver fechamento na Retomada.
-- CHG-004: Réplica externa independente continua obrigatória; após evolução de schema local, WEB-032 revalida restauração de hashes/sessões com custódia e invalidação de sessões restauradas para não ressuscitar acessos. RPO/RTO externo requer medição e aceite, não conta Google.
-- CHG-005: Como o backup PostgreSQL passará a incluir tabelas cadastrais nominais (`web_patients` e `web_evaluators` da migration `0014`), o ensaio de restauração e réplica criptografada deve comprovar integridade dos cadastros, vínculos e trilhas de auditoria sem expor nomes em logs operacionais.
+- Marco: M8. Prioridade: P0. Complexidade: G. Estado: CONCLUIDA.
+- Dependências: WEB-029.
+- Responsável: Proprietário no aceite explícito e na dispensa CHG-008; Codex no registro e nos ensaios locais históricos.
+- Critérios de aceite: Revisados por CHG-008 em 2026-11-16: aceitar massa sintética restaurada isoladamente, integridade de schema/dados/recibo/cadastros, réplica SSH local com agenda/alerta, retorno compatível e limites locais registrados. A confirmação independente ED25519 por painel/console/suporte e o ensaio VPS→notebook com RPO/RTO externos deixam de ser condições de encerramento desta tarefa. O responsável aceita o alcance local e os riscos residuais; não há declaração de validação externa.
+- Testes/verificação: Históricos, não reexecutados nesta alteração documental: `scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`, `scripts/smoke_local_auth_restore.py`, `tests/test_web_backup_replication.py`, `tests/test_vps_rollback.py`. EV-M8-031-LOCAL-20261115 registra 36 testes e smokes locais aprovados; EV-M8-031-MINT registra integridade em 21 tabelas, 14 migrations, 16 tentativas e 12 métricas, SSH local/idempotência/hostkey incorreta, timer/alertas e rollback.
+- Evidências: CHG-008 e EV-M8-031-ACEITE-20261116 na Retomada: pedido explícito do proprietário para retirar a exigência e tratar WEB-031 como concluída. EV-M8-029/031, EV-M8-031-MINT e EV-M8-031-LOCAL-20261115 preservam resultados reais. Réplica VPS→notebook e RPO/RTO externos não executados/comprovados.
+- Riscos/bloqueios: Sem bloqueio de encerramento no alcance revisado. R08/R09 continuam ABERTOS: identidade SSH sem comprovação independente, réplica externa não demonstrada, notebook intermitente sem garantia de RPO 24 h e RTO externo 4 h não medido. Aceite do proprietário não remove esses fatos nem autoriza publicação. Nenhum acesso remoto ou alteração operacional nesta sessão.
+- Referências: REQ-INF-003, CHG-008; [arquitetura](ARQUITETURA_WEB.md) e [recuperação](operacao/WEB_RECUPERACAO.md).
+- Git da entrega: Ensaios/implementação históricos em `test/m6-m8-validacao-isolada` e `feat/m8-entregaveis-integrados` (`a3ef4aa`, `c02909d`); aceite documental identificável pelo commit `docs(m8): registra dispensa e aceite explícito de WEB-031`. Push/CI/merge na Retomada vigente.
+- CHG-004: Obrigatoriedade de réplica externa para encerrar WEB-031 superada por CHG-008. WEB-032 continua revalidando hashes/sessões e invalidação de acessos restaurados; comprovação externa antes da publicação permanece no REQ-INF-003/WEB-037/039.
+- CHG-005: Integridade de cadastros, vínculos e auditoria preservada nos ensaios sintéticos locais, sem nomes em logs. Aceite local não comprova restauração externa.
 
 ### EV-M8-031-MINT — receptor temporário e ensaios sintéticos, 2026-11-12
+
+Registro histórico: bloqueios de hostkey e critérios externos de encerramento
+de WEB-031 abaixo foram superados por CHG-008 em 2026-11-16; os resultados
+técnicos e as operações não executadas permanecem como registrados.
 
 Autorização explícita do proprietário para preparar Linux Mint como receptor,
 automação local e ensaios sintéticos. Exclui modificações na VPS sem nova
@@ -2221,7 +2227,7 @@ de critério, sem conclusão de M8/WEB-032 nem autorização de publicação.
 - Riscos/bloqueios: R08, R09; decisões externas nas dependências/ficha do marco. Dependências pendentes não são falha observada.
 - Referências: requisitos transversais do marco e ADR-004; [arquitetura](ARQUITETURA_WEB.md).
 - Git da entrega: branch/commit/push/CI ainda não aplicáveis; registrar evidência real na execução.
-- CHG-004: Candidata deve incluir WEB-024 local aceita, AUTH-L08/L09, manifesto/schema/locks novos, runbooks sem cliente Google obrigatório, provisionamento/recuperação e invalidação de sessões no restore/rollback. Réplica externa WEB-031 e M7 continuam impeditivos; nenhuma publicação.
+- CHG-004: Candidata deve incluir WEB-024 local aceita, AUTH-L08/L09, manifesto/schema/locks novos, runbooks sem cliente Google obrigatório, provisionamento/recuperação e invalidação de sessões no restore/rollback. Dependência WEB-031 satisfeita pelo aceite explícito CHG-008 no alcance local; M7 e demais gates da candidata preservados. Réplica externa antes da publicação continua em REQ-INF-003/WEB-037/039; nenhuma publicação.
 - CHG-005: Candidata deve incluir schema aditivo `0014`, suítes `CAD-01..03`, `PREP-01`, `DASH-01`, `EXP-CSV-01` e `E2E-FLOW-01` verdes no pipeline por SHA, e smoke Compose atualizado para o fluxo com cadastro central de pacientes/avaliadores e sem upload CSV de produto.
 
 - CHG-007: Candidata só após WEB-048..055 aceitas, com evidência de igualdade consulta→prévia→CSV, UX integrada, acessibilidade e CI verify na SHA candidata. Aceites WEB-029/030 preservados; nenhuma tag/release/deploy implícitos.
@@ -3609,7 +3615,7 @@ CHG-007: documentação/handoff devem corresponder à interface final aceita (ma
 - Marco: M10. Prioridade: P0. Complexidade: M. Estado: PENDENTE.
 - Dependências: WEB-041.
 - Responsável: Codex na execução; responsável do produto/metodológico nas aprovações externas indicadas.
-- Critérios de aceite: Plano concreto e candidata validada identificam release, janela, backup, schema, responsáveis, smoke/critério de retorno; resultado preparado para aprovação final do deploy antes de WEB-038, sem tocar produção.
+- Critérios de aceite: Plano concreto e candidata validada identificam release, janela, backup, schema, responsáveis, smoke/critério de retorno; resultado preparado para aprovação final do deploy antes de WEB-038, sem tocar produção. CHG-008: conferir comprovação externa de réplica e RPO/RTO exigida por REQ-INF-003 antes da publicação, com ensaio sintético isolado especificamente autorizado; aceite local de WEB-031 não substitui essa comprovação.
 - Testes/verificação: `PLANEJADO: checklist pré-publicação`. Arquivos citados existem; verificações PLANEJADAS não têm resultado.
 - Evidências: PLANEJADAS; nenhum teste desta tarefa reexecutado nesta fase. Ao executar registrar comando, resultado, data e SHA.
 - Riscos/bloqueios: R08; decisões externas nas dependências/ficha do marco. Dependências pendentes não são falha observada.
@@ -3694,8 +3700,8 @@ de mitigação no código não elimina risco sem ensaio. Atualizar somente aqui.
 | R05 | Substituir OIDC por senha local ou alterar perfis/vínculos/cadastros sem revalidar negações | Acesso cruzado a pacientes, avaliações ou exportações nominais, sessão indevida, perda de administração | Média | Crítica | WEB-021/024 aceitas; CHG-005 exige revalidar escopo por projeto em `/api/v1/patients`, `/api/v1/evaluators` e `/api/v1/exports/*` (CAD-02/03, EXP-CSV-01) | M6/M4/M5 | Segurança/técnico | ABERTO |
 | R06 | Novo schema, rótulo de projeto ou associação de legado apropria/muda histórico | Corrupção de coletas ou fusão indevida de participantes legados | Média | Crítica | Migration 0014 aditiva (`ON DELETE RESTRICT`), `web_legacy_project_links` e `web_legacy_entity_links` explícitos e auditados sem fusão automática por coincidência de nome/código (`WEB-045`/`WEB-027`) | M2/M4/M7 | Backend + proprietário | ABERTO |
 | R07 | Armazenamento de nomes completos de pacientes/avaliadores e coleta/exportação sem política institucional | Exposição de dados pessoais nominais (LGPD) e uso indevido | Alta | Crítica | Segregação física entre `web_patients`/`web_evaluators` e `assessments`, exportação `deidentified` por padrão, `nominal` restrito a autorização e `DEC-03`/`DEC-05` (`WEB-045`/`020`/`033`/`041`), zero dados nominais em logs/URLs/bootstrap participante | M4/M5/M9/M10 | Proprietário/instituição | ABERTO |
-| R08 | Publicação interrompe aplicação; backup não restaurável/retorno incompatível | Indisponibilidade/perda | Média | Crítica | Ensaio isolado schema/dados/imagens, réplica/agenda/alerta, deploy autorizado e retorno | M7/M8/M10 | Operador/proprietário | ABERTO |
-| R09 | Dependências de VPS/DNS/TLS/provisionamento local/chaves/destino externo ou CI sem PR | Bloqueio de homologação/recuperação e falsa prontidão | Média | Alta | Preparar local independente; inventário de recursos e validação por SHA, sem mudar proteção para contornar bloqueio | M1/M8/M10 | Operador + técnico | ABERTO |
+| R08 | Publicação interrompe aplicação; backup não restaurável/retorno incompatível | Indisponibilidade/perda | Média | Crítica | Ensaios locais históricos; CHG-008 aceita WEB-031 no alcance local sem comprovar réplica externa/RPO/RTO; comprovação antes da publicação em REQ-INF-003/WEB-037/039, deploy autorizado e retorno | M7/M8/M10 | Operador/proprietário | ABERTO |
+| R09 | Dependências de VPS/DNS/TLS/provisionamento local/chaves/destino externo ou CI sem PR | Bloqueio de homologação/recuperação e falsa prontidão | Média | Alta | CHG-008 dispensa confirmação independente da hostkey para WEB-031; identidade remota não comprovada. Preservar verificação SSH, inventário e validação por SHA; CI da candidata continua exigida | M1/M8/M10 | Operador + técnico | ABERTO |
 | R10 | Reescrever o que existe, ampliar instrumentos e manter backlogs concorrentes | Retrabalho e escopo sem controle | Alta | Alta | Auditoria, backlog único, critérios pequenos, IDs e controle de mudança; sem crédito histórico automático | Todos | Coordenador técnico | ABERTO |
 | R11 | Contorno/retirada da caixa e precisão, HUD e diferenças de renderização alteram percepção/saliência/atenção | Versões experimentais incompatíveis e evidência anterior insuficiente | Média | Alta | Aprovação visual D3/D4 pelo proprietário registrada; conferir dez cores/screenshots sintéticos Chromium/Firefox, versão/SHA distinta, WEB-044/011 e revisão WEB-034 com DEC-04. Não inferir melhoria de desempenho/validade pela redução de informação potencialmente distrativa | M3/M4/M9 | Técnico + metodológico | ABERTO |
 | R12 | Conta administrativa compartilhada: vazamento/reuso da senha, saída de integrante e autoria técnica indistinguível da identificação declarada do avaliador | Sem atribuição individual por credencial, revogação por pessoa impossível, seleção de `evaluator_id` depende de declaração operacional | Alta | Crítica | Proprietário/operador: custódia protegida, senha exclusiva, troca na alteração da equipe e revogação global; `CHG-005` separa `issued_by` (conta autenticada) de `evaluator_uuid` (avaliador responsável cadastrado em `web_evaluators`); adequação institucional avaliada em `DEC-03`/`WEB-033` | M6/M4/M5/M9/M10 | Proprietário + segurança + instituição | ABERTO |
@@ -4191,9 +4197,46 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 - Matriz requisito→tarefa→marco, IDs sequenciais/únicos, grafo e painel conferidos pelo validador; revisão semântica conferiu caminho crítico, gates externos, distinção de população A/T e cardinalidades. Somente oito Markdown canônicos em docs/ alterados. Código/testes/configurações/workflow/AGENTS/ADR-007 intactos; nenhum novo roadmap/arquivo de progresso. Histórico anterior arquivado na base Git imutável, sem fonte concorrente.
 - Git da missão: branch `docs/chg-007-replanejamento-integrado` sobre `b5fccbb`; unidade documental `2d982d7bf7cdd40f7bf9ff9bfc27430cb7d76add`, commit/push com upstream concluídos. [PR #18](https://github.com/thiagorraposo/stroop-test-web/pull/18) aberto para main, somente oito Markdown; auto-merge desabilitado. No fechamento documental, verify aguardando execução/conclusão na SHA final; merge não realizado. **Instrução posterior explícita do proprietário nesta sessão: deixar o PR aberto, sem merge.** Auto-merge permanece desabilitado; CI aprovada não autoriza integração nesta missão. Não executar merge, deploy, tag ou release. O SHA do fechamento é consultável por `git log -1 --format=%H --grep='docs(planejamento): registra envio da CHG-007'`; resultado remoto final é consultável no PR/check correspondente, sem autorreferência artificial de commit. Nenhum aceite funcional de WEB-048..055.
 
+### CHG-008 — Dispensa da confirmação independente SSH e aceite local de WEB-031
+
+- Origem/data: instrução explícita do proprietário em 2026-11-16: “altere a documentação e retire essa exigência, trate web031 como concluída”.
+- Motivo: Falha de acesso/login ao console do provedor; responsável decide remover a exigência e encerrar a tarefa com as evidências locais disponíveis.
+- Decisão aprovada: Retirar confirmação independente ED25519 por painel/console/suporte como gate de WEB-031. Para cumprir o encerramento solicitado sem inventar ensaio externo, o proprietário aceita o alcance local e dispensa réplica VPS→notebook e medição externa de RPO/RTO como critérios desta tarefa em M8. Estado CONCLUIDA por aceite explícito, não por execução externa.
+- Impacto: WEB-031 satisfaz sua dependência em WEB-032; WEB-032 ainda depende de WEB-055 e CI autorizada na candidata. REQ-INF-003 conserva comprovação externa antes da publicação em WEB-037 e confirmação no handoff WEB-039; não se declara conformidade operacional externa. Nenhuma tarefa nova, renumeração ou mudança do denominador.
+- Riscos aceitos no alcance da tarefa: R08/R09 permanecem abertos, sem identidade remota independentemente comprovada, RPO/RTO externo ou garantia de disponibilidade do notebook. Não desabilitar checagem de chave SSH, ignorar mudança de chave ou alterar código/configuração de segurança por esta dispensa.
+- Documentos afetados: Ficha/painel/Retomada/riscos deste backlog, REQ-INF-003/matriz, arquitetura, runbook de recuperação e registro de alterações. Fontes históricas anteriores a esta decisão permanecem datadas e superadas apenas nesses pontos.
+- Validação: Verificador documental, seus sete testes e diff check; resultados na Retomada. Nenhum ensaio remoto, funcional ou CI novo atribuído ao aceite; autorização não se estende a deploy, produção ou dados reais.
+
 ## Retomada
 
-### Retomada vigente — continuidade de M8 e vínculo legado na exportação, 2026-11-15
+### Retomada vigente — aceite explícito de WEB-031, 2026-11-16
+
+**EV-M8-031-ACEITE-20261116**: proprietário instruiu retirar a exigência de
+confirmação independente da chave SSH e tratar WEB-031 como concluída. CHG-008
+registra a decisão e revisa o aceite para o alcance sintético local já ensaiado.
+WEB-031 **CONCLUIDA por aceite explícito**; não foi feita conexão SSH, réplica
+VPS→notebook ou medição externa nesta sessão. R08/R09 continuam abertos;
+RPO 24 h/RTO 4 h externos e identidade remota não foram comprovados. Condições
+anteriores que bloqueavam WEB-031 por hostkey/ensaio externo estão superadas;
+registro histórico preservado, sem transformar ausência de teste em passe.
+
+Progresso **38/56 (67,9%)**, 18 sem aceite; M8 **3/12**. WEB-048 EM_VALIDACAO,
+WEB-050 EM_ANDAMENTO; WEB-032 PENDENTE de WEB-055 e dos demais gates, incluindo
+CI autorizada na candidata. REQ-INF-003/WEB-037/039 mantêm comprovação externa antes
+da publicação. Próxima ação local: checklist AA de WEB-048 e catálogo/status
+de WEB-050, seguindo dependências de WEB-048..055. Sem avanço a M9.
+
+Git: worktree inicialmente limpa, branch adequada `feat/m8-entregaveis-integrados`,
+base HEAD/upstream `3a1c2d6`; fetch conferiu main/origin/main `a0723d3`.
+Alteração exclusivamente documental. Entrega identificável por
+`git log -1 --format=%H --grep='docs(m8): registra dispensa e aceite explícito de WEB-031'`.
+Push verificável por igualdade HEAD/upstream/remoto. Mantida restrição anterior
+de não executar CI; sem PR (dispararia CI), merge, tag/release ou deploy.
+Validação documental desta sessão: verificador (11 marcos, 56 tarefas,
+75 requisitos, 15 riscos, cinco decisões e 38 aceitos), sete testes e
+`git diff --check` aprovados; nenhum teste funcional reexecutado nem nova evidência externa.
+
+### Retomada anterior — continuidade de M8 e vínculo legado na exportação, 2026-11-15
 
 Pedido atual renova a execução autônoma de M8 até conclusão ou impedimento real,
 priorizando WEB-048..055/031/032, sem CI ou deploy. Supera a limitação de encerrar

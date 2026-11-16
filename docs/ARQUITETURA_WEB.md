@@ -197,7 +197,11 @@ dados e resposta a incidentes; revisão M6 cobre XSS/CSRF/IDOR e vazamentos.
 
 Compose/Nginx/HTTPS já existem com banco/API internos, apenas proxy publicado,
 segredos externos, limites e imagens fixadas. M8 revalida build, grants, backup
-criptografado, réplica externa e restauração isolada; M10 inclui WEB-041 para implementar a configuração research já prevista no
+criptografado e restauração isolada; CHG-008 aceita WEB-031 no alcance sintético
+local por decisão explícita do proprietário, sem confirmação independente da
+hostkey ou ensaio externo como gate dessa tarefa. Réplica externa e RPO/RTO
+continuam sem comprovação e exigidos antes da publicação (REQ-INF-003/WEB-037/039);
+M10 inclui WEB-041 para implementar a configuração research já prevista no
 contrato de acesso, após aprovação institucional e autorização específica, com
 barreiras negativas e revalidação dos gates afetados. M10 exige autorização
 específica de produção, backup recente e retorno ensaiado. CI existente não faz
