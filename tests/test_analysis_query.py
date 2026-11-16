@@ -9,6 +9,22 @@ from api.errors import APIError
 
 
 class AnalysisSchemaTests(unittest.TestCase):
+    def test_go_nogo_exige_instrumento_e_normaliza_conjunto_sem_aceitar_outros_tipos(self):
+        project = str(uuid4())
+        for instruments in ([], ['other'], ['stroop_go_nogo_ptbr', 'other']):
+            with self.subTest(instruments=instruments), self.assertRaises(APIError):
+                normalize(QuerySelection.model_validate({'projects': [project], 'filters': {
+                    'test_code': instruments, 'go_nogo': ['go']}}))
+        for value in (['GO'], ['no-go'], 'go', [True], ['go'] * 3):
+            with self.subTest(value=value), self.assertRaises(ValidationError):
+                QuerySelection.model_validate({'projects': [project], 'filters': {'go_nogo': value}})
+        query, filters = normalize(QuerySelection.model_validate({'projects': [project], 'filters': {
+            'test_code': ['stroop_go_nogo_ptbr'], 'go_nogo': ['no_go', 'go']}}))
+        self.assertEqual(query['filters']['go_nogo'], ['go', 'no_go'])
+        self.assertEqual(filters['go_nogo'], ['go', 'no_go'])
+        empty, _ = normalize(QuerySelection.model_validate({'projects': [project], 'filters': {'go_nogo': []}}))
+        self.assertNotIn('go_nogo', empty['filters'])
+
     def test_aliases_equivalentes_e_limites_sem_coercao(self):
         project = str(uuid4())
         first, filters = normalize(QuerySelection.model_validate({'projects': [project], 'filters': {
@@ -29,6 +45,7 @@ class AnalysisSchemaTests(unittest.TestCase):
             with self.subTest(page=page), self.assertRaises(ValidationError):
                 AnalysisRequest.model_validate({**base, 'page': page})
         for filters in ({'patient_id': 'SYNTHETIC'}, {'accuracy_min': True}, {'status': 'invalidated'},
+                        {'rt_mean_min_ms': 0}, {'rt_mean_max_ms': 1000},
                         {'include_null_rt': 'false'}, {'platform': ['legacy']}, {'visit': ['A'] * 101}):
             with self.subTest(filters=filters), self.assertRaises(ValidationError):
                 AnalysisRequest.model_validate({**base, 'query': {'projects': [project], 'filters': filters}})

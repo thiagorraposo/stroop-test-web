@@ -16,7 +16,7 @@ def project_rows(rows, trials, granularity, columns, criteria):
     """Não lê nominal. CSV21 usa o exportador oficial sem reimplementar fórmulas."""
     by_id = {row['assessment_id']: row for row in rows}
     if granularity == 'stroop_21_colunas':
-        if criteria.get('condition') or criteria.get('response_type') or any(row['test_code'] != 'stroop_go_nogo_ptbr' for row in rows):
+        if criteria.get('condition') or criteria.get('response_type') or criteria.get('go_nogo') or any(row['test_code'] != 'stroop_go_nogo_ptbr' for row in rows):
             raise UnsupportedProjection
     result = []
     if granularity == 'pacientes':

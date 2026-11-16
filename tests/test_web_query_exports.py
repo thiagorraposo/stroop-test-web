@@ -84,6 +84,24 @@ class QueryExportTests(unittest.TestCase):
             self.assertEqual(single.status_code, 200, single.text)
             self.assertEqual([row for row in parsed if row['assessment_id'] == assessment['assessment_id']], list(csv.DictReader(io.StringIO(single.text))))
 
+    def test_export7_go_nogo_mantem_tentativas_da_consulta_e_metricas_completas(self):
+        receipt, _ = self.complete()
+        context = self.context({'test_code': ['stroop_go_nogo_ptbr'], 'go_nogo': ['no_go']})
+        self.assertEqual(context['counts']['trials'], 8)
+        for granularity, expected in [('tentativas', 8), ('metricas', 12)]:
+            with self.subTest(granularity=granularity):
+                body = self.body(context, granularity)
+                preview = self.preview(body)
+                rows = list(csv.DictReader(io.StringIO(self.download(body, preview).text)))
+                self.assertEqual(len(rows), expected)
+                self.assertEqual(preview['counts'], context['counts'])
+                self.assertEqual({row['assessment_id'] for row in rows}, {receipt['assessment_id']})
+                if granularity == 'tentativas':
+                    self.assertTrue(all(row['correct_response'] == '' for row in rows))
+                else:
+                    self.assertEqual(next(row['metric_value'] for row in rows if row['metric_code'] == 'total_trials'), '16.0')
+        self.preview(self.body(context, 'stroop_21_colunas'), 422)
+
     def test_data7_agregacao_oficial_separa_proveniencia_e_mantem_nulos(self):
         self.complete()
         self.complete(no_responses=True)

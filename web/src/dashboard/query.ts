@@ -16,6 +16,7 @@ export type AdvancedFilterValues = {
   rtRange: 'all' | 'under500ms' | '500to1000ms' | '1000to1500ms' | '1500msPlus'
   includeNullRt: boolean
   condition: Condition[]
+  goNogo?: ('go' | 'no_go')[]
   responseType: ResponseType[]
   sortBy: 'date' | 'participant' | 'accuracy' | 'response_time'
   sortOrder: 'asc' | 'desc'
@@ -32,12 +33,12 @@ export type ResearchQuery = {
 export const defaultAdvanced: AdvancedFilterValues = {
   searchText: '', status: 'valid', accuracyRange: 'all', rtRange: 'all',
   goAccuracyRange: 'all', noGoAccuracyRange: 'all', hasCommissionErrors: 'all', hasOmissionErrors: 'all',
-  includeNullRt: true, condition: [], responseType: [],
+  includeNullRt: true, condition: [], goNogo: [], responseType: [],
   sortBy: 'date', sortOrder: 'desc',
 }
 
 export function defaultQuery(project: string): ResearchQuery {
-  return { projects: project ? [project] : [], filters: {}, advanced: { ...defaultAdvanced, condition: [], responseType: [] } }
+  return { projects: project ? [project] : [], filters: {}, advanced: { ...defaultAdvanced, condition: [], goNogo: [], responseType: [] } }
 }
 
 /** Remove transporte, vazios e duplicatas; ordena dimensões sem mudar seus valores. */
@@ -56,6 +57,7 @@ export function normalizeQuery(query: ResearchQuery): ResearchQuery {
     ...(query.assessmentIds?.length ? { assessmentIds: [...new Set(query.assessmentIds)].sort() } : {}),
     advanced: { ...defaultAdvanced, ...query.advanced,
       condition: [...new Set(query.advanced?.condition ?? [])].sort(),
+      goNogo: [...new Set(query.advanced?.goNogo ?? [])].sort(),
       responseType: [...new Set(query.advanced?.responseType ?? [])].sort(),
     },
   }
@@ -72,12 +74,13 @@ export function supportsLegacyExport(query: ResearchQuery): boolean {
   return !query.assessmentIds?.length && !a.searchText && a.status === 'valid' && a.accuracyRange === 'all'
     && a.goAccuracyRange === 'all' && a.noGoAccuracyRange === 'all'
     && a.hasCommissionErrors === 'all' && a.hasOmissionErrors === 'all'
-    && a.rtRange === 'all' && a.includeNullRt && !a.condition.length && !a.responseType.length
+    && a.rtRange === 'all' && a.includeNullRt && !a.condition.length && !a.responseType.length && !a.goNogo?.length
 }
 
 /** Adapta o transporte existente; filtros de tentativa são avaliados no servidor. */
 export function assessmentQueryFilters(query: ResearchQuery): AssessmentOptions {
   const normalized = normalizeQuery(query)
+  if (normalized.advanced!.goNogo?.length) throw new Error('Go/No-Go exige a consulta POST normalizada.')
   return { ...normalized.filters,
     ...(normalized.advanced!.condition.length ? { condition: normalized.advanced!.condition } : {}),
     ...(normalized.advanced!.responseType.length ? { response_type: normalized.advanced!.responseType } : {}),
@@ -94,6 +97,7 @@ export function analysisQueryBody(query: ResearchQuery, cursor?: string): Analys
   }
   if (a.searchText.trim()) filters.patient_search = a.searchText.trim().toLowerCase()
   if (a.condition.length) filters.condition = a.condition
+  if (a.goNogo?.length) filters.go_nogo = a.goNogo
   if (a.responseType.length) filters.response_type = a.responseType
   if (a.accuracyRange === 'under50') filters.accuracy_max = 50
   if (a.accuracyRange === '50to80') { filters.accuracy_min = 50; filters.accuracy_max = 80 }

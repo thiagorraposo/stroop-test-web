@@ -483,6 +483,7 @@ export function ProfessionalDashboard({
                   {query.advanced?.hasOmissionErrors && query.advanced.hasOmissionErrors !== 'all' ? ` · erros de omissão: ${query.advanced.hasOmissionErrors === 'yes' ? 'com' : 'sem'}` : ''}
                   {query.advanced?.rtRange && query.advanced.rtRange !== 'all' ? ` · RT: ${query.advanced.rtRange}` : ''}
                   {query.advanced?.condition.length ? ` · condições: ${query.advanced.condition.join(', ')}` : ''}
+                  {query.advanced?.goNogo?.length ? ` · Go/No-Go: ${query.advanced.goNogo.map(kind => kind === 'go' ? 'Go' : 'No-Go').join(', ')}` : ''}
                   {query.advanced?.responseType.length ? ` · respostas: ${query.advanced.responseType.join(', ')}` : ''}
                   .
                 </p>

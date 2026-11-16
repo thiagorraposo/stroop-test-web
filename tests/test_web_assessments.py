@@ -750,6 +750,29 @@ class WebAssessmentsTests(unittest.TestCase):
         self.assertEqual(response.json()['counts']['assessments'], 1)
         self.assertEqual(response.json()['items'][0]['summary'], without['items'][0]['summary'])
 
+    def test_analysis_go_nogo_intersecta_na_mesma_tentativa_e_preserva_metricas(self):
+        receipt, _ = self.complete()
+        base = {'test_code': ['stroop_go_nogo_ptbr']}
+        complete = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body(base))
+        self.assertEqual(complete.status_code, 200, complete.text)
+        summary = complete.json()['items'][0]['summary']
+        for filters, assessments, trials in (
+                ({'go_nogo': ['go']}, 1, 8),
+                ({'go_nogo': ['no_go']}, 1, 8),
+                ({'go_nogo': ['no_go', 'go']}, 1, 16),
+                ({'go_nogo': ['go'], 'condition': ['incongruent']}, 0, 0),
+                ({'go_nogo': ['no_go'], 'response_type': ['hit']}, 0, 0),
+                ({'go_nogo': ['go'], 'response_type': ['hit']}, 1, receipt['summary']['hits'])):
+            with self.subTest(filters=filters):
+                response = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({**base, **filters}))
+                self.assertEqual(response.status_code, 200, response.text)
+                result = response.json()
+                self.assertEqual(result['counts']['assessments'], assessments)
+                self.assertEqual(result['counts']['trials'], trials)
+                self.assertIsNone(result['legacy_export_context'])
+                if assessments:
+                    self.assertEqual(result['items'][0]['summary'], summary)
+
     def test_analysis_preserva_exportacao_basica_no_mesmo_snapshot(self):
         self.complete()
         response = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body()).json()

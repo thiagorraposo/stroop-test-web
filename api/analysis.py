@@ -36,6 +36,7 @@ class QueryFilters(RequestModel):
     platform: list[Literal['web', 'psychopy', 'psychopy_local']] = Field(default_factory=list, max_length=100)
     condition: list[Literal['congruent', 'incongruent']] = Field(default_factory=list, max_length=100)
     response_type: list[Literal['hit', 'omission', 'commission', 'correct_rejection']] = Field(default_factory=list, max_length=100)
+    go_nogo: list[Literal['go', 'no_go']] = Field(default_factory=list, max_length=2)
     status: Literal['valid'] = 'valid'
     patient_search: str | None = Field(default=None, max_length=120)
     accuracy_min: float | None = Field(default=None, ge=0, le=100)
@@ -97,6 +98,9 @@ def normalize(selection: QuerySelection):
         raise APIError('invalid_request')
     raw = selection.filters.model_dump(exclude_none=True)
     raw.pop('status')
+    go_nogo = sorted(set(raw.pop('go_nogo')))
+    if go_nogo and set(raw.get('test_code', [])) != {'stroop_go_nogo_ptbr'}:
+        raise APIError('invalid_request')
     advanced = {key: raw.pop(key) for key in ('patient_search', 'accuracy_min', 'accuracy_max',
                 'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max',
                 'has_commission_errors', 'has_omission_errors',
@@ -140,6 +144,9 @@ def normalize(selection: QuerySelection):
     # Não reproduzir regex/allowlists das rotas existentes.
     validation_request = Request({'type': 'http', 'query_string': urlencode(legacy, doseq=True).encode()})
     filters = _filters(validation_request)
+    if go_nogo:
+        normalized['go_nogo'] = go_nogo
+        filters['go_nogo'] = go_nogo
     if advanced.get('patient_search'):
         filters['patient_search'] = advanced['patient_search']
     query = {'projects': projects, 'filters': normalized}
@@ -219,7 +226,7 @@ async def analysis_query(request: Request, body: AnalysisRequest):
                                      'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max',
                                      'has_commission_errors', 'has_omission_errors',
                                      'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt'],
-                         'status': ['valid'], 'trial_filters': {'stroop_go_nogo_ptbr': ['condition', 'response_type']},
+                         'status': ['valid'], 'trial_filters': {'stroop_go_nogo_ptbr': ['condition', 'response_type', 'go_nogo']},
                          'grouping': [body.grouping.model_dump(exclude_none=True)],
                          'sort': ['started_at_desc', 'started_at_asc', 'participant_code_asc', 'participant_code_desc', 'visit_asc',
                                   'accuracy_asc', 'accuracy_desc', 'response_time_asc', 'response_time_desc'],

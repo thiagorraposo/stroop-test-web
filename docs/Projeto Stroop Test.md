@@ -4207,9 +4207,74 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 - Documentos afetados: Ficha/painel/Retomada/riscos deste backlog, REQ-INF-003/matriz, arquitetura, runbook de recuperação e registro de alterações. Fontes históricas anteriores a esta decisão permanecem datadas e superadas apenas nesses pontos.
 - Validação: Verificador documental, seus sete testes e diff check; resultados na Retomada. Nenhum ensaio remoto, funcional ou CI novo atribuído ao aceite; autorização não se estende a deploy, produção ou dados reais.
 
+### CHG-009 — RT médio indisponível nesta versão; mediana oficial preservada
+
+- Data/motivo: 2026-11-16; divergência concreta entre catálogo alvo de M8 (RT médio) e núcleo científico `stroop.domain.stroop.calculate_metrics` (mediana dos acertos).
+- Aprovação: Proprietário respondeu **“sim”** à proposta explícita de registrar RT médio como indisponível nesta versão, preservando o cálculo oficial e mantendo o filtro por mediana.
+- Impacto: Retirar implementação de RT médio dos critérios residuais de WEB-050/051/052/053/055/032 nesta versão. `rt_mean_min_ms`/`rt_mean_max_ms` continuam recusados; nenhuma equivalência entre média e mediana. REQ-REL-004/006 e contrato HTTP registram a limitação; médias descritivas entre avaliações em WEB-051/052 continuam distintas e não foram removidas.
+- Preservação: Nenhuma fórmula, métrica, coluna CSV, tempo, estímulo, versão científica ou aceite histórico foi alterado. Denominador permanece 56, sem tarefa nova ou reabertura. Demais lacunas e gates de M8 permanecem exigidos.
+- Validação: Testes estritos recusam campos RT médio; interface informa uso da mediana e indisponibilidade. Evidências locais e Git na Retomada; nenhuma autorização de CI, M9 ou deploy decorre desta decisão.
+
 ## Retomada
 
-### Retomada vigente — aceite explícito de WEB-031, 2026-11-16
+### Retomada vigente — filtro Go/No-Go e CHG-009, 2026-11-16
+
+Novo `continue o projeto` retoma M8. Proprietário aprovou explicitamente RT
+médio indisponível nesta versão, mantendo mediana oficial (CHG-009), e pediu
+commit imediato do trabalho até aqui. WEB-050 continua EM_ANDAMENTO; WEB-048
+EM_VALIDACAO. Progresso permanece **38/56 (67,9%)**, M8 **3/12**; nenhum novo
+aceite integral. Sem avanço a M9.
+
+**EV-M8-050-GONOGO-20261116**: filtro `go_nogo` no POST normalizado, em RAM,
+exige Stroop exclusivo e combina tipo/condição/resposta na mesma tentativa.
+Classificação usa resposta esperada do domínio, sem nova fórmula científica.
+Consulta, chips, descarte e resumo aplicado incluem o tipo; prévia/CSV v2
+preservam T e métricas da avaliação completa. CSV21 recusa recorte de tentativas
+com 422. Transporte GET incompatível falha explicitamente. UI informa mediana
+oficial e indisponibilidade de RT médio; campos de média continuam recusados.
+
+Validação local até o pedido de commit:
+
+- `npm --prefix web test -- --maxWorkers=2`: **368/368**, 30 arquivos, sem skips;
+  tipos/build aprovados, aviso histórico de bundle >500 kB preservado. Guarda
+  adicional do adaptador GET e sua asserção foram incluídas depois dessa rodada;
+  reexecução focada ainda pendente no momento deste commit solicitado.
+- `TEST_DATABASE_URL` exclusivamente descartável e `.venv/bin/python -m unittest
+  tests.test_analysis_query tests.test_web_assessments tests.test_web_query_exports
+  tests.test_nucleo_compartilhado tests.test_web_export -q`: **54/54**, 95,621 s,
+  sem falhas/skips, PG 17.6 real em tmpfs/loopback, banco
+  `stroop_etapa4_test_m8_20261116`. Inclui interseções contraditórias, dois tipos,
+  preservação das métricas e CSV parseado. Teste estrito atualizado de recusa de
+  RT médio reexecutado em `tests.test_analysis_query`: **4/4**.
+- Primeira rodada Python: 35 testes, quatro falhas e um erro no teste novo:
+  comparação indevida do recibo reduzido com summary profissional completo e
+  fixture que usava string vazia onde o schema exige NULL. Corrigida a comparação
+  para consulta completa e removida a mutação inválida; constraints preservadas.
+  Rodada final 54/54 acima, sem falha de runtime atribuída àquela fixture.
+- Em `web/`, `TEST_DATABASE_URL` em banco descartável separado
+  `stroop_etapa4_test_m8_20261116_https`, Playwright com
+  `--config playwright.integration.config.ts e2e/integrated/analysis-query.spec.ts
+  e2e/integrated/query-exports.spec.ts --workers=1 --trace=off`: **em execução**
+  no pedido de commit; cinco casos Chromium observados aprovados, Firefox ainda
+  não conferido. Não declarar campanha concluída ou CI aprovada.
+- Verificador documental aprovado: 11 marcos/56 tarefas/75 requisitos/15 riscos/
+  cinco decisões/38 aceitos, 90 documentos/750 links/119 âncoras; sete testes do
+  validador aprovados. Conferência final de diff/links no commit solicitado.
+
+Ambiente: Linux 7.0.0-43-generic, Python 3.12.3, Node 24.15.0, navegadores
+Playwright locais. Somente fixtures sintéticas; nenhuma dependência, migration,
+coleta, segredo operacional ou produção alterados. Banco/container descartáveis
+próprios ainda usados nos ensaios; remover ao terminar.
+
+Git: branch `feat/m8-entregaveis-integrados`, worktree inicial limpa,
+HEAD/upstream `f3d1bfd`; fetch confirmou main/origin/main `a0723d3`. Commit desta
+unidade identificável por `feat(web): completa filtro Go/No-Go e preserva RT mediano`.
+Push ainda não executado neste registro. CI/PR/merge não executados, preservando
+restrição vigente de CI. Próxima ação: concluir a rodada HTTPS e a reexecução
+focada do adaptador GET, conferir envio e continuar catálogo residual/status
+operacionais e checklist AA de WEB-050/048 até as dependências de WEB-055/032.
+
+### Retomada anterior — aceite explícito de WEB-031, 2026-11-16
 
 **EV-M8-031-ACEITE-20261116**: proprietário instruiu retirar a exigência de
 confirmação independente da chave SSH e tratar WEB-031 como concluída. CHG-008

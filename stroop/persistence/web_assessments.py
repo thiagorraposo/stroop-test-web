@@ -163,7 +163,7 @@ def _filters(filters):
         clauses.append('AND a.test_code=ANY(%s)')
         instruments = filters['test_code']
         values.append([instruments] if isinstance(instruments, str) else list(instruments))
-    if filters.get('condition') or filters.get('response_type'):
+    if filters.get('condition') or filters.get('response_type') or filters.get('go_nogo'):
         # Resolve outcome categories through the official domain. One EXISTS
         # requires condition AND response on the SAME main trial; metrics below
         # continue to hydrate the full assessment.
@@ -173,7 +173,9 @@ def _filters(filters):
         for condition in sorted(ALLOWED_CONDITIONS):
             for key in sorted(ALLOWED_KEYS):
                 outcome = expected_outcome({'condition': condition, 'key_pressed': key})
-                if outcome and condition in conditions and (not responses or outcome[2] in responses):
+                kind = ('go' if outcome[0] else 'no_go') if outcome else None
+                if (outcome and condition in conditions and (not responses or outcome[2] in responses)
+                        and (not filters.get('go_nogo') or kind in filters['go_nogo'])):
                     pairs.append((condition, key))
         if not pairs:
             clauses.append('AND FALSE')

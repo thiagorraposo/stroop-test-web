@@ -57,9 +57,9 @@ export function decodeAnalysisPage(value: unknown, body: AnalysisBody): Analysis
     || contextKey(value.capabilities.status) !== '["valid"]'
     || contextKey(value.capabilities.platform) !== '["web","psychopy_local"]'
     || contextKey(value.capabilities.grouping) !== contextKey([body.grouping])
-    || contextKey(value.capabilities.trial_filters) !== contextKey({ stroop_go_nogo_ptbr: ['condition', 'response_type'] })
+    || contextKey(value.capabilities.trial_filters) !== contextKey({ stroop_go_nogo_ptbr: ['condition', 'response_type', 'go_nogo'] })
     || !Array.isArray(value.capabilities.filters) || !value.capabilities.filters.every(x => typeof x === 'string')
-    || !Object.keys(body.query.filters).every(key => key === 'condition' || key === 'response_type' || (value.capabilities as Record<string, unknown[]>).filters!.includes(key))
+    || !Object.keys(body.query.filters).every(key => ['condition', 'response_type', 'go_nogo'].includes(key) || (value.capabilities as Record<string, unknown[]>).filters!.includes(key))
     || !Array.isArray(value.capabilities.sort) || !value.capabilities.sort.every(x => typeof x === 'string')
     || !value.capabilities.sort.includes(body.page.sort)) return invalid()
   if (!closed(value.analytics, 'grouping timezone week_start population compatibility groups indicators')

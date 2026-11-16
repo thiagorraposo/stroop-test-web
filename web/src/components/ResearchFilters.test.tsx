@@ -179,6 +179,7 @@ test('QUERY7: multisseleção de condição/resposta exige capacidade e só publ
     return list
   }
   await select('Condição experimental', ['congruent', 'incongruent'])
+  await select('Tipo de tentativa Go/No-Go', ['go'])
   const list = await select('Tipo de resposta / erro', ['hit', 'omission'])
   expect(applied).not.toHaveBeenCalled()
   await act(async () => button('Aplicar filtros').click())
@@ -186,7 +187,7 @@ test('QUERY7: multisseleção de condição/resposta exige capacidade e só publ
   expect(applied).not.toHaveBeenCalled()
   await select('Instrumento da consulta', ['stroop_go_nogo_ptbr'])
   await act(async () => button('Aplicar filtros').click())
-  expect(applied.mock.lastCall?.[0].advanced).toMatchObject({ condition: ['congruent', 'incongruent'], responseType: ['hit', 'omission'] })
+  expect(applied.mock.lastCall?.[0].advanced).toMatchObject({ condition: ['congruent', 'incongruent'], goNogo: ['go'], responseType: ['hit', 'omission'] })
   const search = list.querySelector<HTMLInputElement>('input[type=search]')!
   await fill(search, 'comissão')
   const selected = () => [...list.querySelectorAll<HTMLInputElement>('input:checked')].map(option => option.value)

@@ -952,8 +952,13 @@ A consulta combinada (`WEB-017` / `WEB-019`) suporta filtros combinados (AND ent
 
 - **Identificação e vínculos:** `project_id` (multisseleção até 20 projetos), `patient_id` (UUID), `participant_id` (`participant_code`), `patient_search` (busca textual por nome completo autorizado, iniciais ou código), `evaluator_id` (UUID ou `evaluator_code`, multisseleção), `visit` (multisseleção ou busca), `test_code` (multisseleção), `test_version`, `platform` (`web`, `psychopy_local`, `legacy`).
 - **Datas e status:** `date_from`, `date_to` (`YYYY-MM-DD` inclusivos), `status` (`valid` padrão oficial, `invalidated`, `aborted`, `expired`, `in_progress` — consultas de sessões parciais/inválidas permanecem estritamente segregadas dos totais e métricas oficiais).
-- **Condição experimental e tipo de resposta/erro:** `condition` (`congruent`, `incongruent`), `response_type` (`hit`, `omission`, `correct_rejection`, `commission`), `has_commission_errors` (`true`/`false`), `has_omission_errors` (`true`/`false`).
-- **Métricas de precisão e tempos de reação (faixas numéricas):** `accuracy_min`, `accuracy_max` (`0..100`), `go_accuracy_min`, `go_accuracy_max`, `no_go_accuracy_min`, `no_go_accuracy_max`, `rt_median_min_ms`, `rt_median_max_ms`, `rt_mean_min_ms`, `rt_mean_max_ms`, `include_null_rt` (`true`/`false`, explícito quando `hits = 0`).
+- **Condição experimental e tipo de resposta/erro:** `condition` (`congruent`, `incongruent`), `go_nogo` (`go`, `no_go`, no POST normalizado), `response_type` (`hit`, `omission`, `correct_rejection`, `commission`), `has_commission_errors` (`true`/`false`), `has_omission_errors` (`true`/`false`).
+- **Métricas de precisão e tempos de reação (faixas numéricas):** `accuracy_min`, `accuracy_max` (`0..100`), `go_accuracy_min`, `go_accuracy_max`, `no_go_accuracy_min`, `no_go_accuracy_max`, `rt_median_min_ms`, `rt_median_max_ms`, `include_null_rt` (`true`/`false`, explícito quando `hits = 0`).
+RT médio (`rt_mean_min_ms`/`rt_mean_max_ms`) indisponível nesta versão por decisão
+explícita do proprietário em CHG-009: o núcleo oficial fornece mediana dos
+acertos. Campos de média são recusados com 422; nenhuma fórmula ou coluna
+científica foi acrescentada.
+
 - **Ordenação e paginação:** `sort` (`started_at_desc`, `started_at_asc`, `participant_code_asc`, `visit_asc`, `accuracy_desc`, `accuracy_asc`, `rt_median_asc`, `rt_median_desc`), `page`, `page_size`.
 
 ### 6. Exportação CSV avançada multi-granularidade (`/api/v1/exports/*`)
@@ -980,15 +985,25 @@ até implementação da habilitação institucional de WEB-041/DEC-03.
 ### Consulta normalizada e seleção
 
 `POST /api/v1/analysis/query` aceita as dimensões categoriais existentes, datas,
-seleção explícita `assessment_ids`, condição/resposta e faixas oficiais já
+seleção explícita `assessment_ids`, condição/resposta/Go-No-Go e faixas oficiais já
 implementadas em WEB-050. Aliases equivalentes são normalizados; contraditórios
 retornam 422. Status disponível continua somente `valid`. Busca `patient_search`
 continua sendo substring literal do código, sem leitura de nome/iniciais.
 RT mediano de entrada em ms seleciona métrica oficial da avaliação completa;
 `include_null_rt` é explícito e ausência não vira zero. Precisão geral/Go/No-Go
 e presença de omissões/comissões conservam os limites documentados na seção 5.
-RT médio, IDs cadastrais, busca nominal e status operacionais seguem indisponíveis:
+RT médio está fora do escopo desta versão por CHG-009, mantendo-se a mediana
+oficial. IDs cadastrais, busca nominal e status operacionais seguem indisponíveis:
 campos não suportados são recusados, sem aplicação parcial silenciosa.
+
+`go_nogo` aceita lista de `go`/`no_go` (até duas entradas), normalizada como
+conjunto; vazio não restringe. Exige instrumento Stroop exclusivo. Go/No-Go
+deriva da resposta esperada pelo domínio (`expected_outcome`), sem inferência
+visual ou uso de flags redundantes. Condição, resposta e Go/No-Go devem ocorrer
+na mesma tentativa principal. Os três filtros restringem A/T; métricas continuam
+da avaliação inteira. `capabilities.trial_filters` declara os três campos.
+Prévia e CSV v2 respeitam T; CSV21 recusa recorte de tentativas com 422,
+preservando o contrato científico da avaliação completa.
 
 `grouping` já admite os níveis e dimensões da estrutura alvo abaixo, com
 `time_bucket` restrito à dimensão date e `metric_code` restrito às 12 métricas

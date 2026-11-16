@@ -188,6 +188,10 @@ def analysis_dataset(database_url, actor, *, query, filters, snapshot=None, conn
             continue
         if filters.get('condition') and trial['condition'] not in filters['condition']:
             continue
+        if filters.get('go_nogo'):
+            outcome = expected_outcome({'condition': trial['condition'], 'key_pressed': trial['key_pressed'] or ''})
+            if outcome is None or ('go' if outcome[0] else 'no_go') not in filters['go_nogo']:
+                continue
         if filters.get('response_type'):
             outcome = expected_outcome({'condition': trial['condition'], 'key_pressed': trial['key_pressed'] or ''})
             if outcome is None or outcome[2] not in filters['response_type']:

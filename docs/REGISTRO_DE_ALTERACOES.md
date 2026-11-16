@@ -4,6 +4,15 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-16 — Filtro Go/No-Go e decisão sobre RT médio
+
+Consulta aplicada passa a combinar Go/No-Go, condição e resposta na mesma
+tentativa principal, usando a resposta esperada do domínio. Prévia e CSV v2
+preservam o recorte; CSV21 recusa subconjuntos de tentativas. Métricas da
+avaliação completa permanecem oficiais. CHG-009 registra aprovação explícita
+do proprietário para manter RT médio indisponível nesta versão e preservar
+RT mediano. Testes, resultados, limites e Git no backlog canônico.
+
 ## 2026-11-16 — Dispensa de confirmação independente SSH e aceite local de WEB-031
 
 Por instrução explícita do proprietário, registrada em CHG-008, retirada a

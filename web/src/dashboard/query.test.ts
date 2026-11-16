@@ -36,6 +36,18 @@ test('QUERY7: faixas Go/No-Go e ausência de erros não se perdem em falsy/defau
   expect(supportsLegacyExport(query)).toBe(false)
 })
 
+test('QUERY7: tipo Go/No-Go tem identidade canônica e não perde recorte no POST', () => {
+  const query = defaultQuery('a')
+  query.advanced!.goNogo = ['no_go', 'go', 'go']
+  const canonical = structuredClone(query)
+  canonical.advanced!.goNogo = ['go', 'no_go']
+  expect(queryKey(query)).toBe(queryKey(canonical))
+  expect(analysisQueryBody(query).query.filters.go_nogo).toEqual(['go', 'no_go'])
+  expect(supportsLegacyExport(query)).toBe(false)
+  expect(queryKey(query)).not.toBe(queryKey(defaultQuery('a')))
+  expect(() => assessmentQueryFilters(query)).toThrow('Go/No-Go exige a consulta POST normalizada.')
+})
+
 test('QUERY7: condição/resposta são conjuntos canônicos e chegam integralmente ao servidor', () => {
   const query = defaultQuery('a')
   query.filters.test_code = ['stroop_go_nogo_ptbr']
