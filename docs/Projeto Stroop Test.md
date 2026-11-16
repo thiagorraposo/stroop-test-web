@@ -4274,6 +4274,22 @@ restrição vigente de CI. Próxima ação: concluir a rodada HTTPS e a reexecu�
 focada do adaptador GET, conferir envio e continuar catálogo residual/status
 operacionais e checklist AA de WEB-050/048 até as dependências de WEB-055/032.
 
+#### Fechamento da unidade solicitada — 2026-11-16
+
+Implementação commitada em `bbde6b710c93e86870f2fcd2857940b4c861e947` e push
+confirmado por igualdade HEAD/upstream nessa SHA. Rodada HTTPS acima terminou
+**10/10 aprovada**, 1,2 min, Chromium e Firefox, sem mocks/skips. Guarda do
+adaptador GET reexecutada com `npm --prefix web test --
+ src/dashboard/query.test.ts --maxWorkers=2`: **6/6**, sem skips. Tipos já
+incluíam a guarda; nenhuma alteração adicional de runtime após o commit.
+Container próprio `stroop_etapa4_test_m8_20261116` e seus dois bancos tmpfs
+removidos ao terminar, sem alterar os demais serviços. Restrição de CI
+preservada: nenhum PR/CI/merge, tag/release ou deploy executado. WEB-050 segue
+EM_ANDAMENTO, WEB-048 EM_VALIDACAO, M8 3/12 e progresso 38/56. Próxima tarefa
+continua catálogo cadastral/status operacionais e checklist AA; RT médio deixa
+de ser pendência desta versão por CHG-009. Registro de fechamento contém
+resultados novos e não concede aceite integral.
+
 ### Retomada anterior — aceite explícito de WEB-031, 2026-11-16
 
 **EV-M8-031-ACEITE-20261116**: proprietário instruiu retirar a exigência de
