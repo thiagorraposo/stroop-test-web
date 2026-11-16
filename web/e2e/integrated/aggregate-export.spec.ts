@@ -38,7 +38,8 @@ async function download(page: Page) {
 test('CSV real corresponde a todas paginas/projetos e filtros; vinculo revogado impede novo download', async ({ page, context }) => {
   const prepared = manage('filters')
   await open(page, context, prepared)
-  await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(105)
+  await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(25)
+  await expect(page.getByRole('navigation', { name: 'Páginas da tabela de avaliações' })).toContainText('105 avaliações na tabela')
   const all = await download(page)
   expect(all.lines).toHaveLength(106)
   const body = all.request.postDataJSON()
