@@ -206,6 +206,8 @@ export function ProfessionalDashboard({
           if (first && (page.query_id !== first.query_id || page.query_fingerprint !== first.query_fingerprint
             || page.content_fingerprint !== first.content_fingerprint || page.expires_at !== first.expires_at
             || contextKey(page.counts) !== contextKey(first.counts)
+            || contextKey(page.registry_counts) !== contextKey(first.registry_counts)
+            || contextKey(page.operational.counts) !== contextKey(first.operational.counts)
             || contextKey(page.aggregates) !== contextKey(first.aggregates)
             || contextKey(page.analytics) !== contextKey(first.analytics)
             || contextKey(page.legacy_export_context) !== contextKey(first.legacy_export_context))) throw new ApiError('state_conflict', 409)
@@ -381,6 +383,88 @@ export function ProfessionalDashboard({
     </div>
   )
 
+  const operationalStatusLabels: Record<string, string> = {
+    invalidated: 'Invalidada',
+    aborted: 'Abortada / interrompida',
+    expired: 'Expirada',
+    in_progress: 'Em andamento',
+  }
+
+  const renderRegistryCounts = () =>
+    analysisContext ? (
+      <section className="overview-summary-kpis" aria-label="Quatro contagens cadastrais e de participantes">
+        <div className="kpi-grid">
+          <div className="kpi-box">
+            <span className="kpi-label">Cadastro central visível autorizado (sem filtro de avaliação)</span>
+            <strong className="kpi-value tabular-nums">{analysisContext.registry_counts.visible_patients}</strong>
+          </div>
+          <div className="kpi-box">
+            <span className="kpi-label">Pacientes vinculados a projeto</span>
+            <strong className="kpi-value tabular-nums">{analysisContext.registry_counts.project_linked_patients}</strong>
+          </div>
+          <div className="kpi-box">
+            <span className="kpi-label">Participantes com avaliação oficial válida</span>
+            <strong className="kpi-value tabular-nums">{analysisContext.registry_counts.valid_assessment_participants}</strong>
+          </div>
+          <div className="kpi-box">
+            <span className="kpi-label">Participantes do recorte</span>
+            <strong className="kpi-value tabular-nums">{analysisContext.registry_counts.filtered_participants}</strong>
+          </div>
+        </div>
+      </section>
+    ) : null
+
+  const renderOperationalSection = () => {
+    if (!analysisContext) return null
+    const op = analysisContext.operational
+    const statusFilter = query?.advanced?.status ?? 'valid'
+    if (op.counts.total === 0 && statusFilter === 'valid') return null
+    return (
+      <section className="operational-sessions-section analytics-card" aria-label="Sessões operacionais segregadas" style={{ marginTop: '1rem' }}>
+        <h3>Registros operacionais segregados (fora de A/T e das métricas oficiais)</h3>
+        <p className="quiet" role="status">
+          População operacional segregada (sem 12 métricas oficiais e excluída do CSV oficial):{' '}
+          {op.counts.invalidated} invalidada(s) · {op.counts.aborted} abortada(s) · {op.counts.expired} expirada(s) · {op.counts.in_progress} em andamento (total operacional: {op.counts.total}).
+        </p>
+        {op.items.length > 0 && (
+          <div className="table-scroll">
+            <table aria-label="Sessões operacionais segregadas">
+              <caption>Sessões operacionais segregadas ({op.items.length})</caption>
+              <thead>
+                <tr>
+                  <th>Sessão</th>
+                  <th>Projeto</th>
+                  <th>Participante</th>
+                  <th>Visita</th>
+                  <th>Instrumento</th>
+                  <th>Status operacional</th>
+                  <th>Motivo / estado</th>
+                  <th>Checkpoints</th>
+                  <th>Início / Ativação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {op.items.map(item => (
+                  <tr key={item.session_id}>
+                    <td className="tabular-nums">{item.session_id}</td>
+                    <td>{item.project_code}</td>
+                    <td className="tabular-nums">{item.participant_id}</td>
+                    <td>{item.visit}</td>
+                    <td>{item.test_code} ({item.test_version})</td>
+                    <td>{operationalStatusLabels[item.status] ?? item.status}</td>
+                    <td>{item.invalidation_reason ?? item.abort_reason ?? item.state}</td>
+                    <td className="tabular-nums">{item.confirmed_through}/16</td>
+                    <td className="tabular-nums">{item.started_at ?? item.created_at}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    )
+  }
+
   // Renderizador do painel de detalhe de avaliação
   const renderAssessmentDetail = () =>
     detail ? (
@@ -533,6 +617,8 @@ export function ProfessionalDashboard({
 
               {!loading && !error && (
                 <>
+                  {renderRegistryCounts()}
+                  {renderOperationalSection()}
                   {!rows.length ? (
                     <p role="status">Nenhuma avaliação corresponde aos filtros.</p>
                   ) : (
@@ -552,7 +638,7 @@ export function ProfessionalDashboard({
                           <div className="kpi-box">
                             <span className="kpi-label">Pacientes cadastrados acessíveis</span>
                             <strong className="kpi-value tabular-nums">
-                              {registeredPatientsCount !== null ? registeredPatientsCount : '—'}
+                              {analysisContext ? analysisContext.registry_counts.visible_patients : registeredPatientsCount !== null ? registeredPatientsCount : '—'}
                             </strong>
                           </div>
                           <div className="kpi-box">
@@ -561,7 +647,7 @@ export function ProfessionalDashboard({
                           </div>
                           <div className="kpi-box">
                             <span className="kpi-label">Avaliações interrompidas / inválidas</span>
-                            <strong className="kpi-value tabular-nums">{overviewKpis.byStatus.invalid}</strong>
+                            <strong className="kpi-value tabular-nums">{analysisContext ? analysisContext.operational.counts.total : overviewKpis.byStatus.invalid}</strong>
                           </div>
                           <div className="kpi-box">
                             <span className="kpi-label">Avaliadores no recorte</span>
@@ -953,6 +1039,8 @@ export function ProfessionalDashboard({
 
 
           {loading && <p role="status">Carregando histórico de avaliações…</p>}
+
+          {!loading && !error && renderOperationalSection()}
 
           {!loading && !error && !rows.length && (
             <p role="status">Nenhuma avaliação corresponde aos filtros.</p>

@@ -18,13 +18,25 @@ export function analysisFixture(body: AnalysisBody, rows: (Assessment & { projec
     return true
   })
   if (Array.isArray(filters.test_code) && filters.test_code.length === 1) filters.test_code = filters.test_code[0]
+  const participants = new Set(items.map(x => `${x.project_id}/${x.participant_id}`)).size
   return {
     query_id: '33333333-3333-4333-8333-333333333333', normalized_query: body.query,
     query_fingerprint: 'a'.repeat(64), content_fingerprint: 'b'.repeat(64), expires_at: expires,
     completeness: 'complete' as const,
-    counts: { participants: new Set(items.map(x => `${x.project_id}/${x.participant_id}`)).size,
+    counts: { participants,
       visits: new Set(items.map(x => `${x.project_id}/${x.participant_id}/${x.visit}`)).size,
       assessments: items.length, trials: items.reduce((n, row) => n + trialCount(row), 0) },
+    registry_counts: {
+      visible_patients: participants,
+      project_linked_patients: participants,
+      valid_assessment_participants: participants,
+      filtered_participants: participants,
+    },
+    operational: {
+      population: 'segregated_non_official_sessions' as const,
+      counts: { invalidated: 0, aborted: 0, expired: 0, in_progress: 0, total: 0 },
+      items: [],
+    },
     aggregates: body.query.projects.map(id => ({ project_id: id, assessments: items.filter(x => x.project_id === id).length,
       trials: items.filter(x => x.project_id === id).reduce((n, row) => n + trialCount(row), 0) })),
     analytics: { grouping: body.grouping, timezone: 'UTC', week_start: 'monday', population: 'complete_assessment_metrics_and_selected_main_trials', compatibility: 'stratified_by_test_version_protocol_platform', groups: [], indicators: [] },
@@ -34,7 +46,7 @@ export function analysisFixture(body: AnalysisBody, rows: (Assessment & { projec
     summary: { source: 'stroop.domain.stroop.calculate_metrics', population: 'complete_assessment', rt_unit: 'seconds' } },
     capabilities: { filters: [...basic, 'patient_id', 'status', 'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt',
       'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max', 'has_commission_errors', 'has_omission_errors'],
-      status: ['valid'], trial_filters: { stroop_go_nogo_ptbr: ['condition', 'response_type', 'go_nogo'] },
+      status: ['valid', 'invalidated', 'aborted', 'expired', 'in_progress'], trial_filters: { stroop_go_nogo_ptbr: ['condition', 'response_type', 'go_nogo'] },
       grouping: [body.grouping],
       sort: ['started_at_desc', 'started_at_asc', 'participant_code_asc', 'participant_code_desc', 'visit_asc', 'accuracy_asc', 'accuracy_desc', 'response_time_asc', 'response_time_desc'],
       platform: ['web', 'psychopy_local'], max_assessments: 5000, max_projects: 20, exports: true, nominal_search: false },

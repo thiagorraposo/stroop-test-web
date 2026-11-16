@@ -109,6 +109,7 @@ export function ExportHubPanel({ profile, context, dirty = false, onExpired }: P
   const [message, setMessage] = useState<string | null>(null)
 
   const currentGranularityOption = GRANULARITY_OPTIONS.find(g => g.id === granularity)!
+  const officialStatusOnly = !context || context.normalized_query.filters.status === 'valid'
 
   useEffect(() => {
     io.current?.abort(); setPreview(null); setLoading(false); setDownloading(false); setMessage(null)
@@ -300,11 +301,16 @@ export function ExportHubPanel({ profile, context, dirty = false, onExpired }: P
       </fieldset>
 
       {/* 4. Ações de Prévia e Download */}
+      {!officialStatusOnly && (
+        <p role="status" className="notice">
+          A exportação CSV oficial exige status &quot;Oficiais válidas (padrão)&quot;. Registros operacionais permanecem estritamente segregados de A/T e das exportações científicas.
+        </p>
+      )}
       <div className="export-actions">
         <button
           type="button"
           className="button secondary"
-          disabled={loading || downloading || dirty || selectedColumns.length === 0 || !context}
+          disabled={loading || downloading || dirty || !officialStatusOnly || selectedColumns.length === 0 || !context}
           onClick={() => void handlePreview()}
         >
           {loading ? 'Consultando contagem…' : 'Pré-visualizar contagem e amostra'}
@@ -313,7 +319,7 @@ export function ExportHubPanel({ profile, context, dirty = false, onExpired }: P
         <button
           type="button"
           className="button primary"
-          disabled={downloading || loading || dirty || !context || !preview || preview.total_rows === 0}
+          disabled={downloading || loading || dirty || !officialStatusOnly || !context || !preview || preview.total_rows === 0}
           onClick={() => void handleDownload()}
         >
           {downloading ? 'Baixando CSV…' : `Baixar arquivo CSV (${preview?.total_rows ?? 0} registros)`}

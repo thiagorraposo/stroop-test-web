@@ -4,10 +4,12 @@ import type { AnalysisBody } from '../api/analysis'
 
 export type Condition = 'congruent' | 'incongruent'
 export type ResponseType = 'hit' | 'omission' | 'commission' | 'correct_rejection'
+export type OperationalStatus = 'invalidated' | 'aborted' | 'expired' | 'in_progress'
+export type AssessmentStatusOption = 'valid' | OperationalStatus | 'all' | 'invalid'
 
 export type AdvancedFilterValues = {
   searchText: string
-  status: 'valid' | 'all' | 'invalid'
+  status: AssessmentStatusOption
   accuracyRange: 'all' | 'under50' | '50to80' | '80plus'
   goAccuracyRange: AdvancedFilterValues['accuracyRange']
   noGoAccuracyRange: AdvancedFilterValues['accuracyRange']
@@ -86,6 +88,7 @@ export function supportsLegacyExport(query: ResearchQuery): boolean {
 /** Adapta o transporte existente; filtros de tentativa são avaliados no servidor. */
 export function assessmentQueryFilters(query: ResearchQuery): AssessmentOptions {
   const normalized = normalizeQuery(query)
+  if (normalized.advanced!.status !== 'valid') throw new Error('Status operacionais exigem a consulta POST normalizada.')
   if (normalized.advanced!.goNogo?.length) throw new Error('Go/No-Go exige a consulta POST normalizada.')
   if (normalized.filters.patient_id?.length || (normalized.filters.evaluator_id ?? []).some(v => uuidPattern.test(v))) {
     throw new Error('IDs cadastrais exigem a consulta POST normalizada.')
@@ -99,7 +102,13 @@ export function assessmentQueryFilters(query: ResearchQuery): AssessmentOptions 
 /** Normalização de transporte; nenhuma seleção científica acontece no cliente. */
 export function analysisQueryBody(query: ResearchQuery, cursor?: string): AnalysisBody {
   const normalized = normalizeQuery(query), a = normalized.advanced!
-  const filters: AnalysisBody['query']['filters'] = { status: a.status, include_null_rt: a.includeNullRt }
+  const statusFilter: string | string[] =
+    a.status === 'invalid'
+      ? ['aborted', 'expired', 'in_progress', 'invalidated']
+      : a.status === 'all'
+        ? ['aborted', 'expired', 'in_progress', 'invalidated', 'valid']
+        : a.status
+  const filters: AnalysisBody['query']['filters'] = { status: statusFilter, include_null_rt: a.includeNullRt }
   for (const [key, value] of Object.entries(normalized.filters)) {
     const canonical = ({ start_date: 'date_from', end_date: 'date_to', participant_id: 'participant_code' } as Record<string, string>)[key] ?? key
     filters[canonical] = key === 'platform' ? (value as string[]).map(item => item === 'psychopy' ? 'psychopy_local' : item) : value

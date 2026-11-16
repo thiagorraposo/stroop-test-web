@@ -9,10 +9,43 @@ export type AnalysisBody = {
   grouping: { level: 'project' | 'instrument' | 'participant' | 'assessment' | 'trial'; dimension: 'date' | 'project' | 'visit' | 'evaluator' | 'instrument_version' | 'condition' | 'go_nogo' | 'response_type'; time_bucket?: 'day' | 'week' | 'month'; metric_code?: string }
   page: { size: number; sort: string; cursor?: string }
 }
+export type OperationalStatus = 'invalidated' | 'aborted' | 'expired' | 'in_progress'
+export type OperationalSessionItem = {
+  session_id: string
+  project_id: string
+  project_code: string
+  participant_id: string
+  visit: string
+  evaluator_id: string | null
+  test_code: string
+  test_version: string
+  protocol_id: string | null
+  platform: 'web'
+  status: OperationalStatus
+  state: string
+  created_at: string
+  started_at: string | null
+  expires_at: string
+  abort_reason: string | null
+  invalidation_reason: string | null
+  confirmed_through: number
+  valid_for_result: false
+}
 export type AnalysisPage = {
   query_id: string; normalized_query: AnalysisBody['query']; query_fingerprint: string; content_fingerprint: string
   expires_at: string; completeness: 'complete'
   counts: { participants: number; visits: number; assessments: number; trials: number }
+  registry_counts: {
+    visible_patients: number
+    project_linked_patients: number
+    valid_assessment_participants: number
+    filtered_participants: number
+  }
+  operational: {
+    population: 'segregated_non_official_sessions'
+    counts: { invalidated: number; aborted: number; expired: number; in_progress: number; total: number }
+    items: OperationalSessionItem[]
+  }
   analytics: { grouping: AnalysisBody['grouping']; timezone: 'UTC'; week_start: 'monday'; population: string; compatibility: string
     groups: { key: (string | number | null)[]; label: string; assessments: number; trials: number; value: number | null; present: number; missing: number; unit: string }[]
     indicators: { code: string; label: string; unit: string; source: string; population: string; aggregation: string; missing: string; denominator: string; numerator: string }[] }
@@ -33,7 +66,7 @@ export function contextKey(x: unknown): string {
     ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : value)
 }
 export function decodeAnalysisPage(value: unknown, body: AnalysisBody): AnalysisPage {
-  if (!closed(value, 'query_id normalized_query query_fingerprint content_fingerprint expires_at completeness counts indicator_definitions aggregates analytics items next_cursor capabilities legacy_export_context')
+  if (!closed(value, 'query_id normalized_query query_fingerprint content_fingerprint expires_at completeness counts registry_counts operational indicator_definitions aggregates analytics items next_cursor capabilities legacy_export_context')
     || typeof value.query_id !== 'string' || !uuid.test(value.query_id)
     || ![value.query_fingerprint, value.content_fingerprint].every(x => typeof x === 'string' && fingerprint.test(x))
     || typeof value.expires_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T.*Z$/.test(value.expires_at)
@@ -42,6 +75,32 @@ export function decodeAnalysisPage(value: unknown, body: AnalysisBody): Analysis
     || !closed(value.counts, 'participants visits assessments trials') || !Object.values(value.counts).every(count)
     || Number(value.counts.assessments) > 5000 || Number(value.counts.participants) > Number(value.counts.assessments)
     || Number(value.counts.visits) > Number(value.counts.assessments)
+    || !closed(value.registry_counts, 'visible_patients project_linked_patients valid_assessment_participants filtered_participants')
+    || !Object.values(value.registry_counts).every(count)
+    || Number(value.registry_counts.project_linked_patients) > Number(value.registry_counts.visible_patients)
+    || Number(value.registry_counts.filtered_participants) > Number(value.registry_counts.valid_assessment_participants)
+    || Number(value.registry_counts.filtered_participants) > Number(value.counts.participants)
+    || !closed(value.operational, 'population counts items')
+    || value.operational.population !== 'segregated_non_official_sessions'
+    || !closed(value.operational.counts, 'invalidated aborted expired in_progress total')
+    || !Object.values(value.operational.counts).every(count)
+    || Number(value.operational.counts.invalidated) + Number(value.operational.counts.aborted) + Number(value.operational.counts.expired) + Number(value.operational.counts.in_progress) !== Number(value.operational.counts.total)
+    || !Array.isArray(value.operational.items)
+    || value.operational.items.some(item => !closed(item, 'session_id project_id project_code participant_id visit evaluator_id test_code test_version protocol_id platform status state created_at started_at expires_at abort_reason invalidation_reason confirmed_through valid_for_result')
+      || typeof item.session_id !== 'string' || !uuid.test(item.session_id)
+      || typeof item.project_id !== 'string' || !body.query.projects.includes(item.project_id)
+      || typeof item.project_code !== 'string' || typeof item.participant_id !== 'string' || typeof item.visit !== 'string'
+      || !(item.evaluator_id === null || typeof item.evaluator_id === 'string')
+      || typeof item.test_code !== 'string' || typeof item.test_version !== 'string'
+      || !(item.protocol_id === null || typeof item.protocol_id === 'string')
+      || item.platform !== 'web'
+      || !['invalidated', 'aborted', 'expired', 'in_progress'].includes(String(item.status))
+      || typeof item.state !== 'string' || typeof item.created_at !== 'string'
+      || !(item.started_at === null || typeof item.started_at === 'string')
+      || typeof item.expires_at !== 'string'
+      || !(item.abort_reason === null || typeof item.abort_reason === 'string')
+      || !(item.invalidation_reason === null || typeof item.invalidation_reason === 'string')
+      || !count(item.confirmed_through) || item.valid_for_result !== false)
     || !Array.isArray(value.items) || value.items.length > body.page.size
     || !(value.next_cursor === null || typeof value.next_cursor === 'string' && token.test(value.next_cursor))
     || !Array.isArray(value.aggregates) || value.aggregates.length !== body.query.projects.length) return invalid()
@@ -54,7 +113,7 @@ export function decodeAnalysisPage(value: unknown, body: AnalysisBody): Analysis
     || !closed(value.capabilities, 'filters status trial_filters grouping sort platform max_assessments max_projects exports nominal_search')
     || value.capabilities.exports !== true || value.capabilities.nominal_search !== false
     || value.capabilities.max_assessments !== 5000 || value.capabilities.max_projects !== 20
-    || contextKey(value.capabilities.status) !== '["valid"]'
+    || contextKey(value.capabilities.status) !== '["valid","invalidated","aborted","expired","in_progress"]'
     || contextKey(value.capabilities.platform) !== '["web","psychopy_local"]'
     || contextKey(value.capabilities.grouping) !== contextKey([body.grouping])
     || contextKey(value.capabilities.trial_filters) !== contextKey({ stroop_go_nogo_ptbr: ['condition', 'response_type', 'go_nogo'] })

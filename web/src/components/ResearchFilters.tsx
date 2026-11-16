@@ -30,6 +30,16 @@ const labels = {
   platform: 'Plataformas',
 } as const
 
+const statusLabels: Record<AdvancedFilterValues['status'], string> = {
+  valid: 'Oficiais válidas (padrão)',
+  invalidated: 'Invalidadas (segregadas de A/T)',
+  aborted: 'Abortadas / interrompidas (segregadas de A/T)',
+  expired: 'Expiradas (segregadas de A/T)',
+  in_progress: 'Em andamento (segregadas de A/T)',
+  invalid: 'Todos os status operacionais (segregados de A/T)',
+  all: 'Oficiais válidas + status operacionais segregados',
+}
+
 export function ResearchFilters({
   projects,
   patients = [],
@@ -130,6 +140,11 @@ export function ResearchFilters({
       setValidation('A data inicial deve ser anterior ou igual à final.')
       return
     }
+    if (status !== 'valid' && status !== 'all' && (condition.length || responseType.length || advanced.goNogo?.length || accuracyRange !== 'all' || goAccuracyRange !== 'all' || noGoAccuracyRange !== 'all'
+      || hasCommissionErrors !== 'all' || hasOmissionErrors !== 'all' || rtRange !== 'all' || !includeNullRt || draft.assessmentIds?.length)) {
+      setValidation('Status operacionais (invalidadas, abortadas, expiradas, em andamento) são segregados de A/T e não possuem métricas oficiais nem tentativas principais. Limpe os filtros de métricas/tentativas ou inclua avaliações oficiais válidas.')
+      return
+    }
     if ((condition.length || responseType.length || advanced.goNogo?.length || accuracyRange !== 'all' || goAccuracyRange !== 'all' || noGoAccuracyRange !== 'all'
       || hasCommissionErrors !== 'all' || hasOmissionErrors !== 'all' || rtRange !== 'all' || !includeNullRt) && (instruments.length !== 1 || instruments[0] !== 'stroop_go_nogo_ptbr')) {
       setValidation('Selecione somente o instrumento Stroop Go/No-Go para filtrar condição, resposta, precisão ou RT. Condição, Go/No-Go e resposta exigem uma mesma tentativa principal; as métricas continuam da avaliação completa.')
@@ -163,7 +178,7 @@ export function ResearchFilters({
     activeChips.push({ label: `${draft.assessmentIds.length} avaliações selecionadas`, onRemove: () => update({ ...draft, assessmentIds: [] }) })
   }
   if (status !== 'valid') {
-    activeChips.push({ label: `Status: ${status === 'all' ? 'Todas' : 'Inválidas'}`, onRemove: () => setAdvanced('status', 'valid') })
+    activeChips.push({ label: `Status: ${statusLabels[status]}`, onRemove: () => setAdvanced('status', 'valid') })
   }
   if (accuracyRange !== 'all') {
     activeChips.push({ label: `Precisão: ${accuracyRange}`, onRemove: () => setAdvanced('accuracyRange', 'all') })
@@ -301,8 +316,12 @@ export function ResearchFilters({
             Status da avaliação
             <select value={status} onChange={event => setAdvanced('status', event.target.value as AdvancedFilterValues['status'])}>
               <option value="valid">Oficiais válidas (padrão)</option>
-              <option value="all" disabled>Todas as avaliações — indisponível</option>
-              <option value="invalid" disabled>Interrompidas / Invalidadas — indisponível</option>
+              <option value="invalidated">Invalidadas (segregadas de A/T)</option>
+              <option value="aborted">Abortadas / interrompidas (segregadas de A/T)</option>
+              <option value="expired">Expiradas (segregadas de A/T)</option>
+              <option value="in_progress">Em andamento (segregadas de A/T)</option>
+              <option value="invalid">Todos os status operacionais (segregados de A/T)</option>
+              <option value="all">Oficiais válidas + status operacionais segregados</option>
             </select>
           </label>
           <label>

@@ -230,3 +230,35 @@ test('QUERY7: seleção cadastral de pacientes (UUID) mantém rascunho, chip e d
   await act(async () => button('Descartar alterações').click())
   expect(checkbox.checked).toBe(true)
 })
+
+test('QUERY7: status operacionais são selecionáveis e recusam combinação incompatível com filtros de métricas/tentativas', async () => {
+  const applied = vi.fn()
+  await act(async () =>
+    root.render(
+      <ResearchFilters
+        projects={mockProjects}
+        initialProject={mockProjects[0]!.id}
+        loading={false}
+        onApply={applied}
+      />,
+    ),
+  )
+  const statusSelect = [...container.querySelectorAll('label')].find(l => l.textContent?.includes('Status da avaliação'))!.querySelector('select')!
+  const accuracySelect = [...container.querySelectorAll('label')].find(l => l.textContent?.includes('Faixa de precisão') && !l.textContent?.includes('Go'))!.querySelector('select')!
+  await act(async () => {
+    statusSelect.value = 'aborted'
+    statusSelect.dispatchEvent(new Event('change', { bubbles: true }))
+    accuracySelect.value = '80plus'
+    accuracySelect.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await act(async () => button('Aplicar filtros').click())
+  expect(applied).not.toHaveBeenCalled()
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Status operacionais')
+  await act(async () => {
+    accuracySelect.value = 'all'
+    accuracySelect.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await act(async () => button('Aplicar filtros').click())
+  expect(applied).toHaveBeenCalledTimes(1)
+  expect(applied.mock.lastCall?.[0].advanced.status).toBe('aborted')
+})

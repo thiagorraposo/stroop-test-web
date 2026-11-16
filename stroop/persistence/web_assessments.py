@@ -31,7 +31,7 @@ REQUIRED_COLUMNS = {
     },
     "web_patients": {"id", "participant_code", "active", "created_at"},
     "web_evaluators": {"id", "evaluator_code"},
-    "web_project_participants": {"participant_uuid", "project_id", "pseudonym"},
+    "web_project_participants": {"participant_uuid", "project_id", "pseudonym", "patient_id"},
     "web_legacy_entity_links": {"link_id", "entity_type", "legacy_participant_uuid", "patient_id", "active"},
     "web_projects": {"project_id", "code", "active"},
     "web_legacy_project_links": {"legacy_project", "project_id", "active"},
@@ -44,8 +44,15 @@ REQUIRED_COLUMNS = {
     },
     "web_session_invalidations": {"session_id", "reason", "recorded_at", "source", "event_at_ms"},
     "web_session_checkpoints": {"session_id", "confirmed_through", "prefix_hash", "received_at"},
-    "web_participant_sessions": {"session_id", "state", "expires_at", "abort_reason", "revoked_at"},
-    "web_invitations": {"session_id", "project_id", "revoked_at"},
+    "web_participant_sessions": {
+        "session_id", "state", "activated_at", "started_at", "expires_at",
+        "abort_reason", "revoked_at", "app_version",
+    },
+    "web_invitations": {
+        "session_id", "project_id", "revoked_at", "participant_id", "visit",
+        "patient_id", "evaluator_uuid", "evaluator_id", "protocol_id",
+        "test_code", "test_version", "created_at",
+    },
     "web_trial_observations": {
         "assessment_id", "trial_number", "condition_id", "trial_start_ms",
         "stimulus_onset_ms", "stimulus_offset_ms", "trial_end_ms", "key_at_ms",
@@ -542,6 +549,185 @@ def session_status(database_url, project_id, session_id, issuer, subject):
         raise PersistenceError from exc
 
 
+def _operational_sessions(connection, projects, filters):
+    clauses, values = [], []
+    if filters.get('patient_search'):
+        clauses.append('AND position(%s in lower(i.participant_id)) > 0')
+        values.append(filters['patient_search'])
+    if filters.get('patient_id'):
+        patients = [str(UUID(value)) for value in filters['patient_id']]
+        clauses.append('AND COALESCE(wa.patient_id, i.patient_id) = ANY(%s::uuid[])')
+        values.append(patients)
+    for key, column in (('participant_id', 'i.participant_id'), ('visit', 'i.visit'),
+                        ('test_version', 'i.test_version')):
+        if filters.get(key):
+            clauses.append(f'AND {column} = ANY(%s)')
+            values.append(list(filters[key]))
+    if filters.get('platform'):
+        clauses.append("AND 'web' = ANY(%s)")
+        values.append(list(filters['platform']))
+    if filters.get('evaluator_id'):
+        evaluators = list(filters['evaluator_id'])
+        clauses.append(
+            """AND (COALESCE(i.evaluator_id, 'LEGADO_NAO_MAPEADO') = ANY(%s)
+                 OR (COALESCE(wa.evaluator_uuid, i.evaluator_uuid) IS NOT NULL
+                     AND COALESCE(wa.evaluator_uuid, i.evaluator_uuid)::text = ANY(%s)))"""
+        )
+        values.extend([evaluators, evaluators])
+    for key, operator in [('start_date', '>='), ('end_date', '<=')]:
+        if filters.get(key):
+            clauses.append(f"AND (COALESCE(s.started_at, s.activated_at) AT TIME ZONE 'UTC')::date {operator} %s::date")
+            values.append(filters[key])
+    if filters.get('test_code'):
+        instruments = filters['test_code']
+        clauses.append('AND i.test_code = ANY(%s)')
+        values.append([instruments] if isinstance(instruments, str) else list(instruments))
+    where_sql = ' '.join(clauses)
+    op_rows = []
+    for project_id in projects:
+        rows = connection.execute(
+            f"""SELECT s.session_id, i.project_id, p.code AS project_code,
+                       i.participant_id, i.visit, i.evaluator_id,
+                       i.test_code, i.test_version, i.protocol_id,
+                       s.state, s.activated_at AS created_at, s.started_at, s.expires_at,
+                       s.abort_reason, s.revoked_at, i.revoked_at AS invitation_revoked_at,
+                       inv.reason AS invalidation_reason,
+                       c.confirmed_through, c.prefix_hash,
+                       (s.expires_at <= clock_timestamp()) AS deadline_passed
+                FROM web_participant_sessions s
+                JOIN web_invitations i USING (session_id)
+                JOIN web_projects p ON p.project_id = i.project_id
+                LEFT JOIN web_session_checkpoints c USING (session_id)
+                LEFT JOIN web_session_invalidations inv USING (session_id)
+                LEFT JOIN web_assessments wa ON wa.session_id = s.session_id
+                WHERE i.project_id = %s AND p.active
+                  AND (inv.session_id IS NOT NULL OR s.state <> 'completed')
+                  {where_sql}
+                ORDER BY COALESCE(s.started_at, s.activated_at) DESC, s.session_id ASC
+                LIMIT 5001""",
+            (project_id, *values),
+        ).fetchall()
+        for row in rows:
+            if row['invalidation_reason'] is not None:
+                op_status = 'invalidated'
+            elif row['state'] == 'aborted' or row['revoked_at'] is not None or row['invitation_revoked_at'] is not None:
+                op_status = 'aborted'
+            elif row['state'] == 'expired' or row['deadline_passed']:
+                op_status = 'expired'
+            else:
+                op_status = 'in_progress'
+            op_rows.append({
+                'session_id': str(row['session_id']),
+                'project_id': str(project_id),
+                'project_code': row['project_code'],
+                'participant_id': row['participant_id'],
+                'visit': row['visit'],
+                'evaluator_id': row['evaluator_id'],
+                'test_code': row['test_code'],
+                'test_version': row['test_version'],
+                'protocol_id': row['protocol_id'],
+                'platform': 'web',
+                'status': op_status,
+                'state': row['state'],
+                'created_at': iso_utc(row['created_at']),
+                'started_at': iso_utc(row['started_at']),
+                'expires_at': iso_utc(row['expires_at']),
+                'abort_reason': row['abort_reason'],
+                'invalidation_reason': row['invalidation_reason'],
+                'confirmed_through': int(row['confirmed_through'] or 0),
+                'valid_for_result': False,
+                '_prefix_hash': row['prefix_hash'],
+            })
+        if len(op_rows) > 5000:
+            raise FacetLimitError
+    counts = {
+        'invalidated': sum(1 for row in op_rows if row['status'] == 'invalidated'),
+        'aborted': sum(1 for row in op_rows if row['status'] == 'aborted'),
+        'expired': sum(1 for row in op_rows if row['status'] == 'expired'),
+        'in_progress': sum(1 for row in op_rows if row['status'] == 'in_progress'),
+        'total': len(op_rows),
+    }
+    raw_statuses = filters.get('status') or ['valid']
+    statuses = [raw_statuses] if isinstance(raw_statuses, str) else list(raw_statuses)
+    requested_op = set(statuses) & {'invalidated', 'aborted', 'expired', 'in_progress'}
+    digest_entries = [
+        (row['session_id'], row['status'], row['state'], row['abort_reason'],
+         row['invalidation_reason'], row['confirmed_through'], row['_prefix_hash'])
+        for row in op_rows
+    ]
+    items = [
+        {k: v for k, v in row.items() if k != '_prefix_hash'}
+        for row in op_rows if row['status'] in requested_op
+    ][:100] if requested_op else []
+    return counts, items, digest_entries
+
+
+def _registry_counts(connection, projects, issuer, subject):
+    visible_patients = int(
+        connection.execute('SELECT COUNT(*) AS cnt FROM web_patients').fetchone()['cnt']
+    )
+    project_list = list(projects)
+    project_linked_patients = int(
+        connection.execute(
+            """SELECT COUNT(DISTINCT patient_id) AS cnt FROM (
+                   SELECT pp.patient_id FROM web_project_participants pp
+                   WHERE pp.project_id = ANY(%s) AND pp.patient_id IS NOT NULL
+                   UNION
+                   SELECT wa.patient_id FROM web_assessments wa
+                   WHERE wa.project_id = ANY(%s) AND wa.patient_id IS NOT NULL
+                   UNION
+                   SELECT i.patient_id FROM web_invitations i
+                   WHERE i.project_id = ANY(%s) AND i.patient_id IS NOT NULL
+                   UNION
+                   SELECT l.patient_id FROM web_legacy_entity_links l
+                   JOIN web_project_participants pp ON pp.participant_uuid = l.legacy_participant_uuid
+                   WHERE pp.project_id = ANY(%s)
+                     AND l.entity_type = 'patient' AND l.active AND l.patient_id IS NOT NULL
+               ) linked""",
+            (project_list, project_list, project_list, project_list),
+        ).fetchone()['cnt']
+    )
+    valid_entries = []
+    for project in projects:
+        rows = connection.execute(
+            _base_query(''),
+            (project, issuer, subject),
+        ).fetchall()
+        valid_entries.extend((project, row['assessment_id'], row['participant_id']) for row in rows)
+    valid_identities = set()
+    if valid_entries:
+        links = connection.execute(
+            """SELECT a.assessment_id, scope.project_id,
+                      COALESCE(wa.patient_id, l.patient_id) AS patient_id, l.link_id
+               FROM unnest(%s::uuid[], %s::text[]) AS scope(project_id, assessment_id)
+               JOIN assessments a ON a.assessment_id = scope.assessment_id
+               LEFT JOIN web_assessments wa ON wa.assessment_id = a.assessment_id AND wa.project_id = scope.project_id
+               LEFT JOIN web_project_participants pp ON pp.project_id = scope.project_id AND pp.pseudonym = a.participant_id
+               LEFT JOIN web_legacy_entity_links l ON wa.assessment_id IS NULL
+                   AND l.legacy_participant_uuid = pp.participant_uuid
+                   AND l.entity_type = 'patient' AND l.active
+               ORDER BY scope.project_id, a.assessment_id, l.link_id""",
+            ([p for p, _, _ in valid_entries], [aid for _, aid, _ in valid_entries]),
+        ).fetchall()
+        seen_keys = {}
+        for link in links:
+            key = (str(link['project_id']), link['assessment_id'])
+            if key in seen_keys:
+                raise SnapshotConflict
+            seen_keys[key] = link['patient_id']
+        for project, aid, participant_id in valid_entries:
+            pid = seen_keys.get((str(project), aid))
+            if pid is not None:
+                valid_identities.add(('patient', str(pid)))
+            else:
+                valid_identities.add(('project_participant', str(project), participant_id))
+    return {
+        'visible_patients': visible_patients,
+        'project_linked_patients': project_linked_patients,
+        'valid_assessment_participants': len(valid_identities),
+    }
+
+
 def analysis_selection(database_url, projects, issuer, subject, *, filters, assessment_ids=None, connection=None):
     """Universo autorizado em uma transação RO; nunca publicar prefixo de 5.001."""
     if not 1 <= len(projects) <= 20:
@@ -556,18 +742,23 @@ def analysis_selection(database_url, projects, issuer, subject, *, filters, asse
     _validate_schema(connection)
     # Reautorizar TODOS antes de ler/popular qualquer resultado.
     if not all(_authorized_project(connection, project, issuer, subject) for project in projects):
-        return False, [], [], None, []
+        return False, [], [], None, [], {}, {'population': 'segregated_non_official_sessions', 'counts': {'invalidated': 0, 'aborted': 0, 'expired': 0, 'in_progress': 0, 'total': 0}, 'items': []}
+    raw_statuses = filters.get('status') or ['valid']
+    statuses = [raw_statuses] if isinstance(raw_statuses, str) else list(raw_statuses)
+    include_valid = 'valid' in statuses
+    official_filters = {k: v for k, v in filters.items() if k != 'status'}
     selected, sources = [], []
-    for project in projects:
-        base, params = _scoped_query(project, issuer, subject, filters)
-        if assessment_ids is not None:
-            base += ' AND a.assessment_id=ANY(%s)'
-            params.append(assessment_ids)
-        rows, fingerprint = _snapshot(connection, base, params)
-        selected.extend((project, row) for row in rows)
-        sources.append((str(project), fingerprint))
-        if len(selected) > 5000:
-            raise FacetLimitError
+    if include_valid:
+        for project in projects:
+            base, params = _scoped_query(project, issuer, subject, official_filters)
+            if assessment_ids is not None:
+                base += ' AND a.assessment_id=ANY(%s)'
+                params.append(assessment_ids)
+            rows, fingerprint = _snapshot(connection, base, params)
+            selected.extend((project, row) for row in rows)
+            sources.append((str(project), fingerprint))
+            if len(selected) > 5000:
+                raise FacetLimitError
     if len({row['assessment_id'] for _, row in selected}) != len(selected):
         # Vínculos legados ambíguos não podem duplicar o universo A/T.
         raise SnapshotConflict
@@ -613,6 +804,13 @@ def analysis_selection(database_url, projects, issuer, subject, *, filters, asse
         by_id[key] = dict(link)
     for row in result:
         row['registry'] = by_id.get((str(row['project_id']), row['assessment_id']))
-    content = hashlib.sha256(json.dumps([sources, result, trials], sort_keys=True, default=str,
+    registry_base = _registry_counts(connection, projects, issuer, subject)
+    op_counts, op_items, op_digest = _operational_sessions(connection, projects, filters)
+    operational = {
+        'population': 'segregated_non_official_sessions',
+        'counts': op_counts,
+        'items': op_items,
+    }
+    content = hashlib.sha256(json.dumps([sources, result, trials, registry_base, op_digest], sort_keys=True, default=str,
                                        separators=(',', ':')).encode()).hexdigest()
-    return True, result, trials, content, sources
+    return True, result, trials, content, sources, registry_base, operational

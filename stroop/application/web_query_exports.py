@@ -14,6 +14,8 @@ class UnsupportedProjection(ValueError):
 
 def project_rows(rows, trials, granularity, columns, criteria):
     """Não lê nominal. CSV21 usa o exportador oficial sem reimplementar fórmulas."""
+    if criteria.get('status', 'valid') != 'valid':
+        raise UnsupportedProjection
     by_id = {row['assessment_id']: row for row in rows}
     if granularity == 'stroop_21_colunas':
         if criteria.get('condition') or criteria.get('response_type') or criteria.get('go_nogo') or any(row['test_code'] != 'stroop_go_nogo_ptbr' for row in rows):
@@ -73,8 +75,8 @@ def project_rows(rows, trials, granularity, columns, criteria):
 def prepare_export(database_url, actor, *, query, filters, snapshot, granularity, columns):
     try:
         with persistence._connect(database_url) as connection:
-            rows, trials, content, _ = analysis_dataset(database_url, actor, query=query, filters=filters,
-                                                       snapshot=snapshot, connection=connection)
+            rows, trials, content, *_ = analysis_dataset(database_url, actor, query=query, filters=filters,
+                                                         snapshot=snapshot, connection=connection)
             # Métricas são da avaliação completa mesmo quando T é subconjunto.
             if granularity == 'metricas':
                 ids = [row['assessment_id'] for row in rows]

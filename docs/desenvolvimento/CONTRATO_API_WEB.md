@@ -986,23 +986,31 @@ até implementação da habilitação institucional de WEB-041/DEC-03.
 
 `POST /api/v1/analysis/query` aceita as dimensões categoriais existentes, datas,
 seleção explícita `assessment_ids`, condição/resposta/Go-No-Go, IDs cadastrais
-(`patient_id` UUID e `evaluator_id` UUID ou `evaluator_code`) e faixas oficiais já
+(`patient_id` UUID e `evaluator_id` UUID ou `evaluator_code`), status oficiais e
+operacionais (`valid`, `invalidated`, `aborted`, `expired`, `in_progress`, como
+valor único ou lista de até 5 valores) e faixas oficiais já
 implementadas em WEB-050. Aliases equivalentes são normalizados; contraditórios
-retornam 422. Status disponível continua somente `valid`. Busca `patient_search`
+retornam 422. Busca `patient_search`
 continua sendo substring literal do código, sem leitura de nome/iniciais.
 `patient_id` aceita até 100 UUIDs (rejeita código `PAT-...` ou texto com 422) e
 seleciona avaliações WEB pelo `patient_id` persistido e avaliações legadas apenas
 por vínculo explícito ativo (`web_legacy_entity_links` com `entity_type='patient'`
 no mesmo projeto autorizado), recusando com 409 se houver mais de um mapa ativo
 para o mesmo participante legado; `evaluator_id` aceita até 100 valores (UUID do
-cadastro central ou `evaluator_code`). Quando `patient_id` é usado ou `evaluator_id`
-contém UUID, `legacy_export_context` (CSV v1) retorna `null`, mantendo a exportação
-pelas cinco projeções do contrato v2.
+cadastro central ou `evaluator_code`). Quando `patient_id` é usado, `evaluator_id`
+contém UUID ou `status != 'valid'`, `legacy_export_context` (CSV v1) retorna `null`.
+A resposta retorna `registry_counts` (`visible_patients`, `project_linked_patients`,
+`valid_assessment_participants`, `filtered_participants`) separado de `counts`, e
+`operational` (`population: 'segregated_non_official_sessions'`, `counts`:
+`invalidated`, `aborted`, `expired`, `in_progress`, `total`, e `items` segregados
+sem as 12 métricas oficiais). Consultas exclusivamente operacionais (sem `valid`)
+retornam `A/T` vazios (`counts.assessments = 0`, `items = []`), recusam filtros de
+métricas/tentativas oficiais com 422 e bloqueiam exportação CSV v2 com 422.
 RT mediano de entrada em ms seleciona métrica oficial da avaliação completa;
 `include_null_rt` é explícito e ausência não vira zero. Precisão geral/Go/No-Go
 e presença de omissões/comissões conservam os limites documentados na seção 5.
 RT médio está fora do escopo desta versão por CHG-009, mantendo-se a mediana
-oficial. Busca nominal e status operacionais seguem indisponíveis:
+oficial. Busca nominal segue indisponível:
 campos não suportados são recusados, sem aplicação parcial silenciosa.
 
 `go_nogo` aceita lista de `go`/`no_go` (até duas entradas), normalizada como

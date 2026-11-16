@@ -45,11 +45,27 @@ class AnalysisSchemaTests(unittest.TestCase):
             with self.subTest(page=page), self.assertRaises(ValidationError):
                 AnalysisRequest.model_validate({**base, 'page': page})
         for filters in ({'patient_id': 'SYNTHETIC'}, {'patient_id': ['SYNTHETIC']},
-                        {'patient_id': ['PAT-20261116-000001']}, {'accuracy_min': True}, {'status': 'invalidated'},
+                        {'patient_id': ['PAT-20261116-000001']}, {'accuracy_min': True}, {'status': 'unknown'},
+                        {'status': []}, {'status': ['valid'] * 6},
                         {'rt_mean_min_ms': 0}, {'rt_mean_max_ms': 1000},
                         {'include_null_rt': 'false'}, {'platform': ['legacy']}, {'visit': ['A'] * 101}):
             with self.subTest(filters=filters), self.assertRaises(ValidationError):
                 AnalysisRequest.model_validate({**base, 'query': {'projects': [project], 'filters': filters}})
+        for status_input, expected_norm, expected_list in (
+                ('valid', 'valid', None),
+                (['valid'], 'valid', None),
+                ('invalidated', 'invalidated', ['invalidated']),
+                (['aborted', 'invalidated', 'aborted'], ['aborted', 'invalidated'], ['aborted', 'invalidated']),
+                (['valid', 'expired', 'in_progress'], ['expired', 'in_progress', 'valid'], ['expired', 'in_progress', 'valid'])):
+            norm_q, norm_f = normalize(QuerySelection.model_validate({'projects': [project], 'filters': {'status': status_input}}))
+            self.assertEqual(norm_q['filters']['status'], expected_norm)
+            self.assertEqual(norm_f.get('status'), expected_list)
+        for bad_op in (
+                {'status': 'aborted', 'test_code': ['stroop_go_nogo_ptbr'], 'accuracy_min': 50},
+                {'status': 'invalidated', 'test_code': ['stroop_go_nogo_ptbr'], 'condition': ['congruent']},
+                {'status': ['expired', 'in_progress'], 'test_code': ['stroop_go_nogo_ptbr'], 'go_nogo': ['go']}):
+            with self.subTest(bad_op=bad_op), self.assertRaises(APIError):
+                normalize(QuerySelection.model_validate({'projects': [project], 'filters': bad_op}))
         pid_a, pid_b, ev_uuid = str(uuid4()), str(uuid4()), str(uuid4())
         upper_query, upper_filters = normalize(QuerySelection.model_validate({'projects': [project], 'filters': {
             'patient_id': [pid_b.upper(), pid_a, pid_a], 'evaluator_id': [ev_uuid.upper(), 'EVA-000001']}}))

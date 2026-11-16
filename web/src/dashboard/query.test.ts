@@ -68,6 +68,23 @@ test('QUERY7: IDs cadastrais normalizam UUIDs, integram POST e bloqueiam transpo
   expect(() => assessmentQueryFilters(evalOnlyUuid)).toThrow('IDs cadastrais exigem a consulta POST normalizada.')
 })
 
+test('QUERY7: status operacionais mapeiam para o contrato POST e bloqueiam transporte/exportação legados', () => {
+  for (const [option, expected] of [
+    ['invalidated', 'invalidated'],
+    ['aborted', 'aborted'],
+    ['expired', 'expired'],
+    ['in_progress', 'in_progress'],
+    ['invalid', ['aborted', 'expired', 'in_progress', 'invalidated']],
+    ['all', ['aborted', 'expired', 'in_progress', 'invalidated', 'valid']],
+  ] as const) {
+    const query = defaultQuery('a')
+    query.advanced!.status = option
+    expect(analysisQueryBody(query).query.filters.status).toEqual(expected)
+    expect(supportsLegacyExport(query)).toBe(false)
+    expect(() => assessmentQueryFilters(query)).toThrow('Status operacionais exigem a consulta POST normalizada.')
+  }
+})
+
 test('QUERY7: condição/resposta são conjuntos canônicos e chegam integralmente ao servidor', () => {
   const query = defaultQuery('a')
   query.filters.test_code = ['stroop_go_nogo_ptbr']

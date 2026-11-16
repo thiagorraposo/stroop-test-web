@@ -22,6 +22,7 @@ from stroop.application import web_assessments as application
 router = APIRouter(prefix='/api/v1/analysis', tags=['analysis'])
 UUID_PATTERN = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 UuidStr = Annotated[str, Field(pattern=UUID_PATTERN)]
+StatusLiteral = Literal['valid', 'invalidated', 'aborted', 'expired', 'in_progress']
 
 
 class QueryFilters(RequestModel):
@@ -40,7 +41,7 @@ class QueryFilters(RequestModel):
     condition: list[Literal['congruent', 'incongruent']] = Field(default_factory=list, max_length=100)
     response_type: list[Literal['hit', 'omission', 'commission', 'correct_rejection']] = Field(default_factory=list, max_length=100)
     go_nogo: list[Literal['go', 'no_go']] = Field(default_factory=list, max_length=2)
-    status: Literal['valid'] = 'valid'
+    status: StatusLiteral | Annotated[list[StatusLiteral], Field(min_length=1, max_length=5)] = 'valid'
     patient_search: str | None = Field(default=None, max_length=120)
     accuracy_min: float | None = Field(default=None, ge=0, le=100)
     accuracy_max: float | None = Field(default=None, ge=0, le=100)
@@ -100,7 +101,9 @@ def normalize(selection: QuerySelection):
     if len(set(projects)) != len(projects):
         raise APIError('invalid_request')
     raw = selection.filters.model_dump(exclude_none=True)
-    raw.pop('status')
+    raw_status = raw.pop('status', 'valid')
+    statuses = sorted(set([raw_status] if isinstance(raw_status, str) else raw_status))
+    status_value = statuses[0] if len(statuses) == 1 else statuses
     patient_id = sorted({str(UUID(value)) for value in raw.pop('patient_id', [])})
     go_nogo = sorted(set(raw.pop('go_nogo')))
     if go_nogo and set(raw.get('test_code', [])) != {'stroop_go_nogo_ptbr'}:
@@ -127,6 +130,9 @@ def normalize(selection: QuerySelection):
                         'rt_median_min_ms', 'rt_median_max_ms')) or not advanced['include_null_rt']
     if metric_filter and set(raw.get('test_code', [])) != {'stroop_go_nogo_ptbr'}:
         raise APIError('invalid_request')
+    if 'valid' not in statuses and (metric_filter or go_nogo or raw.get('condition') or raw.get('response_type')
+                                    or selection.assessment_ids is not None):
+        raise APIError('invalid_request')
     if any(raw.get(key) == '' for key in ('date_from', 'date_to', 'start_date', 'end_date')):
         raise APIError('invalid_request')
     for alias, canonical in [('start_date', 'date_from'), ('end_date', 'date_to'), ('participant_id', 'participant_code')]:
@@ -135,7 +141,7 @@ def normalize(selection: QuerySelection):
             raise APIError('invalid_request')
         if first and not second:
             raw[canonical] = first
-    normalized = {'status': 'valid', **advanced}
+    normalized = {'status': status_value, **advanced}
     legacy = {}
     aliases = {'date_from': 'start_date', 'date_to': 'end_date', 'participant_code': 'participant_id'}
     for key, value in raw.items():
@@ -153,6 +159,8 @@ def normalize(selection: QuerySelection):
     # Não reproduzir regex/allowlists das rotas existentes.
     validation_request = Request({'type': 'http', 'query_string': urlencode(legacy, doseq=True).encode()})
     filters = _filters(validation_request)
+    if statuses != ['valid']:
+        filters['status'] = statuses
     if patient_id:
         normalized['patient_id'] = patient_id
         filters['patient_id'] = patient_id
@@ -217,11 +225,12 @@ async def analysis_query(request: Request, body: AnalysisRequest):
              'test_code', 'test_version', 'platform', 'status', 'include_null_rt'}
     has_evaluator_uuid = any(re.fullmatch(UUID_PATTERN, item) for item in query['filters'].get('evaluator_id', []))
     legacy_context = None
-    if (set(query['filters']) <= basic and query['filters']['include_null_rt']
+    if (set(query['filters']) <= basic and query['filters'].get('status') == 'valid'
+            and query['filters']['include_null_rt']
             and not has_evaluator_uuid and 'assessment_ids' not in query):
-        legacy_context = {'filters': filters, 'projects': [
+        legacy_context = {'filters': {k: v for k, v in filters.items() if k != 'status'}, 'projects': [
             {'project_id': project, 'snapshot': _signed(config, json.dumps(
-                ['assessment-snapshot-v1', project, actor.issuer, actor.subject, filters], sort_keys=True), [source, expires])}
+                ['assessment-snapshot-v1', project, actor.issuer, actor.subject, {k: v for k, v in filters.items() if k != 'status'}], sort_keys=True), [source, expires])}
             for project, source in sources]}
     remember(request, actor, query_id, query=query, filters=filters, fingerprint=fingerprint,
              content=content, counts=result['counts'], expires=expires)
@@ -239,7 +248,8 @@ async def analysis_query(request: Request, body: AnalysisRequest):
                                      'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max',
                                      'has_commission_errors', 'has_omission_errors',
                                      'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt'],
-                         'status': ['valid'], 'trial_filters': {'stroop_go_nogo_ptbr': ['condition', 'response_type', 'go_nogo']},
+                         'status': ['valid', 'invalidated', 'aborted', 'expired', 'in_progress'],
+                         'trial_filters': {'stroop_go_nogo_ptbr': ['condition', 'response_type', 'go_nogo']},
                          'grouping': [body.grouping.model_dump(exclude_none=True)],
                          'sort': ['started_at_desc', 'started_at_asc', 'participant_code_asc', 'participant_code_desc', 'visit_asc',
                                   'accuracy_asc', 'accuracy_desc', 'response_time_asc', 'response_time_desc'],

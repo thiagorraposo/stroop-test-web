@@ -3325,10 +3325,43 @@ na Retomada):
   nomes nominais em rascunho, chips, resumo aplicado, URL ou storage, e associam
   erro de período inválido (`aria-invalid` e `aria-describedby`) aos campos
   `Data inicial` e `Data final`.
-- `WEB-050` permanece **EM_ANDAMENTO**: restam status operacionais segregados
-  (`invalidated`, `aborted`, `expired`, `in_progress` com contagens operacionais
-  próprias separadas de `A/T`) e fechamento integral do checklist `UX7-AA` antes
-  do aceite formal.
+- `WEB-050` permanece **EM_ANDAMENTO** até a revisão final de aceite integrado
+  de `UX7-AA` com `WEB-048`..`WEB-055`.
+
+#### Continuação — status operacionais segregados (`invalidated`, `aborted`, `expired`, `in_progress`) e quatro contagens cadastrais (`registry_counts`), 2026-11-16
+
+Implementada a consulta segregada de status operacionais e as quatro contagens
+cadastrais de pacientes/participantes em `POST /api/v1/analysis/query` e na
+interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
+
+- `api/analysis.py` amplia `QueryFilters.status` para aceitar `'valid'`,
+  `'invalidated'`, `'aborted'`, `'expired'` e `'in_progress'` (como string ou
+  lista de 1 a 5 valores, normalizada como string quando unitária e lista ordenada
+  sem duplicatas quando múltipla), atualiza `capabilities.status` e recusa com
+  `422` combinações exclusivamente operacionais (sem `'valid'`) com filtros de
+  métricas/tentativas oficiais (`condition`, `response_type`, `go_nogo`, faixas de
+  precisão/RT, `include_null_rt=false` ou `assessment_ids`).
+- `stroop/persistence/web_assessments.py` e `stroop/application/web_assessments.py`
+  adicionam `_operational_sessions` e `_registry_counts` na mesma transação
+  `REPEATABLE READ READ ONLY` do papel `READER`:
+  - `registry_counts` distingue `visible_patients` (`web_patients` acessíveis sem
+    filtro de avaliação), `project_linked_patients` (pacientes distintos vinculados
+    aos projetos consultados em `web_project_participants`, `web_assessments`,
+    `web_invitations` ou `web_legacy_entity_links` ativo),
+    `valid_assessment_participants` (identidades distintas com avaliação oficial
+    válida nos projetos, deduplicando apenas por `patient_id` explícito e mantendo
+    legado sem mapa por `(project_id, participant_id)` sem fundir homônimos ou
+    pseudônimos) e `filtered_participants` (identidades distintas no recorte `A`).
+  - `operational` retorna `population: 'segregated_non_official_sessions'`,
+    `counts` (`invalidated`, `aborted`, `expired`, `in_progress`, `total`) e
+    `items` segregados (sem 12 métricas oficiais e fora de `A/T`).
+- `stroop/application/web_query_exports.py` e `web/src/components/ExportHubPanel.tsx`
+  recusam/bloqueiam prévia e download CSV oficial quando `status != 'valid'`.
+- `web/src/dashboard/query.ts`, `web/src/api/analysis.ts`,
+  `web/src/components/ResearchFilters.tsx` e `web/src/components/ProfessionalDashboard.tsx`
+  integram a seleção de status operacionais, exibem as quatro contagens cadastrais
+  e renderizam a seção/tabela `Sessões operacionais segregadas` na Visão Geral e
+  em `Avaliações e histórico`.
 
 ### WEB-051 — Consolidar seleção analítica autorizada e agregações no servidor
 
@@ -4283,7 +4316,102 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 
 ## Retomada
 
-### Retomada vigente — IDs cadastrais na consulta aplicada e acessibilidade UX7-AA de superfícies, 2026-11-16
+### Retomada vigente — status operacionais segregados, quatro contagens cadastrais e revisão de WEB-048..055, 2026-11-16
+
+Continuidade do projeto no marco **M8** (`WEB-050`, `WEB-051` e revisão de
+`WEB-048`..`WEB-055`) na branch `feat/m8-entregaveis-integrados` (base `0ec2629`),
+preservando a alteração preexistente em `web/e2e/manual/native-zoom.mjs` e
+respeitando a restrição de não executar CI remota, PR, merge ou deploy. Progresso
+global mantido em **38/56 (67,9%)**, M8 **3/12 aceitos** (`WEB-029`, `WEB-030` e
+`WEB-031` por `CHG-008`); `WEB-050` permanece `EM_ANDAMENTO` e `WEB-048` permanece
+`EM_VALIDACAO` enquanto as campanhas finais de volume (`5.000`/`5.001` e `EXPLAIN`
+de `WEB-051`), preparação direta/handoff/QR (`WEB-054`) e três jornadas integradas
+(`WEB-055`) aguardam execução para o fechamento dos aceites formais.
+
+**EV-M8-050-STATUS-CONTAGENS-20261116**:
+
+1. **Consulta segregada de status operacionais (`invalidated`, `aborted`, `expired`, `in_progress`) (`WEB-050` / `WEB-051`):**
+   - `api/analysis.py` aceita `status` como `'valid' | 'invalidated' | 'aborted' | 'expired' | 'in_progress'`
+     ou lista de 1 a 5 valores em `POST /api/v1/analysis/query`, expondo os cinco
+     status em `capabilities.status` e recusando com `422` combinações
+     exclusivamente operacionais (sem `'valid'`) com filtros de métricas oficiais,
+     tentativas principais (`condition`, `response_type`, `go_nogo`) ou
+     `assessment_ids`.
+   - `stroop/persistence/web_assessments.py` seleciona sessões operacionais em
+     `_operational_sessions` com o papel `READER` (`SELECT` sobre colunas técnicas
+     em transação `REPEATABLE READ READ ONLY`, sem ler nomes/iniciais ou hashes de
+     credencial), classificando determinística e mutuamente exclusivamente
+     `invalidated`, `aborted`, `expired` (incluindo expiração lógica
+     `expires_at <= clock_timestamp()` em `preparing`/`running`) e `in_progress`,
+     incorporando o resumo ao `content_fingerprint` sem depender de timestamp
+     volátil entre páginas.
+   - Consultas exclusivamente operacionais retornam `A/T` vazios
+     (`counts.assessments = 0`, `items = []`), `legacy_export_context = null` e
+     recusam prévia/download CSV v2 com `422` (`UnsupportedProjection`), mantendo
+     separação estrita entre registros operacionais e resultados científicos.
+2. **Quatro contagens cadastrais e de participantes (`registry_counts`) (`WEB-050` / `WEB-051`):**
+   - `_registry_counts` em `stroop/persistence/web_assessments.py` e
+     `analysis_dataset` em `stroop/application/web_assessments.py` retornam
+     `registry_counts` separado de `counts`:
+     `visible_patients` (cadastro central visível autorizado sem filtro de
+     avaliação), `project_linked_patients` (pacientes centrais distintos
+     vinculados aos projetos consultados via participante, avaliação, convite ou
+     mapa legado explícito ativo), `valid_assessment_participants` (participantes
+     distintos com avaliação oficial válida nos projetos, deduplicados por
+     `patient_id` explícito sem fundir homônimos ou legados sem mapa) e
+     `filtered_participants` (participantes distintos no recorte `A`).
+   - `web/src/api/analysis.ts`, `web/src/dashboard/query.ts`,
+     `web/src/components/ResearchFilters.tsx`, `web/src/components/ProfessionalDashboard.tsx`
+     e `web/src/components/ExportHubPanel.tsx` validam o contrato fechado de
+     `registry_counts` e `operational`, expõem os filtros de status operacional,
+     exibem os quatro cartões de contagens cadastrais e renderizam a tabela
+     acessível `Sessões operacionais segregadas` na Visão Geral e em `Avaliações e histórico`.
+
+Validação local executada nesta sessão (Linux `7.0.0-43-generic`, Python `3.12.3`,
+Node `24.15.0`, npm `11.16.0`, Playwright `1.64.1`, Chromium `156.0.8078.4` e
+Firefox `157.0`, PostgreSQL `17.6-bookworm` descartável em tmpfs/loopback
+`stroop_etapa4_test_m8_status_20261116`, removido ao término; zero skips):
+
+- `.venv/bin/python -m unittest tests.test_analysis_query -v`: **4/4 aprovados**
+  (primeira execução antes do ajuste de `filters['status']` no padrão `'valid'`
+  teve 1 falha de asserção em `test_aliases_equivalentes_e_limites_sem_coercao`,
+  corrigida mantendo `filters` sem chave `'status'` quando igual ao padrão `'valid'`).
+- `npm --prefix web test -- --maxWorkers=2 --reporter=dot`: **372/372 aprovados**
+  em 30 arquivos, 0 skips.
+- `npm --prefix web run build`: `tsc --noEmit` e `vite build` aprovados (aviso
+  histórico de chunk >500 kB preservado).
+- Com `TEST_DATABASE_URL` no banco descartável `stroop_etapa4_test_m8_status_20261116`:
+  `.venv/bin/python -m unittest tests.test_analysis_query tests.test_web_assessments
+  tests.test_web_query_exports tests.test_web_database_provision -v`:
+  **55/55 aprovados**, 0 falhas, 0 skips (duas rodadas anteriores falharam apenas
+  no setup do novo teste por argumento `participant_id` em `_completion` e pela
+  constraint `web_participant_sessions_expiration_valid` ao avaliar
+  `clock_timestamp()` duas vezes; corrigido o setup da fixture sem alterar
+  constraints).
+- Em `web/`: `WEB_TEST_PORT=4298 node node_modules/@playwright/test/cli.js test
+  e2e/accessibility-surfaces.spec.ts e2e/component-catalog.spec.ts
+  e2e/research-filters.spec.ts e2e/applied-query.spec.ts e2e/presentation.spec.ts
+  e2e/professional-shell.spec.ts --workers=2 --trace=off
+  --output=test-results/m8-status-browser-20261116`: **62/62 aprovados** em
+  Chromium e Firefox, 0 skips.
+- Em `web/` com o PostgreSQL 17.6 descartável:
+  `node node_modules/@playwright/test/cli.js test --config
+  playwright.integration.config.ts e2e/integrated/analysis-query.spec.ts
+  e2e/integrated/trial-filters.spec.ts e2e/integrated/query-exports.spec.ts
+  --workers=1 --trace=off --output=test-results/m8-status-https-20261116-final`:
+  **16/16 aprovados** em 58,2 s (Chromium e Firefox, HTTPS/FastAPI/PG/grants reais;
+  primeira rodada teve 14/16 por usar `getByRole('button', { name: 'Exportações' })`
+  em vez de `getByRole('tab', { name: 'Exportações' })`, corrigido no teste).
+
+Git: branch `feat/m8-entregaveis-integrados` (base `0ec2629`). Commit desta
+unidade identificável por `git log -1 --format=%H --grep='feat(web): implementa status operacionais segregados e quatro contagens cadastrais'`.
+Nenhum PR, CI (`verify_web_ci.py all` ou Actions), merge ou deploy executado.
+Próxima ação em M8: executar a campanha de volume (`5.000`/`5.001` e `EXPLAIN` de
+`WEB-051`), implementar a preparação direta contextual (`WEB-054`) e executar as
+três jornadas integradas (`UX7-J1`/`J2`/`J3` de `WEB-055`) para concluir os aceites
+de `WEB-048`..`WEB-055` antes da candidata `WEB-032`.
+
+### Retomada anterior — IDs cadastrais na consulta aplicada e acessibilidade UX7-AA de superfícies, 2026-11-16
 
 Continuidade do projeto no marco **M8** (`WEB-050` e `WEB-048`), respeitando a
 instrução explícita de não executar CI, merge ou deploy. `WEB-050` permanece
