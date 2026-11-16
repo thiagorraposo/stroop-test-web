@@ -22,6 +22,7 @@ test('filtros combinados entre projetos contam codigos coincidentes e descartam 
     if (url.pathname === '/api/v1/analysis/query') queries.push(request.postDataJSON())
   })
   await page.goto('/equipe')
+  await page.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
   await page.getByRole('combobox', { name: 'Projeto', exact: true }).selectOption(prepared.projects[0]!)
   // Aceite integrado usa tambem uma sessao criada pelo formulario W13A real.
   await page.getByLabel('Código do participante', { exact: true }).fill('P_SINTETICO_FILTROS_W13A')
@@ -33,6 +34,7 @@ test('filtros combinados entre projetos contam codigos coincidentes e descartam 
   await page.getByRole('button', { name: 'Revogar convite', exact: true }).click()
   expect((await revoking).status()).toBe(204)
 
+  await page.getByRole('button', { name: 'Resultados e Análise Unificada', exact: true }).click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()

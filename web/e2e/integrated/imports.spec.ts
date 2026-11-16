@@ -17,6 +17,7 @@ test('EXP-CSV-01: comprova ausencia de upload CSV na UI e bloqueio 410 no backen
 
   // 1. Navega para /equipe e seleciona o projeto
   await page.goto('/equipe')
+  await page.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
   await page.getByLabel('Projeto', { exact: true }).selectOption(prepared.project_id)
 
   // 2. Comprova ausencia completa de painel, formulario ou botao de importacao CSV

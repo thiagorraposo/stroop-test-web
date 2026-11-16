@@ -47,6 +47,7 @@ test('administra perfil sintetico/projeto, prepara sessao e acesso depende do vi
   await importerContext.addCookies([{ name: member.cookie_name, value: member.token, domain: '127.0.0.1', path: '/',
     secure: true, httpOnly: true, sameSite: 'Lax' }])
   await importerPage.goto('/equipe')
+  await importerPage.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
   await importerPage.getByRole('combobox', { name: 'Projeto', exact: true }).selectOption(projectId)
   const preparation = importerPage.getByRole('region', { name: 'Preparar sessão' })
   await preparation.getByLabel('Código do participante').fill('P_SINTETICO_W15D')

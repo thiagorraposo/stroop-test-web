@@ -363,13 +363,7 @@ export function ProfessionalDashboard({
         value={project}
         onChange={event => {
           if (event.target.value !== project) {
-            aggregateIO.current?.abort()
-            setAggregateContext(null)
-            setAggregateBusy(false)
-            setRows([])
-            setDetail(null)
             setProject(event.target.value)
-            setQuery(null)
           }
         }}
       >
