@@ -4,20 +4,25 @@ import hashlib
 import hmac
 import json
 import re
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
-from pydantic import Field
+from pydantic import Field, model_validator
+from stroop.domain.stroop import METRIC_DEFINITIONS
 
 from api.assessments import _filters, _signed, _verified
 from api.errors import APIError
+from api.analysis_context import remember
 from api.models import RequestModel
 from api.sessions import _professional_write, _reject_query
 from stroop.application import web_assessments as application
 
 router = APIRouter(prefix='/api/v1/analysis', tags=['analysis'])
+UUID_PATTERN = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+UuidStr = Annotated[str, Field(pattern=UUID_PATTERN)]
+StatusLiteral = Literal['valid', 'invalidated', 'aborted', 'expired', 'in_progress']
 
 
 class QueryFilters(RequestModel):
@@ -25,6 +30,7 @@ class QueryFilters(RequestModel):
     date_to: str | None = None
     start_date: str | None = None
     end_date: str | None = None
+    patient_id: list[UuidStr] = Field(default_factory=list, max_length=100)
     participant_code: list[str] = Field(default_factory=list, max_length=100)
     participant_id: list[str] = Field(default_factory=list, max_length=100)
     visit: list[str] = Field(default_factory=list, max_length=100)
@@ -34,7 +40,8 @@ class QueryFilters(RequestModel):
     platform: list[Literal['web', 'psychopy', 'psychopy_local']] = Field(default_factory=list, max_length=100)
     condition: list[Literal['congruent', 'incongruent']] = Field(default_factory=list, max_length=100)
     response_type: list[Literal['hit', 'omission', 'commission', 'correct_rejection']] = Field(default_factory=list, max_length=100)
-    status: Literal['valid'] = 'valid'
+    go_nogo: list[Literal['go', 'no_go']] = Field(default_factory=list, max_length=2)
+    status: StatusLiteral | Annotated[list[StatusLiteral], Field(min_length=1, max_length=5)] = 'valid'
     patient_search: str | None = Field(default=None, max_length=120)
     accuracy_min: float | None = Field(default=None, ge=0, le=100)
     accuracy_max: float | None = Field(default=None, ge=0, le=100)
@@ -56,9 +63,20 @@ class QuerySelection(RequestModel):
 
 
 class Grouping(RequestModel):
-    # Demais agrupamentos/métricas serão habilitados com o seletor WEB-051/052.
-    level: Literal['assessment']
-    dimension: Literal['project']
+    level: Literal['project', 'instrument', 'participant', 'assessment', 'trial']
+    dimension: Literal['date', 'project', 'visit', 'evaluator', 'instrument_version', 'condition', 'go_nogo', 'response_type']
+    time_bucket: Literal['day', 'week', 'month'] | None = None
+    metric_code: str | None = None
+
+    @model_validator(mode='after')
+    def validate_grouping(self):
+        if self.time_bucket is not None and self.dimension != 'date':
+            raise ValueError('Agrupamento incompatível.')
+        if self.metric_code is not None and self.metric_code not in {*METRIC_DEFINITIONS, 'assessments', 'trials'}:
+            raise ValueError('Indicador indisponível.')
+        if self.level == 'trial' and self.metric_code not in (None, 'trials'):
+            raise ValueError('Métrica de avaliação não é métrica de tentativa.')
+        return self
 
 
 class QueryPage(RequestModel):
@@ -83,7 +101,13 @@ def normalize(selection: QuerySelection):
     if len(set(projects)) != len(projects):
         raise APIError('invalid_request')
     raw = selection.filters.model_dump(exclude_none=True)
-    raw.pop('status')
+    raw_status = raw.pop('status', 'valid')
+    statuses = sorted(set([raw_status] if isinstance(raw_status, str) else raw_status))
+    status_value = statuses[0] if len(statuses) == 1 else statuses
+    patient_id = sorted({str(UUID(value)) for value in raw.pop('patient_id', [])})
+    go_nogo = sorted(set(raw.pop('go_nogo')))
+    if go_nogo and set(raw.get('test_code', [])) != {'stroop_go_nogo_ptbr'}:
+        raise APIError('invalid_request')
     advanced = {key: raw.pop(key) for key in ('patient_search', 'accuracy_min', 'accuracy_max',
                 'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max',
                 'has_commission_errors', 'has_omission_errors',
@@ -106,6 +130,9 @@ def normalize(selection: QuerySelection):
                         'rt_median_min_ms', 'rt_median_max_ms')) or not advanced['include_null_rt']
     if metric_filter and set(raw.get('test_code', [])) != {'stroop_go_nogo_ptbr'}:
         raise APIError('invalid_request')
+    if 'valid' not in statuses and (metric_filter or go_nogo or raw.get('condition') or raw.get('response_type')
+                                    or selection.assessment_ids is not None):
+        raise APIError('invalid_request')
     if any(raw.get(key) == '' for key in ('date_from', 'date_to', 'start_date', 'end_date')):
         raise APIError('invalid_request')
     for alias, canonical in [('start_date', 'date_from'), ('end_date', 'date_to'), ('participant_id', 'participant_code')]:
@@ -114,19 +141,32 @@ def normalize(selection: QuerySelection):
             raise APIError('invalid_request')
         if first and not second:
             raw[canonical] = first
-    normalized = {'status': 'valid', **advanced}
+    normalized = {'status': status_value, **advanced}
     legacy = {}
     aliases = {'date_from': 'start_date', 'date_to': 'end_date', 'participant_code': 'participant_id'}
     for key, value in raw.items():
         if not value:
             continue
         if isinstance(value, list):
-            value = sorted(set('psychopy_local' if key == 'platform' and item == 'psychopy' else item for item in value))
+            if key == 'platform':
+                value = sorted(set('psychopy_local' if item == 'psychopy' else item for item in value))
+            elif key == 'evaluator_id':
+                value = sorted(set(str(UUID(item)) if re.fullmatch(UUID_PATTERN, item) else item for item in value))
+            else:
+                value = sorted(set(value))
         normalized[key] = value
         legacy[aliases.get(key, key)] = ['psychopy' if item == 'psychopy_local' else item for item in value] if key == 'platform' else value
     # Não reproduzir regex/allowlists das rotas existentes.
     validation_request = Request({'type': 'http', 'query_string': urlencode(legacy, doseq=True).encode()})
     filters = _filters(validation_request)
+    if statuses != ['valid']:
+        filters['status'] = statuses
+    if patient_id:
+        normalized['patient_id'] = patient_id
+        filters['patient_id'] = patient_id
+    if go_nogo:
+        normalized['go_nogo'] = go_nogo
+        filters['go_nogo'] = go_nogo
     if advanced.get('patient_search'):
         filters['patient_search'] = advanced['patient_search']
     query = {'projects': projects, 'filters': normalized}
@@ -147,9 +187,12 @@ async def analysis_query(request: Request, body: AnalysisRequest):
     _reject_query(request)
     actor = _professional_write(request, 'view_dashboard')
     query, filters = normalize(body.query)
+    if body.grouping.metric_code in METRIC_DEFINITIONS or body.grouping.dimension in ('condition', 'response_type', 'go_nogo'):
+        if query['filters'].get('test_code') != ['stroop_go_nogo_ptbr']:
+            raise APIError('invalid_request')
     config = request.app.state.config
     fingerprint = _fingerprint(config, query)
-    scope = json.dumps(['analysis-page-v1', actor.issuer, actor.subject, fingerprint, body.page.sort], separators=(',', ':'))
+    scope = json.dumps(['analysis-page-v1', actor.issuer, actor.subject, fingerprint, body.page.sort, body.grouping.model_dump(exclude_none=True)], separators=(',', ':'))
     now = int(datetime.now(timezone.utc).timestamp())
     query_id, offset, expected, expires = str(uuid4()), 0, None, now + 900
     if body.page.cursor:
@@ -165,7 +208,7 @@ async def analysis_query(request: Request, body: AnalysisRequest):
             raise APIError('state_conflict')
     try:
         result = application.analysis_query(config.read_database_url, actor, query=query, filters=filters,
-                                            sort=body.page.sort, offset=offset, size=body.page.size, snapshot=expected)
+                                            sort=body.page.sort, offset=offset, size=body.page.size, snapshot=expected, grouping=body.grouping.model_dump(exclude_none=True))
     except application.MissingError:
         raise APIError('not_found') from None
     except application.SnapshotConflict:
@@ -180,13 +223,17 @@ async def analysis_query(request: Request, body: AnalysisRequest):
     # Recortes novos nunca recebem token v1 nem perdem filtros no download.
     basic = {'date_from', 'date_to', 'participant_code', 'visit', 'evaluator_id',
              'test_code', 'test_version', 'platform', 'status', 'include_null_rt'}
+    has_evaluator_uuid = any(re.fullmatch(UUID_PATTERN, item) for item in query['filters'].get('evaluator_id', []))
     legacy_context = None
-    if (set(query['filters']) <= basic and query['filters']['include_null_rt']
-            and 'assessment_ids' not in query):
-        legacy_context = {'filters': filters, 'projects': [
+    if (set(query['filters']) <= basic and query['filters'].get('status') == 'valid'
+            and query['filters']['include_null_rt']
+            and not has_evaluator_uuid and 'assessment_ids' not in query):
+        legacy_context = {'filters': {k: v for k, v in filters.items() if k != 'status'}, 'projects': [
             {'project_id': project, 'snapshot': _signed(config, json.dumps(
-                ['assessment-snapshot-v1', project, actor.issuer, actor.subject, filters], sort_keys=True), [source, expires])}
+                ['assessment-snapshot-v1', project, actor.issuer, actor.subject, {k: v for k, v in filters.items() if k != 'status'}], sort_keys=True), [source, expires])}
             for project, source in sources]}
+    remember(request, actor, query_id, query=query, filters=filters, fingerprint=fingerprint,
+             content=content, counts=result['counts'], expires=expires)
     more = offset + body.page.size < result['counts']['assessments']
     return {
         'query_id': query_id, 'normalized_query': query, 'query_fingerprint': fingerprint,
@@ -197,14 +244,15 @@ async def analysis_query(request: Request, body: AnalysisRequest):
                                             'participant_identity': ['project_id', 'participant_code'],
                                             'visit_identity': ['project_id', 'participant_code', 'visit']},
                                   'summary': {'source': 'stroop.domain.stroop.calculate_metrics', 'population': 'complete_assessment', 'rt_unit': 'seconds'}},
-        'capabilities': {'filters': ['date_from', 'date_to', 'participant_code', 'visit', 'evaluator_id', 'test_code', 'test_version', 'platform', 'status',
+        'capabilities': {'filters': ['date_from', 'date_to', 'patient_id', 'participant_code', 'visit', 'evaluator_id', 'test_code', 'test_version', 'platform', 'status',
                                      'go_accuracy_min', 'go_accuracy_max', 'no_go_accuracy_min', 'no_go_accuracy_max',
                                      'has_commission_errors', 'has_omission_errors',
                                      'patient_search', 'accuracy_min', 'accuracy_max', 'rt_median_min_ms', 'rt_median_max_ms', 'include_null_rt'],
-                         'status': ['valid'], 'trial_filters': {'stroop_go_nogo_ptbr': ['condition', 'response_type']},
-                         'grouping': [{'level': 'assessment', 'dimension': 'project'}],
+                         'status': ['valid', 'invalidated', 'aborted', 'expired', 'in_progress'],
+                         'trial_filters': {'stroop_go_nogo_ptbr': ['condition', 'response_type', 'go_nogo']},
+                         'grouping': [body.grouping.model_dump(exclude_none=True)],
                          'sort': ['started_at_desc', 'started_at_asc', 'participant_code_asc', 'participant_code_desc', 'visit_asc',
                                   'accuracy_asc', 'accuracy_desc', 'response_time_asc', 'response_time_desc'],
                          'platform': ['web', 'psychopy_local'], 'max_assessments': 5000, 'max_projects': 20,
-                         'exports': False, 'nominal_search': False},
+                         'exports': True, 'nominal_search': False},
     }

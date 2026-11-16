@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { ApiError, apiErrorMessage } from '../api/client'
+import type { AnalysisPage } from '../api/analysis'
 import type { ProfessionalProfile } from '../api/client'
-import type { Project } from '../api/assessments'
 import {
   previewExport,
+  exportSelection,
+  contextKey,
   downloadExport,
   type ExportGranularity,
   type IdentificationMode,
@@ -83,38 +86,19 @@ const GRANULARITY_OPTIONS: {
     id: 'stroop_21_colunas',
     title: 'Stroop 21 colunas',
     description: 'Formato clássico canônico compatível com PsychoPy Builder e scripts históricos.',
-    columns: [
-      'participant_id',
-      'participant_name',
-      'session',
-      'date',
-      'expName',
-      'psychopyVersion',
-      'frameRate',
-      'OS',
-      'trial_number',
-      'word',
-      'ink_color',
-      'condition',
-      'correct_response',
-      'key_pressed',
-      'key_at',
-      'reaction_time',
-      'correct',
-      'error_type',
-      'trial_start',
-      'stimulus_onset',
-      'stimulus_offset',
-    ],
+    columns: ['project', 'participant_id', 'participant_name', 'initials', 'visit', 'evaluator', 'assessment_id', 'assessment_date', 'started_at', 'test_code', 'test_version', 'block', 'trial_number', 'word', 'ink_color', 'condition', 'correct_response', 'key_pressed', 'reaction_time', 'correct', 'error_type'],
   },
 ]
 
 type Props = {
   profile: ProfessionalProfile
-  project: Project | null
+  context?: AnalysisPage | null
+  dirty?: boolean
+  onExpired?(cause: unknown): void
 }
 
-export function ExportHubPanel({ profile, project }: Props) {
+export function ExportHubPanel({ profile, context, dirty = false, onExpired }: Props) {
+  const io = useRef<AbortController | null>(null)
   const [granularity, setGranularity] = useState<ExportGranularity>('avaliacoes')
   const [mode, setMode] = useState<IdentificationMode>('deidentified')
   const [selectedColumns, setSelectedColumns] = useState<string[]>([])
@@ -125,6 +109,17 @@ export function ExportHubPanel({ profile, project }: Props) {
   const [message, setMessage] = useState<string | null>(null)
 
   const currentGranularityOption = GRANULARITY_OPTIONS.find(g => g.id === granularity)!
+  const officialStatusOnly = !context || context.normalized_query.filters.status === 'valid'
+
+  useEffect(() => {
+    io.current?.abort(); setPreview(null); setLoading(false); setDownloading(false); setMessage(null)
+    return () => io.current?.abort()
+  }, [context, dirty, granularity, mode, selectedColumns])
+  useEffect(() => {
+    if (!preview) return
+    const timer = setTimeout(() => { io.current?.abort(); setPreview(null); setDownloading(false) }, Math.max(0, Date.parse(preview.expires_at) - Date.now()))
+    return () => clearTimeout(timer)
+  }, [preview])
 
   // Ao mudar de granularidade, reseta as colunas para o catálogo padrão
   useEffect(() => {
@@ -147,47 +142,52 @@ export function ExportHubPanel({ profile, project }: Props) {
   }
 
   const handlePreview = async () => {
-    if (!project) {
-      setError('Selecione um projeto para pré-visualizar a exportação.')
+    if (!context || dirty) {
+      setError('Aplique uma consulta completa antes de exportar.')
       return
     }
+    const controller = new AbortController(); io.current?.abort(); io.current = controller
     setLoading(true)
     setError(null)
     setMessage(null)
     try {
       const res = await previewExport(
         {
-          project_id: project.id,
+          ...exportSelection(context!),
           granularity,
           columns: selectedColumns,
           identification_mode: mode,
         },
-        profile.csrf_token,
+        profile.csrf_token, controller.signal,
       )
+      if (controller.signal.aborted) return
+      if (contextKey(res.counts) !== contextKey(context.counts) || contextKey(res.applied_criteria.query) !== contextKey(context.normalized_query)) throw new ApiError('invalid_response', 200)
       setPreview(res)
       setMessage(`Pré-visualização gerada: ${res.total_rows} registro(s) encontrado(s).`)
     } catch (err: any) {
-      setError(err?.message ?? 'Erro ao gerar pré-visualização.')
+      if (!controller.signal.aborted) { setError(apiErrorMessage(err)); onExpired?.(err) }
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) setLoading(false)
     }
   }
 
   const handleDownload = async () => {
-    if (!project || !preview) return
+    if (!context || dirty || !preview || Date.parse(preview.expires_at) <= Date.now()) return
+    const controller = new AbortController(); io.current?.abort(); io.current = controller
     setDownloading(true)
     setError(null)
     try {
       const { filename, blob } = await downloadExport(
         {
-          project_id: project.id,
+          ...exportSelection(context!),
           granularity,
           columns: selectedColumns,
           identification_mode: mode,
           export_token: preview.export_token,
         },
-        profile.csrf_token,
+        profile.csrf_token, controller.signal,
       )
+      if (controller.signal.aborted) return
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -196,11 +196,11 @@ export function ExportHubPanel({ profile, project }: Props) {
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
-      setMessage(`Arquivo ${filename} baixado com sucesso.`)
+      setMessage('Arquivo preparado para download.')
     } catch (err: any) {
-      setError(err?.message ?? 'Erro ao baixar arquivo CSV.')
+      if (!controller.signal.aborted) { setPreview(null); setError(apiErrorMessage(err)); onExpired?.(err) }
     } finally {
-      setDownloading(false)
+      if (!controller.signal.aborted) setDownloading(false)
     }
   }
 
@@ -260,7 +260,7 @@ export function ExportHubPanel({ profile, project }: Props) {
               type="radio"
               name="id_mode"
               value="nominal"
-              disabled={profile.role !== 'administracao'}
+              disabled
               checked={mode === 'nominal'}
               onChange={() => {
                 setMode('nominal')
@@ -268,7 +268,7 @@ export function ExportHubPanel({ profile, project }: Props) {
               }}
             />
             <span>
-              <strong>Nominal (restrito à Administração)</strong>: inclui nomes completos e
+              <strong>Nominal (aguarda habilitação institucional)</strong>: inclui nomes completos e
               iniciais, mediante autorização e habilitação institucional.
             </span>
           </label>
@@ -291,6 +291,7 @@ export function ExportHubPanel({ profile, project }: Props) {
               <input
                 type="checkbox"
                 checked={selectedColumns.includes(col)}
+                disabled={granularity === 'stroop_21_colunas'}
                 onChange={() => toggleColumn(col)}
               />
               <code>{col}</code>
@@ -300,11 +301,16 @@ export function ExportHubPanel({ profile, project }: Props) {
       </fieldset>
 
       {/* 4. Ações de Prévia e Download */}
+      {!officialStatusOnly && (
+        <p role="status" className="notice">
+          A exportação CSV oficial exige status &quot;Oficiais válidas (padrão)&quot;. Registros operacionais permanecem estritamente segregados de A/T e das exportações científicas.
+        </p>
+      )}
       <div className="export-actions">
         <button
           type="button"
           className="button secondary"
-          disabled={loading || selectedColumns.length === 0 || !project}
+          disabled={loading || downloading || dirty || !officialStatusOnly || selectedColumns.length === 0 || !context}
           onClick={() => void handlePreview()}
         >
           {loading ? 'Consultando contagem…' : 'Pré-visualizar contagem e amostra'}
@@ -313,7 +319,7 @@ export function ExportHubPanel({ profile, project }: Props) {
         <button
           type="button"
           className="button primary"
-          disabled={downloading || !preview || preview.total_rows === 0}
+          disabled={downloading || loading || dirty || !officialStatusOnly || !context || !preview || preview.total_rows === 0}
           onClick={() => void handleDownload()}
         >
           {downloading ? 'Baixando CSV…' : `Baixar arquivo CSV (${preview?.total_rows ?? 0} registros)`}
@@ -357,15 +363,9 @@ export function ExportHubPanel({ profile, project }: Props) {
         </section>
       )}
 
-      {/* 6. Aviso de Segurança */}
-      <div className="notice" role="region" aria-label="Proteção contra Formula Injection">
-        <strong>Proteção ativa contra CSV Formula Injection:</strong>
-        <p className="quiet">
-          Células iniciadas por =, +, -, @, tabulação ou quebras de linha são neutralizadas
-          automaticamente com prefixo seguro antes da serialização, garantindo conformidade com
-          planilhas externas (Excel, LibreOffice, SPSS).
-        </p>
-      </div>
+      <p className="quiet">A prévia e o CSV usam a consulta aplicada completa. Métricas referem-se à avaliação completa; tentativas respeitam o recorte. Dados são pseudonimizados, não anônimos.</p>
+      {preview && <p role="status">{preview.counts.participants} participantes · {preview.counts.visits} visitas · {preview.counts.assessments} avaliações · {preview.counts.trials} tentativas no recorte. {preview.total_rows} linhas nesta projeção.</p>}
+
     </div>
   )
 }

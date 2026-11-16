@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
+import { selectMulti } from '../support/multiselect'
 import { finishPractice, manage, manageLinks, redeem } from './fixtures'
 
 const python = fileURLToPath(new URL('../../../.venv/bin/python', import.meta.url))
@@ -22,7 +23,13 @@ async function professional(page: Page, _context: BrowserContext, role: string):
   await page.getByLabel('Senha', { exact: true }).fill(prepared.password)
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page.getByText('Sua sessão está ativa.')).toBeVisible()
-  await page.getByRole('combobox', { name: 'Projeto', exact: true }).selectOption(prepared.project_id)
+  if (role !== 'consulta') {
+    await page.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
+    await page.getByRole('combobox', { name: 'Projeto', exact: true }).selectOption(prepared.project_id)
+  } else {
+    await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
+    await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  }
   return prepared
 }
 async function issue(page: Page, project: string, participant: string, visit: string) {
@@ -57,7 +64,8 @@ test('cadastro pela equipe conserva metadados ate recibo, consulta e CSV reais',
     expect([stored.state, stored.assessments, stored.trials, stored.metrics, stored.observations, stored.confirmed_through])
       .toEqual(['completed', 1, 16, 12, 16, 16])
     await page.reload()
-    await page.getByRole('combobox', { name: 'Projeto', exact: true }).selectOption(prepared.project_id)
+    await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
+    await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
     await page.getByRole('button', { name: `Ver avaliação ${participant}, visita ${visit}` }).click()
     const detail = page.getByRole('region', { name: 'Detalhe da avaliação' })
     await expect(detail).toBeVisible()

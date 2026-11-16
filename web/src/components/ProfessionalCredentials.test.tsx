@@ -95,7 +95,11 @@ test('confirmacao divergente limpa campos sem enviar e permite corrigir', async 
   input('current-password').value = secret; input('new-password').value = secret; input('confirm-password').value = 'Outra frase sintética'
   await submit()
   expect(fetchMock).not.toHaveBeenCalled()
-  expect(container.querySelector('[role="alert"]')?.textContent).toContain('não corresponde')
+  const alert = container.querySelector('[role="alert"]')!
+  expect(alert.textContent).toContain('não corresponde')
+  expect(input('new-password').getAttribute('aria-invalid')).toBe('true')
+  expect(input('new-password').getAttribute('aria-describedby')?.split(' ')).toContain(alert.id)
+  expect(document.activeElement).toBe(input('new-password'))
   expect([...container.querySelectorAll('input')].every(node => node.value === '')).toBe(true)
 })
 

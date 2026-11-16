@@ -4,6 +4,61 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-16 — IDs cadastrais na consulta aplicada e acessibilidade UX7-AA de superfícies
+
+`POST /api/v1/analysis/query` e o estado aplicado React passam a suportar
+`patient_id` (UUID do cadastro central, avaliando vínculo WEB e mapa explícito
+ativo de legado em `web_legacy_entity_links` sem ler nome/iniciais e recusando
+ambiguidade com 409) e `evaluator_id` (UUID de `web_evaluators` ou código
+`EVA-...`). `legacy_export_context` (CSV v1) permanece nulo quando filtros de
+UUID cadastral são usados, preservando a exportação pelas cinco projeções v2.
+Ampliada a cobertura `UX7-AA` (`accessibility-surfaces.spec.ts`) para `/instrucoes`,
+rota desconhecida, área autenticada em três eixos e troca de senha, com correção
+de contraste em `.content-card`, container queries para `zoom = 4` em
+`.professional-theme` e recorte de `.skip-link` não focado. Evidências, comandos,
+resultados e limites em `EV-M8-050-CADASTRAIS-AA-20261116` no backlog canônico.
+
+## 2026-11-16 — Filtro Go/No-Go e decisão sobre RT médio
+
+Consulta aplicada passa a combinar Go/No-Go, condição e resposta na mesma
+tentativa principal, usando a resposta esperada do domínio. Prévia e CSV v2
+preservam o recorte; CSV21 recusa subconjuntos de tentativas. Métricas da
+avaliação completa permanecem oficiais. CHG-009 registra aprovação explícita
+do proprietário para manter RT médio indisponível nesta versão e preservar
+RT mediano. Testes, resultados, limites e Git no backlog canônico.
+
+## 2026-11-16 — Dispensa de confirmação independente SSH e aceite local de WEB-031
+
+Por instrução explícita do proprietário, registrada em CHG-008, retirada a
+confirmação independente ED25519 por painel/console/suporte como condição de
+WEB-031 e formalizado aceite no alcance dos ensaios sintéticos locais já
+registrados. Revisados ficha, painel, dependências, riscos, REQ-INF-003/matriz,
+arquitetura e runbook, preservando o histórico. Nenhum teste externo, RPO/RTO
+externo ou identidade SSH foi declarado comprovado. Comprovação externa antes
+da publicação e checagem de chave no cliente SSH preservadas. Validação apenas
+documental; estado, evidências e próxima ação somente no backlog canônico.
+
+## 2026-11-15 — Projeção de pacientes legados na consulta integrada
+
+Corrigida a projeção de pacientes da exportação integrada para reconhecer somente
+mapas legados explícitos ativos no projeto autorizado. Ambiguidade é recusada e
+desvinculação invalida a prévia pelo fingerprint de conteúdo. Acrescentada leitura
+das colunas técnicas dos mapas ao provisionador existente, sem aplicar grants
+operacionais, ler nomes ou alterar migrations. Testes API/PostgreSQL sintéticos
+e evidências na retomada do backlog; sem CI, PR, merge, VPS ou deploy.
+
+## 2026-11-15 — Revalidação sintética de recuperação e integração parcial de M8
+
+Reexecutados backup/restore/replicação SSH local/agenda/alertas e recuperação de
+autenticação em ambiente descartável. Gate de verificação independente da
+hostkey da VPS preservado, sem conexão remota. Antes da limitação final de
+escopo, integrados shell profissional de três eixos, exploração descritiva e
+exportação vinculada à consulta aplicada, eliminando fallback writer e leitura
+nominal no caminho de exportação. CSV21 passa a reutilizar também o catálogo
+canônico, sem modificar fórmulas ou o exportador científico. Contrato e matriz
+registram capacidade parcial e testes; evidências/limites somente no backlog.
+Sem CI, PR, merge, publicação ou mudança operacional de produção.
+
 ## 2026-11-15 — Acessibilidade de ajuda, login e superfícies públicas
 
 Tooltip passa a atender Escape durante hover; foco de data e rolagem de

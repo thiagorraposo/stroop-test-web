@@ -27,11 +27,12 @@ nav .team-link { border: 1px solid #3a4358; border-radius: 7px; padding: 11px 17
 .welcome-grid > * { min-width: 0; }
 .hero-card :is(h1, p) { max-width: 100%; overflow-wrap: anywhere; }
 .hero-card .journey-indicator li { flex-wrap: wrap; overflow-wrap: anywhere; }
-.hero-card .journey-indicator li, .hero-card .journey-number { color: #475569; }
+.hero-card .journey-indicator li, .hero-card .journey-number,
+.content-card .journey-indicator li, .content-card .journey-number { color: #475569; }
 .hero-card, .content-card { background: #f4f3ed; color: #172139; border-radius: 14px; padding: 56px 48px; }
 .hero-card { min-height: 555px; display: flex; flex-direction: column; align-items: flex-start; }
 .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 11px; font-weight: 700; color: #697287; margin: 0 0 28px; }
-.hero-card :is(.eyebrow, .quiet), .professional-theme :is(.eyebrow, .quiet) { color: #475569; }
+.hero-card :is(.eyebrow, .quiet), .content-card :is(.eyebrow, .quiet, .example-label), .professional-theme :is(.eyebrow, .quiet) { color: #475569; }
 h1 { font-size: clamp(30px, 3.9vw, 49px); line-height: 1.12; font-weight: 600; letter-spacing: -.04em; margin: 0 0 26px; max-width: 15ch; }
 .lead { font-size: 18px; line-height: 1.65; max-width: 45ch; color: #4c566a; margin: 0 0 30px; }
 .button { display: inline-flex; gap: 28px; align-items: center; justify-content: center; min-height: 48px; padding: 14px 21px; border: 1px solid transparent; border-radius: 7px; font-size: 14px; font-weight: 650; text-decoration: none; cursor: pointer; transition: background-color 120ms; }
@@ -68,6 +69,7 @@ kbd { font: inherit; font-size: .9em; border: 1px solid #b7bfca; border-radius: 
 .notice { padding: 17px 20px; color: #793e29; border: 1px solid #d3ae9d; border-radius: 7px; line-height: 1.65; margin: 20px 0; background: #fbefe6; }
 .role-badge { display: table; color: #31513a; background: #dfe9d9; border: 1px solid #b4c9ac; border-radius: 20px; padding: 7px 14px; font-size: 12px; margin: 0 0 28px; }
 .skip-link { position: absolute; left: 16px; top: -70px; z-index: 20; padding: 12px 18px; color: #142033; background: white; border-radius: 6px; }
+.skip-link:not(:focus) { clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; padding: 0; pointer-events: none; }
 .skip-link:focus { top: 15px; }
 .content-card:focus, .practice-preparation:focus { outline: 3px solid #9a7df4; outline-offset: 4px; }
 .preparation-checks { padding: 24px 0 10px; border-top: 1px solid #cdd1d5; }
@@ -265,3 +267,7 @@ kbd { font: inherit; font-size: .9em; border: 1px solid #b7bfca; border-radius: 
 .research-filters input,
 .research-filters select { min-width: 0; }
 .page-shell:has(.professional-dashboard) .site-header { flex-wrap: wrap; }
+main:has(.professional-theme) { container-type: inline-size; }
+@container (max-width: 850px) {
+  .professional-theme.content-card { padding: 24px 16px; }
+}

@@ -12,6 +12,7 @@ import io
 import math
 
 from stroop.domain.web_export import _safe_cell
+from stroop.domain.stroop import CANONICAL_COLUMNS
 
 GRANULARITY_COLUMNS: dict[str, tuple[str, ...]] = {
     "pacientes": (
@@ -65,29 +66,7 @@ GRANULARITY_COLUMNS: dict[str, tuple[str, ...]] = {
         "metric_value",
         "unit",
     ),
-    "stroop_21_colunas": (
-        "participant_id",
-        "participant_name",
-        "session",
-        "date",
-        "expName",
-        "psychopyVersion",
-        "frameRate",
-        "OS",
-        "trial_number",
-        "word",
-        "ink_color",
-        "condition",
-        "correct_response",
-        "key_pressed",
-        "key_at",
-        "reaction_time",
-        "correct",
-        "error_type",
-        "trial_start",
-        "stimulus_onset",
-        "stimulus_offset",
-    ),
+    "stroop_21_colunas": tuple(CANONICAL_COLUMNS),
 }
 
 NOMINAL_COLUMNS: frozenset[str] = frozenset({
@@ -104,8 +83,10 @@ def validate_granularity_and_columns(
     if granularity not in GRANULARITY_COLUMNS:
         raise ValueError(f"Granularidade não suportada: {granularity}")
     allowed = GRANULARITY_COLUMNS[granularity]
-    if not requested_columns:
+    if requested_columns is None:
         return granularity, list(allowed)
+    if not requested_columns or len(set(requested_columns)) != len(requested_columns):
+        raise ValueError("Seleção de colunas vazia ou duplicada.")
     for col in requested_columns:
         if col not in allowed:
             raise ValueError(f"Coluna não permitida para {granularity}: {col}")

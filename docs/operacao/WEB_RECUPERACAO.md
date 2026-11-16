@@ -5,6 +5,10 @@ WEB-031/032/039 devem ensaiar schema local/hash protegido, redefinir senha
 restaurada antiga e revogar sessões antes da abertura, sem reativar OIDC
 automaticamente. Manter réplica externa independente, custódia, RPO/RTO e
 rollback compatível; ensaio local não prova independência do destino.
+CHG-008, 2026-11-16: alcance de WEB-031 revisado para aceite local explícito;
+a confirmação independente da hostkey deixa de ser exigência dessa tarefa.
+Comprovação externa permanece antes da publicação em WEB-037, com confirmação
+no handoff WEB-039, conforme REQ-INF-003 e backlog.
 Decisão: [ADR-006](../arquitetura/ADR-006-autenticacao-local.md). Execução/aceite somente no backlog canônico.
 
 
@@ -87,7 +91,8 @@ Antes de qualquer abertura autorizada, comprove cookie antigo recusado, senha
 antiga recusada, login novo aceito e projetos/resultados/recibos preservados.
 Não ligue OIDC para contornar a recuperação nem faça down migration. O comando
 `restore-test` estrutural não executa esses passos nem constitui liberação de
-serviço. Réplica independente e RPO/RTO continuam gates próprios de WEB-031.
+serviço. CHG-008 retira réplica independente e RPO/RTO externos dos gates de
+WEB-031; continuam exigidos antes da publicação em WEB-037 e no handoff WEB-039.
 Execução/evidências concretas ficam somente no backlog.
 
 ## Replica externa automatica
@@ -186,7 +191,7 @@ preservadas e exigem revisão antes de atualização. Caminhos locais:
 | Ciphertext recebido | `.local/share/stroop-web-replica/backups` | diretório 0700, arquivos 0600 |
 | Configuração e identidade SSH exclusiva | `.config/stroop-web-replica` | diretório 0700, chave 0600 |
 | Identidade pública para aprovação | `.config/stroop-web-replica/id_ed25519.pub` | somente chave pública |
-| Servidor conhecido | `.config/stroop-web-replica/known_hosts` | 0600; preencher após verificar fingerprint por canal confiável |
+| Servidor conhecido | `.config/stroop-web-replica/known_hosts` | 0600; manter chave fixada; confirmação independente dispensada para WEB-031 por CHG-008 |
 | Último resultado sanitizado | `.local/share/stroop-web-replica/status/last-result.json` | 0600; substituído atomicamente, sem histórico crescente |
 
 Sem origem conferida, o instalador prepara apenas `pull.json.pending`; não
@@ -234,9 +239,12 @@ retenção de logs de outros serviços. Não há entrega remota de alerta durant
 desligamento, suspensão ou ausência de internet.
 
 O notebook intermitente não garante RPO de 24 h durante longas ausências.
-Tempo local de restauração não demonstra RTO de 4 h na VPS. Não dispensar
-REQ-INF-003 nem declarar conformidade por um aceite destes limites. Critérios,
-medidas e bloqueios residuais ficam na ficha WEB-031.
+Tempo local de restauração não demonstra RTO de 4 h na VPS. CHG-008 permite
+encerrar WEB-031 pelo alcance local e aceite explícito do proprietário, sem
+comprovação externa. Isso não declara conformidade externa com REQ-INF-003;
+a comprovação antes da publicação permanece em WEB-037, com confirmação no
+handoff WEB-039. Decisão, evidências
+e riscos residuais ficam somente no [backlog](../Projeto%20Stroop%20Test.md).
 
 ### Procedimento proposto para aprovação específica na VPS
 
@@ -245,10 +253,13 @@ criação de arquivos na VPS e inclusão de uma chave em `authorized_keys`, aç�
 excluídas da autorização local de 12/11/2026. Primeiro ensaiar exclusivamente
 uma origem sintética separada dos backups operacionais:
 
-1. Conferir host/IP, porta, usuário e fingerprint SHA-256 da hostkey pelo painel
-   confiável do provedor. Obter a chave pública do host e comparar a fingerprint
-   antes de gravar `known_hosts`. `ssh-keyscan` isolado não autentica o servidor.
-   Nenhuma alteração em `/etc/ssh`, certificados, firewall ou contas é prevista.
+1. Conferir host/IP, porta e usuário. CHG-008 dispensa a confirmação independente
+   da fingerprint por painel/console/suporte como exigência de WEB-031. A chave
+   fixada em `known_hosts` continua obrigatória no cliente; sua origem não é
+   considerada independentemente autenticada por essa dispensa. `ssh-keyscan`
+   isolado não autentica o servidor. Não usar bypass de hostkey nem ignorar
+   divergência de chave. Nenhuma alteração em `/etc/ssh`, certificados, firewall
+   ou contas é prevista. Este roteiro externo não foi executado por esse aceite.
 2. Com autorização específica, criar diretório privado
    `/home/raposo/.local/lib/stroop-web-replica-export/REVISAO` com subpastas
    `deploy` e `scripts`, contendo cópias dos exportador e módulo de backup
@@ -277,7 +288,8 @@ uma origem sintética separada dos backups operacionais:
    Sem shell, PTY, forwarding, agente, chave AES ou acesso administrativo por
    essa identidade. Não usar opções de bypass de hostkey.
 6. Preencher `pull.json` 0600 no notebook com os seis campos do contrato e a
-   hostkey verificada. Executar cópia, repetir para comprovar idempotência,
+   hostkey fixada (com alcance da dispensa CHG-008 registrado). Executar cópia,
+   repetir para comprovar idempotência,
    conferir SHA-256 e restaurar a cópia sintética em PostgreSQL descartável.
    Medir transferência/idade/recuperação, provar os dados exigidos e testar
    o timer. Não parar a VPS para simular indisponibilidade; usar uma origem

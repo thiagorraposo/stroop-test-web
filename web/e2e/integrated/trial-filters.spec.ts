@@ -36,7 +36,7 @@ test('condição e resposta selecionam a mesma tentativa e preservam métricas d
   await expect(card('Precisão média')).toHaveText(accuracy!)
   await expect(page.getByText(/^Filtros aplicados:/)).toContainText('respostas: hit, omission')
   await expect(page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })).toBeDisabled()
-  await expect(page.getByText('A exportação deste recorte ainda não está disponível.', { exact: false })).toBeVisible()
+  await expect(page.getByText('Para exportar os filtros avançados, use Exportações', { exact: false })).toBeVisible()
   await form.getByRole('searchbox', { name: 'Buscar opções de tipo de resposta / erro', exact: true }).fill('comissão')
   await expectMulti(response, ['hit', 'omission'])
   await response.getByRole('checkbox', { name: 'Acerto', exact: true }).focus()

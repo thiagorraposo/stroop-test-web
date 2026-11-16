@@ -22,6 +22,7 @@ const empty: AssessmentFacets = {
 }
 
 const labels = {
+  patient_id: 'Pacientes (cadastro central)',
   participant_id: 'Participantes (códigos)',
   visit: 'Visitas',
   evaluator_id: 'Avaliadores (identificação técnica)',
@@ -29,14 +30,26 @@ const labels = {
   platform: 'Plataformas',
 } as const
 
+const statusLabels: Record<AdvancedFilterValues['status'], string> = {
+  valid: 'Oficiais válidas (padrão)',
+  invalidated: 'Invalidadas (segregadas de A/T)',
+  aborted: 'Abortadas / interrompidas (segregadas de A/T)',
+  expired: 'Expiradas (segregadas de A/T)',
+  in_progress: 'Em andamento (segregadas de A/T)',
+  invalid: 'Todos os status operacionais (segregados de A/T)',
+  all: 'Oficiais válidas + status operacionais segregados',
+}
+
 export function ResearchFilters({
   projects,
+  patients = [],
   initialProject,
   loading,
   onApply,
   value, applied, onChange, refreshKey = 0,
 }: {
   projects: Project[]
+  patients?: { id: string; participant_code: string }[]
   initialProject: string
   loading: boolean
   onApply(query: ResearchQuery): void
@@ -56,6 +69,7 @@ export function ResearchFilters({
   const end = draft.filters.end_date ?? ''
   const instruments = toArray(draft.filters.test_code)
   const values = {
+    patient_id: toArray(draft.filters.patient_id),
     participant_id: toArray(draft.filters.participant_id),
     visit: toArray(draft.filters.visit),
     evaluator_id: toArray(draft.filters.evaluator_id),
@@ -126,9 +140,14 @@ export function ResearchFilters({
       setValidation('A data inicial deve ser anterior ou igual à final.')
       return
     }
-    if ((condition.length || responseType.length || accuracyRange !== 'all' || goAccuracyRange !== 'all' || noGoAccuracyRange !== 'all'
+    if (status !== 'valid' && status !== 'all' && (condition.length || responseType.length || advanced.goNogo?.length || accuracyRange !== 'all' || goAccuracyRange !== 'all' || noGoAccuracyRange !== 'all'
+      || hasCommissionErrors !== 'all' || hasOmissionErrors !== 'all' || rtRange !== 'all' || !includeNullRt || draft.assessmentIds?.length)) {
+      setValidation('Status operacionais (invalidadas, abortadas, expiradas, em andamento) são segregados de A/T e não possuem métricas oficiais nem tentativas principais. Limpe os filtros de métricas/tentativas ou inclua avaliações oficiais válidas.')
+      return
+    }
+    if ((condition.length || responseType.length || advanced.goNogo?.length || accuracyRange !== 'all' || goAccuracyRange !== 'all' || noGoAccuracyRange !== 'all'
       || hasCommissionErrors !== 'all' || hasOmissionErrors !== 'all' || rtRange !== 'all' || !includeNullRt) && (instruments.length !== 1 || instruments[0] !== 'stroop_go_nogo_ptbr')) {
-      setValidation('Selecione somente o instrumento Stroop Go/No-Go para filtrar condição, resposta, precisão ou RT. Condição e resposta exigem uma mesma tentativa principal; as métricas continuam da avaliação completa.')
+      setValidation('Selecione somente o instrumento Stroop Go/No-Go para filtrar condição, resposta, precisão ou RT. Condição, Go/No-Go e resposta exigem uma mesma tentativa principal; as métricas continuam da avaliação completa.')
       return
     }
     if ([...Object.values(values), instruments, condition, responseType].some(items => items.length > 100)) {
@@ -155,8 +174,11 @@ export function ResearchFilters({
   if (instruments.length) {
     activeChips.push({ label: `Instrumentos: ${instruments.join(', ')}`, onRemove: () => setInstruments([]) })
   }
+  if (draft.assessmentIds?.length) {
+    activeChips.push({ label: `${draft.assessmentIds.length} avaliações selecionadas`, onRemove: () => update({ ...draft, assessmentIds: [] }) })
+  }
   if (status !== 'valid') {
-    activeChips.push({ label: `Status: ${status === 'all' ? 'Todas' : 'Inválidas'}`, onRemove: () => setAdvanced('status', 'valid') })
+    activeChips.push({ label: `Status: ${statusLabels[status]}`, onRemove: () => setAdvanced('status', 'valid') })
   }
   if (accuracyRange !== 'all') {
     activeChips.push({ label: `Precisão: ${accuracyRange}`, onRemove: () => setAdvanced('accuracyRange', 'all') })
@@ -173,6 +195,10 @@ export function ResearchFilters({
   }
   if (responseType.length) {
     activeChips.push({ label: `Resposta: ${responseType.join(', ')}`, onRemove: () => setAdvanced('responseType', []) })
+  }
+  if (advanced.goNogo?.length) {
+    activeChips.push({ label: `Go/No-Go: ${advanced.goNogo.map(kind => kind === 'go' ? 'Go' : 'No-Go').join(', ')}`,
+      onRemove: () => setAdvanced('goNogo', []) })
   }
   for (const key of Object.keys(labels) as (keyof typeof labels)[]) {
     if (values[key].length > 0) {
@@ -238,11 +264,13 @@ export function ResearchFilters({
             options={projects.map(project => ({ value: project.id, label: `${project.code}${project.active ? '' : ' (inativo)'}` }))} />
           <label>
             Data inicial
-            <input type="date" value={start} onChange={event => setStart(event.target.value)} />
+            <input type="date" value={start} aria-invalid={Boolean(start && end && start > end) || undefined}
+              aria-describedby={validation ? validationId : undefined} onChange={event => setStart(event.target.value)} />
           </label>
           <label>
             Data final
-            <input type="date" value={end} onChange={event => setEnd(event.target.value)} />
+            <input type="date" value={end} aria-invalid={Boolean(start && end && start > end) || undefined}
+              aria-describedby={validation ? validationId : undefined} onChange={event => setEnd(event.target.value)} />
           </label>
           <SearchableMultiSelect label="Instrumento da consulta" value={instruments} onChange={setInstruments}
             options={[...new Set([...facets.test_code, ...instruments])].sort().map(code => ({ value: code, label: code }))} />
@@ -259,8 +287,12 @@ export function ResearchFilters({
           {(Object.keys(labels) as (keyof typeof labels)[]).map(key => (
             <SearchableMultiSelect key={key} label={labels[key]} value={values[key]}
               onChange={items => setValues({ ...values, [key]: items })}
-              options={[...new Set([...facets[key], ...values[key]])].sort().map(value => ({ value,
-                label: value === 'LEGADO_NAO_MAPEADO' && key === 'evaluator_id' ? 'Legado sem identificação técnica' : value }))} />
+              options={key === 'patient_id'
+                ? [...new Map<string, string>([...values.patient_id.map(id => [id.toLowerCase(), id.toLowerCase()] as const),
+                    ...patients.map(p => [p.id.toLowerCase(), `${p.participant_code} (${p.id.toLowerCase()})`] as const)]).entries()]
+                    .sort(([a], [b]) => a.localeCompare(b)).map(([value, label]) => ({ value, label }))
+                : [...new Set([...facets[key], ...values[key]])].sort().map(value => ({ value,
+                    label: value === 'LEGADO_NAO_MAPEADO' && key === 'evaluator_id' ? 'Legado sem identificação técnica' : value }))} />
           ))}
         </div>
 
@@ -284,8 +316,12 @@ export function ResearchFilters({
             Status da avaliação
             <select value={status} onChange={event => setAdvanced('status', event.target.value as AdvancedFilterValues['status'])}>
               <option value="valid">Oficiais válidas (padrão)</option>
-              <option value="all" disabled>Todas as avaliações — indisponível</option>
-              <option value="invalid" disabled>Interrompidas / Invalidadas — indisponível</option>
+              <option value="invalidated">Invalidadas (segregadas de A/T)</option>
+              <option value="aborted">Abortadas / interrompidas (segregadas de A/T)</option>
+              <option value="expired">Expiradas (segregadas de A/T)</option>
+              <option value="in_progress">Em andamento (segregadas de A/T)</option>
+              <option value="invalid">Todos os status operacionais (segregados de A/T)</option>
+              <option value="all">Oficiais válidas + status operacionais segregados</option>
             </select>
           </label>
           <label>
@@ -313,6 +349,7 @@ export function ResearchFilters({
               <option value="1500msPlus">≥ 1,5 s</option>
             </select>
           </label>
+          <p className="quiet">O filtro de RT usa a mediana oficial dos acertos. RT médio indisponível nesta versão.</p>
           {([['goAccuracyRange', 'Faixa de precisão Go'], ['noGoAccuracyRange', 'Faixa de precisão No-Go']] as const).map(([field, label]) =>
             <Select key={field} label={label} value={advanced[field]} onChange={event => setAdvanced(field, event.target.value as AdvancedFilterValues['accuracyRange'])}
               options={[{ value: 'all', label: 'Todas as precisões' }, { value: 'under50', label: '< 50%' }, { value: '50to80', label: '50% a < 80%' }, { value: '80plus', label: '≥ 80%' }]} />)}
@@ -328,7 +365,10 @@ export function ResearchFilters({
           <SearchableMultiSelect label="Condição experimental" value={condition}
             onChange={items => setAdvanced('condition', items as AdvancedFilterValues['condition'])}
             options={[{ value: 'congruent', label: 'Congruente' }, { value: 'incongruent', label: 'Incongruente' }]} />
-          <p className="quiet">Condição e resposta devem ocorrer na mesma tentativa principal do Stroop Go/No-Go.
+          <SearchableMultiSelect label="Tipo de tentativa Go/No-Go" value={advanced.goNogo ?? []}
+            onChange={items => setAdvanced('goNogo', items as ('go' | 'no_go')[])}
+            options={[{ value: 'go', label: 'Go (resposta esperada)' }, { value: 'no_go', label: 'No-Go (sem resposta esperada)' }]} />
+          <p className="quiet">Condição, Go/No-Go e resposta devem ocorrer na mesma tentativa principal do Stroop Go/No-Go.
             As métricas apresentadas referem-se sempre à avaliação completa.</p>
         </div>
 

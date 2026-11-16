@@ -263,7 +263,7 @@ Esse script desativa o proxy WEB e religa o proxy legado nas portas 80/443, conf
 Atualmente, o deploy automático em push na `main` é **proibido por governança** (marcos M8–M10 do backlog). Para que um gatilho de Continuous Deployment (CD) direto após o merge possa ser habilitado no futuro, os seguintes pré-requisitos técnicos e institucionais devem ser atendidos:
 
 1. **Aprovação Formal dos Marcos M8, M9 e M10:**
-   - Conclusão e aceite da réplica externa independente e runbooks de recuperação (`WEB-031` e `WEB-032`).
+   - Aceite local explícito de `WEB-031` (CHG-008), candidata/runbooks de `WEB-032` e comprovação de réplica externa/RPO/RTO antes da publicação em `WEB-037`, confirmada no handoff `WEB-039`. A dispensa da confirmação independente da hostkey em WEB-031 não comprova réplica externa.
    - Validação metodológica e temporal do experimento em ambiente controlado (`WEB-034` e `WEB-036`).
    - Conclusão da homologação e handoff operacional (`WEB-037` a `WEB-040`).
 2. **Decisão Institucional DEC-05:**

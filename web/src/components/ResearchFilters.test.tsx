@@ -179,6 +179,7 @@ test('QUERY7: multisseleção de condição/resposta exige capacidade e só publ
     return list
   }
   await select('Condição experimental', ['congruent', 'incongruent'])
+  await select('Tipo de tentativa Go/No-Go', ['go'])
   const list = await select('Tipo de resposta / erro', ['hit', 'omission'])
   expect(applied).not.toHaveBeenCalled()
   await act(async () => button('Aplicar filtros').click())
@@ -186,7 +187,7 @@ test('QUERY7: multisseleção de condição/resposta exige capacidade e só publ
   expect(applied).not.toHaveBeenCalled()
   await select('Instrumento da consulta', ['stroop_go_nogo_ptbr'])
   await act(async () => button('Aplicar filtros').click())
-  expect(applied.mock.lastCall?.[0].advanced).toMatchObject({ condition: ['congruent', 'incongruent'], responseType: ['hit', 'omission'] })
+  expect(applied.mock.lastCall?.[0].advanced).toMatchObject({ condition: ['congruent', 'incongruent'], goNogo: ['go'], responseType: ['hit', 'omission'] })
   const search = list.querySelector<HTMLInputElement>('input[type=search]')!
   await fill(search, 'comissão')
   const selected = () => [...list.querySelectorAll<HTMLInputElement>('input:checked')].map(option => option.value)
@@ -196,4 +197,68 @@ test('QUERY7: multisseleção de condição/resposta exige capacidade e só publ
   expect(applied).toHaveBeenCalledTimes(1)
   await act(async () => button('Descartar alterações').click())
   expect(selected()).toHaveLength(2)
+})
+
+test('QUERY7: seleção cadastral de pacientes (UUID) mantém rascunho, chip e descarte sem expor nome nominal', async () => {
+  const applied = vi.fn()
+  const patientId = '11111111-1111-4111-8111-111111111111'
+  await act(async () =>
+    root.render(
+      <ResearchFilters
+        projects={mockProjects}
+        patients={[{ id: patientId, participant_code: 'PAT-20261116-000001' }]}
+        initialProject={mockProjects[0]!.id}
+        loading={false}
+        onApply={applied}
+      />,
+    ),
+  )
+  const list = [...container.querySelectorAll('fieldset')].find(
+    node => node.querySelector('legend')?.textContent === 'Pacientes (cadastro central)',
+  )!
+  expect(list).toBeDefined()
+  expect(list.textContent).toContain('PAT-20261116-000001')
+  const checkbox = list.querySelector<HTMLInputElement>('input[type="checkbox"]')!
+  await act(async () => checkbox.click())
+  expect(container.textContent).toContain('Pacientes (cadastro central): 1 sel.')
+  expect(applied).not.toHaveBeenCalled()
+  await act(async () => button('Aplicar filtros').click())
+  expect(applied).toHaveBeenCalledTimes(1)
+  expect(applied.mock.lastCall?.[0].filters.patient_id).toEqual([patientId])
+  await act(async () => container.querySelector<HTMLButtonElement>('[aria-label^="Remover filtro Pacientes (cadastro central)"]')!.click())
+  expect(checkbox.checked).toBe(false)
+  await act(async () => button('Descartar alterações').click())
+  expect(checkbox.checked).toBe(true)
+})
+
+test('QUERY7: status operacionais são selecionáveis e recusam combinação incompatível com filtros de métricas/tentativas', async () => {
+  const applied = vi.fn()
+  await act(async () =>
+    root.render(
+      <ResearchFilters
+        projects={mockProjects}
+        initialProject={mockProjects[0]!.id}
+        loading={false}
+        onApply={applied}
+      />,
+    ),
+  )
+  const statusSelect = [...container.querySelectorAll('label')].find(l => l.textContent?.includes('Status da avaliação'))!.querySelector('select')!
+  const accuracySelect = [...container.querySelectorAll('label')].find(l => l.textContent?.includes('Faixa de precisão') && !l.textContent?.includes('Go'))!.querySelector('select')!
+  await act(async () => {
+    statusSelect.value = 'aborted'
+    statusSelect.dispatchEvent(new Event('change', { bubbles: true }))
+    accuracySelect.value = '80plus'
+    accuracySelect.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await act(async () => button('Aplicar filtros').click())
+  expect(applied).not.toHaveBeenCalled()
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Status operacionais')
+  await act(async () => {
+    accuracySelect.value = 'all'
+    accuracySelect.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await act(async () => button('Aplicar filtros').click())
+  expect(applied).toHaveBeenCalledTimes(1)
+  expect(applied.mock.lastCall?.[0].advanced.status).toBe('aborted')
 })

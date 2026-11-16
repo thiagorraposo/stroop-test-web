@@ -17,7 +17,14 @@ async function access(page: Page, role = 'importacao', active = true) {
   await page.route('**/api/v1/analysis/query', route => route.fulfill({ json: analysisFixture(route.request().postDataJSON(), []) }))
   await page.route('**/api/v1/patients*', route => route.fulfill({ json: { items: [], total: 0, page: 1, page_size: 50 } }))
   await page.route('**/api/v1/evaluators*', route => route.fulfill({ json: { items: [], total: 0, page: 1, page_size: 50 } }))
-  await page.goto('/equipe'); await expect(page.getByLabel('Projeto', { exact: true })).toBeVisible()
+  await page.goto('/equipe')
+  if (role !== 'consulta') {
+    await page.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
+    await expect(page.getByLabel('Projeto', { exact: true })).toHaveValue(id)
+  } else {
+    await expect(page.getByRole('heading', { name: 'Resultados da pesquisa' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Nova Avaliação', exact: true })).toHaveCount(0)
+  }
 }
 async function fill(page: Page) {
   await page.getByLabel('Código do participante', { exact: true }).fill(' P_SINTETICO ')

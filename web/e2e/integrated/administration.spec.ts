@@ -24,7 +24,8 @@ test('administra perfil sintetico/projeto, prepara sessao e acesso depende do vi
   await context.addCookies([{ name: admin.cookie_name, value: admin.token, domain: '127.0.0.1', path: '/',
     secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
-  await page.getByRole('button', { name: 'Administração', exact: true }).click()
+  await page.getByRole('button', { name: 'Gestão', exact: true }).click()
+  await page.getByRole('tab', { name: 'Administração', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Cadastrar conta' })).toHaveCount(0)
   const accounts = page.getByRole('table', { name: 'Contas cadastradas' })
   await expect(accounts.getByRole('row').filter({ hasText: memberUserId })).toBeVisible()
@@ -46,6 +47,7 @@ test('administra perfil sintetico/projeto, prepara sessao e acesso depende do vi
   await importerContext.addCookies([{ name: member.cookie_name, value: member.token, domain: '127.0.0.1', path: '/',
     secure: true, httpOnly: true, sameSite: 'Lax' }])
   await importerPage.goto('/equipe')
+  await importerPage.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
   await importerPage.getByRole('combobox', { name: 'Projeto', exact: true }).selectOption(projectId)
   const preparation = importerPage.getByRole('region', { name: 'Preparar sessão' })
   await preparation.getByLabel('Código do participante').fill('P_SINTETICO_W15D')

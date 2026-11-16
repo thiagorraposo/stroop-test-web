@@ -122,7 +122,7 @@ function ProfessionalAccess() {
       <button className="button secondary" onClick={() => setRevision(value => value + 1)}>Tentar novamente</button>
     </>}
     {state.phase === 'ready' && <>
-      <div className="session-bar">
+      <div className="session-bar" id="conta-profissional" tabIndex={-1}>
         <div className="session-bar-info">
           <p className="lead" style={{ margin: 0 }}>Sua sessão está ativa.</p>
           <p className={`role-badge role-badge-${state.profile.role === 'administracao' ? 'admin' : state.profile.role === 'importacao' ? 'import' : 'query'}`}>

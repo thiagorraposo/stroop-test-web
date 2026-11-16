@@ -36,6 +36,55 @@ test('QUERY7: faixas Go/No-Go e ausência de erros não se perdem em falsy/defau
   expect(supportsLegacyExport(query)).toBe(false)
 })
 
+test('QUERY7: tipo Go/No-Go tem identidade canônica e não perde recorte no POST', () => {
+  const query = defaultQuery('a')
+  query.advanced!.goNogo = ['no_go', 'go', 'go']
+  const canonical = structuredClone(query)
+  canonical.advanced!.goNogo = ['go', 'no_go']
+  expect(queryKey(query)).toBe(queryKey(canonical))
+  expect(analysisQueryBody(query).query.filters.go_nogo).toEqual(['go', 'no_go'])
+  expect(supportsLegacyExport(query)).toBe(false)
+  expect(queryKey(query)).not.toBe(queryKey(defaultQuery('a')))
+  expect(() => assessmentQueryFilters(query)).toThrow('Go/No-Go exige a consulta POST normalizada.')
+})
+
+test('QUERY7: IDs cadastrais normalizam UUIDs, integram POST e bloqueiam transporte/exportação legados', () => {
+  const pidA = '11111111-1111-4111-8111-111111111111', pidB = '22222222-2222-4222-8222-222222222222'
+  const evalUuid = '33333333-3333-4333-8333-333333333333'
+  const query = defaultQuery('a')
+  query.filters = { patient_id: [pidB.toUpperCase(), pidA, pidA], evaluator_id: [evalUuid.toUpperCase(), 'EVA-000001'] }
+  const canonical = defaultQuery('a')
+  canonical.filters = { patient_id: [pidA, pidB], evaluator_id: [evalUuid, 'EVA-000001'] }
+  expect(queryKey(query)).toBe(queryKey(canonical))
+  expect(analysisQueryBody(query).query.filters).toMatchObject({
+    patient_id: [pidA, pidB],
+    evaluator_id: [evalUuid, 'EVA-000001'],
+  })
+  expect(supportsLegacyExport(query)).toBe(false)
+  expect(() => assessmentQueryFilters(query)).toThrow('IDs cadastrais exigem a consulta POST normalizada.')
+  const evalOnlyUuid = defaultQuery('a')
+  evalOnlyUuid.filters = { evaluator_id: [evalUuid] }
+  expect(supportsLegacyExport(evalOnlyUuid)).toBe(false)
+  expect(() => assessmentQueryFilters(evalOnlyUuid)).toThrow('IDs cadastrais exigem a consulta POST normalizada.')
+})
+
+test('QUERY7: status operacionais mapeiam para o contrato POST e bloqueiam transporte/exportação legados', () => {
+  for (const [option, expected] of [
+    ['invalidated', 'invalidated'],
+    ['aborted', 'aborted'],
+    ['expired', 'expired'],
+    ['in_progress', 'in_progress'],
+    ['invalid', ['aborted', 'expired', 'in_progress', 'invalidated']],
+    ['all', ['aborted', 'expired', 'in_progress', 'invalidated', 'valid']],
+  ] as const) {
+    const query = defaultQuery('a')
+    query.advanced!.status = option
+    expect(analysisQueryBody(query).query.filters.status).toEqual(expected)
+    expect(supportsLegacyExport(query)).toBe(false)
+    expect(() => assessmentQueryFilters(query)).toThrow('Status operacionais exigem a consulta POST normalizada.')
+  }
+})
+
 test('QUERY7: condição/resposta são conjuntos canônicos e chegam integralmente ao servidor', () => {
   const query = defaultQuery('a')
   query.filters.test_code = ['stroop_go_nogo_ptbr']

@@ -609,7 +609,7 @@ class WebAssessmentsTests(unittest.TestCase):
         self.assertEqual(result['counts'], {'participants': 1, 'visits': 1, 'assessments': 2, 'trials': 32})
         self.assertEqual(len(result['items']), 1)
         self.assertEqual(result['aggregates'][0]['assessments'], 2)
-        self.assertFalse(result['capabilities']['exports'])
+        self.assertTrue(result['capabilities']['exports'])
         self.assertEqual(response.headers['cache-control'], 'no-store')
         body['page']['cursor'] = result['next_cursor']
         other = self.h.consulta.post('/api/v1/analysis/query', json=body)
@@ -643,7 +643,8 @@ class WebAssessmentsTests(unittest.TestCase):
         if matched:
             self.assertEqual(result.json()['items'][0]['summary'], detail['summary'])
         for filters in ({'patient_id': 'NOME_SINTETICO'}, {'accuracy_min': 50}, {'platform': ['legacy']},
-                        {'condition': ['congruent']}, {'status': 'aborted'},
+                        {'condition': ['congruent']}, {'status': 'unknown'},
+                        {'status': 'aborted', 'test_code': ['stroop_go_nogo_ptbr'], 'accuracy_min': 50},
                         {'participant_id': ['A'], 'participant_code': ['B']},
                         {'date_from': '2026-02-30'}, {'start_date': '2026-01-01', 'date_from': '2026-02-01'}):
             with self.subTest(filters=filters):
@@ -750,6 +751,29 @@ class WebAssessmentsTests(unittest.TestCase):
         self.assertEqual(response.json()['counts']['assessments'], 1)
         self.assertEqual(response.json()['items'][0]['summary'], without['items'][0]['summary'])
 
+    def test_analysis_go_nogo_intersecta_na_mesma_tentativa_e_preserva_metricas(self):
+        receipt, _ = self.complete()
+        base = {'test_code': ['stroop_go_nogo_ptbr']}
+        complete = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body(base))
+        self.assertEqual(complete.status_code, 200, complete.text)
+        summary = complete.json()['items'][0]['summary']
+        for filters, assessments, trials in (
+                ({'go_nogo': ['go']}, 1, 8),
+                ({'go_nogo': ['no_go']}, 1, 8),
+                ({'go_nogo': ['no_go', 'go']}, 1, 16),
+                ({'go_nogo': ['go'], 'condition': ['incongruent']}, 0, 0),
+                ({'go_nogo': ['no_go'], 'response_type': ['hit']}, 0, 0),
+                ({'go_nogo': ['go'], 'response_type': ['hit']}, 1, receipt['summary']['hits'])):
+            with self.subTest(filters=filters):
+                response = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({**base, **filters}))
+                self.assertEqual(response.status_code, 200, response.text)
+                result = response.json()
+                self.assertEqual(result['counts']['assessments'], assessments)
+                self.assertEqual(result['counts']['trials'], trials)
+                self.assertIsNone(result['legacy_export_context'])
+                if assessments:
+                    self.assertEqual(result['items'][0]['summary'], summary)
+
     def test_analysis_preserva_exportacao_basica_no_mesmo_snapshot(self):
         self.complete()
         response = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body()).json()
@@ -763,3 +787,183 @@ class WebAssessmentsTests(unittest.TestCase):
                                (item['assessment_id'],))
         self.assertEqual(self.h.consulta.post('/api/v1/assessments/export', json={
             **response['legacy_export_context'], 'view': {'test_code': 'stroop_go_nogo_ptbr'}}).status_code, 409)
+
+    def test_analysis_ids_cadastrais_filtram_vinculo_explicito_e_recusam_ambiguidade(self):
+        web_receipt, _ = self.complete()
+        other_web, _ = self.complete()
+        legacy_id = self.legacy()
+        self.link_legacy()
+        patient_web, patient_legacy, evaluator_uuid, participant_uuid = uuid4(), uuid4(), uuid4(), uuid4()
+        with psycopg.connect(self.database_url) as connection:
+            actor = connection.execute('SELECT issuer,subject FROM app_users LIMIT 1').fetchone()
+            pseudonym = connection.execute('SELECT participant_id FROM assessments WHERE assessment_id=%s', (legacy_id,)).fetchone()[0]
+            for pid, code, name in ((patient_web, 'PAT-20261116-000001', 'SYNTHETIC_WEB'),
+                                    (patient_legacy, 'PAT-20261116-000002', 'SYNTHETIC_LEG')):
+                connection.execute(
+                    "INSERT INTO web_patients(id,participant_code,full_name,normalized_name,created_by_issuer,created_by_subject) VALUES (%s,%s,%s,%s,%s,%s)",
+                    (pid, code, name, name.lower(), *actor),
+                )
+            connection.execute(
+                "INSERT INTO web_evaluators(id,evaluator_code,full_name,normalized_name,created_by_issuer,created_by_subject) VALUES (%s,'EVA-000001','SYNTHETIC_EVAL','synthetic_eval',%s,%s)",
+                (evaluator_uuid, *actor),
+            )
+            connection.execute(
+                'UPDATE web_assessments SET patient_id=%s, evaluator_uuid=%s WHERE assessment_id=%s',
+                (patient_web, evaluator_uuid, web_receipt['assessment_id']),
+            )
+            # patient_id em web_project_participants sem web_legacy_entity_links ativo não autoriza seleção.
+            connection.execute(
+                'INSERT INTO web_project_participants(participant_uuid,project_id,pseudonym,patient_id) VALUES (%s,%s,%s,%s)',
+                (participant_uuid, self.h.project_id, pseudonym, patient_legacy),
+            )
+        by_web_patient = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'patient_id': [str(patient_web)]}))
+        self.assertEqual(by_web_patient.status_code, 200, by_web_patient.text)
+        self.assertEqual([row['assessment_id'] for row in by_web_patient.json()['items']], [web_receipt['assessment_id']])
+        self.assertIsNone(by_web_patient.json()['legacy_export_context'])
+
+        by_eval_uuid = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'evaluator_id': [str(evaluator_uuid)]}))
+        self.assertEqual(by_eval_uuid.status_code, 200, by_eval_uuid.text)
+        self.assertEqual([row['assessment_id'] for row in by_eval_uuid.json()['items']], [web_receipt['assessment_id']])
+        self.assertIsNone(by_eval_uuid.json()['legacy_export_context'])
+
+        unlinked = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'patient_id': [str(patient_legacy)]}))
+        self.assertEqual(unlinked.status_code, 200, unlinked.text)
+        self.assertEqual(unlinked.json()['counts']['assessments'], 0)
+
+        linked = self.h.admin.post('/api/v1/admin/legacy-links', json={
+            'entity_type': 'patient', 'legacy_participant_uuid': str(participant_uuid),
+            'patient_id': str(patient_legacy), 'reason_code': 'SYNTHETIC_QUERY7_LINK',
+        })
+        self.assertEqual(linked.status_code, 201, linked.text)
+        both = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'patient_id': [str(patient_web), str(patient_legacy)]}))
+        self.assertEqual(both.status_code, 200, both.text)
+        self.assertEqual({row['assessment_id'] for row in both.json()['items']}, {web_receipt['assessment_id'], legacy_id})
+        self.assertNotIn(other_web['assessment_id'], {row['assessment_id'] for row in both.json()['items']})
+
+        with psycopg.connect(self.database_url) as connection:
+            actor = connection.execute('SELECT issuer,subject FROM app_users LIMIT 1').fetchone()
+            connection.execute(
+                "INSERT INTO web_legacy_entity_links(link_id,entity_type,legacy_participant_uuid,patient_id,reason_code,linked_by_issuer,linked_by_subject) VALUES (%s,'patient',%s,%s,'SYNTHETIC_AMBIGUOUS',%s,%s)",
+                (uuid4(), participant_uuid, patient_legacy, *actor),
+            )
+        self.assertEqual(
+            self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'patient_id': [str(patient_legacy)]})).status_code,
+            409,
+        )
+
+    def test_analysis_status_operacionais_segregados_e_quatro_contagens_cadastrais(self):
+        valid_receipt, _ = self.complete()
+        second_valid, _ = self.complete()
+        _, invalidated_client = self.complete()
+        inv_resp = invalidated_client.post(
+            '/api/v1/participant/session/invalidate',
+            json={'reason': 'focus_lost', 'event_at_ms': 12000},
+        )
+        self.assertEqual(inv_resp.status_code, 200, inv_resp.text)
+
+        aborted_client, _, aborted_issued = self.h._completion()
+        abort_resp = aborted_client.post('/api/v1/participant/abort', json={'reason': 'escape'})
+        self.assertEqual(abort_resp.status_code, 200, abort_resp.text)
+
+        _, _, expired_issued = self.h._completion()
+        _, _, in_progress_issued = self.h._completion()
+
+        # Prepara 3 pacientes no cadastro central: 2 vinculados ao projeto (homônimos confirmados,
+        # sendo apenas 1 com avaliação oficial válida) e 1 sem vínculo com o projeto.
+        p_valid, p_linked_only, p_unlinked = uuid4(), uuid4(), uuid4()
+        with psycopg.connect(self.database_url) as connection:
+            connection.execute(
+                """UPDATE web_participant_sessions
+                   SET activated_at = CURRENT_TIMESTAMP - interval '25 minutes',
+                       expires_at = CURRENT_TIMESTAMP - interval '5 minutes'
+                   WHERE session_id = %s""",
+                (expired_issued['session_id'],),
+            )
+            connection.execute(
+                "UPDATE assessments SET visit = 'V2' WHERE assessment_id = %s",
+                (second_valid['assessment_id'],),
+            )
+            actor = connection.execute('SELECT issuer,subject FROM app_users LIMIT 1').fetchone()
+            for pid, code, name, homonym in (
+                (p_valid, 'PAT-20261116-000010', 'HOMONIMO SINTETICO', False),
+                (p_linked_only, 'PAT-20261116-000011', 'HOMONIMO SINTETICO', True),
+                (p_unlinked, 'PAT-20261116-000012', 'PACIENTE FORA PROJETO', False),
+            ):
+                connection.execute(
+                    """INSERT INTO web_patients(id,participant_code,full_name,normalized_name,is_homonym_confirmed,created_by_issuer,created_by_subject)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                    (pid, code, name, name.lower(), homonym, *actor),
+                )
+            connection.execute(
+                'UPDATE web_assessments SET patient_id = %s WHERE assessment_id = ANY(%s)',
+                (p_valid, [valid_receipt['assessment_id'], second_valid['assessment_id']]),
+            )
+            connection.execute(
+                'UPDATE web_project_participants SET patient_id = %s WHERE project_id = %s AND pseudonym = %s',
+                (p_valid, self.h.project_id, 'P_SINTETICO'),
+            )
+            connection.execute(
+                'INSERT INTO web_project_participants(participant_uuid,project_id,pseudonym,patient_id) VALUES (%s,%s,%s,%s)',
+                (uuid4(), self.h.project_id, 'PAT-20261116-000011', p_linked_only),
+            )
+
+        # 1) Consulta padrão (status='valid'): A/T contém apenas as 2 avaliações oficiais de P_SINTETICO
+        default_res = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body()).json()
+        self.assertEqual(default_res['counts'], {'participants': 1, 'visits': 2, 'assessments': 2, 'trials': 32})
+        self.assertEqual(
+            default_res['registry_counts'],
+            {
+                'visible_patients': 3,
+                'project_linked_patients': 2,
+                'valid_assessment_participants': 1,
+                'filtered_participants': 1,
+            },
+        )
+        self.assertEqual(
+            default_res['operational']['counts'],
+            {'invalidated': 1, 'aborted': 1, 'expired': 1, 'in_progress': 1, 'total': 4},
+        )
+        self.assertEqual(default_res['operational']['items'], [])
+
+        # 2) Consulta segregada de cada status operacional: A/T fica vazio e operational.items traz apenas o status pedido
+        for op_status, expected_session in (
+            ('invalidated', inv_resp.json()['session_id']),
+            ('aborted', aborted_issued['session_id']),
+            ('expired', expired_issued['session_id']),
+            ('in_progress', in_progress_issued['session_id']),
+        ):
+            with self.subTest(op_status=op_status):
+                op_res = self.h.consulta.post('/api/v1/analysis/query', json=self.analysis_body({'status': op_status}))
+                self.assertEqual(op_res.status_code, 200, op_res.text)
+                body = op_res.json()
+                self.assertEqual(body['counts'], {'participants': 0, 'visits': 0, 'assessments': 0, 'trials': 0})
+                self.assertEqual(body['items'], [])
+                self.assertIsNone(body['legacy_export_context'])
+                self.assertEqual(body['registry_counts']['filtered_participants'], 0)
+                self.assertEqual(body['registry_counts']['valid_assessment_participants'], 1)
+                self.assertEqual([item['session_id'] for item in body['operational']['items']], [expected_session])
+                self.assertEqual([item['status'] for item in body['operational']['items']], [op_status])
+                self.assertTrue(all(item['valid_for_result'] is False for item in body['operational']['items']))
+                # Exportação CSV v2 recusa consulta de status operacional com 422
+                preview_res = self.h.consulta.post(
+                    '/api/v1/exports/preview',
+                    json={
+                        'query_id': body['query_id'],
+                        'query_fingerprint': body['query_fingerprint'],
+                        'content_fingerprint': body['content_fingerprint'],
+                        'granularity': 'avaliacoes',
+                        'columns': ['assessment_id', 'participant_code'],
+                        'identification_mode': 'deidentified',
+                    },
+                )
+                self.assertEqual(preview_res.status_code, 422, preview_res.text)
+
+        # 3) Consulta combinada ('valid' + status operacionais): mantém populações separadas sem soma indistinta
+        combined = self.h.consulta.post(
+            '/api/v1/analysis/query',
+            json=self.analysis_body({'status': ['valid', 'invalidated', 'aborted', 'expired', 'in_progress']}),
+        ).json()
+        self.assertEqual(combined['counts']['assessments'], 2)
+        self.assertEqual(len(combined['items']), 2)
+        self.assertEqual(len(combined['operational']['items']), 4)
+        self.assertIsNone(combined['legacy_export_context'])

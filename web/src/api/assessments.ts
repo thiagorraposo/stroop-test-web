@@ -26,6 +26,7 @@ export type AssessmentOptions = PageOptions & Omit<AssessmentFacetOptions, 'test
   condition?: readonly ('congruent' | 'incongruent')[];
   response_type?: readonly ('hit' | 'omission' | 'commission' | 'correct_rejection')[];
   test_code?: string | readonly string[];
+  patient_id?: string | readonly string[];
   participant_id?: string | readonly string[]; visit?: string | readonly string[];
   evaluator_id?: readonly string[]; test_version?: readonly string[]; platform?: readonly ('web' | 'psychopy')[];
 };

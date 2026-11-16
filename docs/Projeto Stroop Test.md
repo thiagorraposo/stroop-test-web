@@ -1,6 +1,6 @@
 # Projeto Stroop Test — backlog canônico da plataforma WEB
 
-Última verificação documental: **2026-11-15**. Missão e limites:
+Última verificação documental: **2026-11-16**. Missão e limites:
 [arquitetura](ARQUITETURA_WEB.md); inventário: [auditoria](AUDITORIA_REPLANEJAMENTO.md);
 especificação: [requisitos e matriz](REQUISITOS_E_RASTREABILIDADE.md).
 Este é o único registro executável de marcos, tarefas, estados, dependências,
@@ -40,7 +40,7 @@ de denominador exigem motivo e IDs novos, sem renumerar/remover histórico.
 Histórico legado: 87% das etapas 1–12 e aceites Wxx ficam nos arquivos congelados;
 não são transferidos, nem se declaram inválidos por esta revalidação de novo escopo.
 
-Progresso atual: **37/56 entregáveis aceitos (WEB-000 a WEB-028, WEB-029/030, WEB-042/043/044, WEB-045/046 e WEB-047)**.
+Progresso atual: **38/56 entregáveis aceitos (WEB-000 a WEB-028, WEB-029/030/031, WEB-042/043/044, WEB-045/046 e WEB-047)**.
 WEB-005 é documental; WEB-006 aceita o receptor backend e contratos em banco
 sintético. M1, M2, M3, M4, M5, M6 e M7 concluídos; atomicidade e paridade aceitas em EV-M2-007/008;
 autenticação local e revisão de segurança aceitas em EV-M6-021/024; M4 integralmente concluído (6/6);
@@ -50,14 +50,14 @@ de legados sem merge automático (WEB-027, EV-M7-027), e cobertura operacional e
 
 ## Painel visual de acompanhamento
 
-Atualizado em **2026-11-15**, a partir das fichas deste backlog.
+Atualizado em **2026-11-16**, a partir das fichas deste backlog.
 
 | Entregáveis aceitos | Ainda sem aceite | Marco autorizado | Próxima ação |
 |---|---|---|---|
-| **37 de 56 · 66,1%** | **19** | **M8 em execução (2/12 aceitos)** | WEB-050: catálogo residual e UX7-AA; WEB-048 em validação; WEB-031 bloqueada |
+| **38 de 56 · 67,9%** | **18** | **M8 em execução (3/12 aceitos)** | WEB-050: catálogo residual e UX7-AA; WEB-048 em validação; WEB-031 concluída por aceite explícito CHG-008 |
 
 ```text
-Aceites   █████████████░░░░░░░   66,1%
+Aceites   ██████████████░░░░░░   67,9%
 ```
 
 A barra global é aproximada; os números são exatos, com percentual arredondado.
@@ -82,7 +82,7 @@ A ordem da tabela segue os IDs; dependências e paralelismo estão na
 | [M5](#m5--interface-administrativa-e-analítica-react) | Interface administrativa e analítica React | 🟩🟩🟩🟩🟩 **5/5** | ✅ Concluído |
 | [M6](#m6--autenticação-permissões-e-segurança) | Autenticação, permissões e segurança | 🟩🟩🟩🟩 **4/4** | ✅ Concluído |
 | [M7](#m7--integração-compatibilidade-histórica-e-transição) | Integração, compatibilidade histórica e transição | 🟩🟩🟩🟩 **4/4** | ✅ Concluído |
-| [M8](#m8--ci-infraestrutura-e-preparação-operacional) | CI, infraestrutura e preparação operacional | 🟩🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ **2/12** | ◐ Parcial; CHG-007, réplica externa e release pendentes |
+| [M8](#m8--ci-infraestrutura-e-preparação-operacional) | CI, infraestrutura e preparação operacional | 🟩🟩🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜ **3/12** | ◐ Parcial; CHG-007 e release pendentes; WEB-031 aceita no alcance local |
 | [M9](#m9--validação-técnica-e-metodológica) | Validação técnica e metodológica | ⬜⬜⬜⬜ **0/4** | ○ Pendente |
 | [M10](#m10--implantação-controlada-e-documentação-operacional) | Implantação controlada e documentação operacional | ⬜⬜⬜⬜⬜ **0/5** | ○ Pendente |
 
@@ -128,21 +128,23 @@ Clique no ID para conferir critérios, evidências e limites do aceite.
 | ✅ [WEB-026](#web-026--comprovar-intercâmbio-histórico-por-fixtures-sintéticas) | Roundtrip de exportação canônica 21 colunas e granularidades com analisador Python e SQLite | Testes sintéticos com analisar_stroop.py e import_sqlite |
 | ✅ [WEB-027](#web-027--revalidar-vínculo-explícito-de-dados-legados) | Vínculo explícito auditado de legados a cadastros centrais sem merge automático | web_legacy_entity_links e web_registry_audit_events no PostgreSQL |
 | ✅ [WEB-028](#web-028--revisar-cobertura-e-plano-de-substituição-operacional) | Cobertura operacional em 3 eixos (ADR-008/CHG-006) e paridade com Streamlit/PsychoPy | ADR-008, TRANSICAO_WEB.md e preservação total de launchers/CLIs |
+| ✅ [WEB-031](#web-031--ensaiar-restauração-réplica-e-retorno-compatível) | Recuperação sintética local e encerramento por decisão do proprietário (CHG-008) | Ensaios locais históricos; réplica externa e RPO/RTO externos não comprovados |
 
 ### Foco do marco atual
 
 Novo `continue o projeto` de **2026-11-11** autoriza **M8 — CI, infraestrutura e
-preparação operacional**, com 2/12 aceitos. WEB-050 está EM_ANDAMENTO; WEB-048
-EM_VALIDACAO após a continuidade de 2026-11-14. A preparação de WEB-031 continua bloqueada por destino externo/custódia
-não autorizados; isso impede WEB-032 e o encerramento de M8, sem bloquear
-CHG-007 independente. M7 permanece integralmente aceito (4/4). PR #18 deve
+preparação operacional**, com 3/12 aceitos. WEB-050 está EM_ANDAMENTO; WEB-048
+EM_VALIDACAO após a continuidade de 2026-11-14. WEB-031 foi encerrada por
+aceite explícito do proprietário em CHG-008, com alcance local e dispensa da
+confirmação independente da hostkey. WEB-032 ainda depende de WEB-055 e CI
+autorizada; M8 permanece aberto. M7 permanece integralmente aceito (4/4). PR #18 deve
 permanecer aberto sem merge, inclusive por ancestralidade de outra branch.
 
 | ✅ Aceito | ✅ Aceito | ✅ Aceito | ✅ Aceito |
 |---|---|---|---|
 | [WEB-025](#web-025--revalidar-importação-minimizada-e-status-idempotente): retirada upload CSV | [WEB-026](#web-026--comprovar-intercâmbio-histórico-por-fixtures-sintéticas): roundtrip 21 colunas/SQLite | [WEB-027](#web-027--revalidar-vínculo-explícito-de-dados-legados): vínculo auditado legados | [WEB-028](#web-028--revisar-cobertura-e-plano-de-substituição-operacional): paridade 3 eixos |
 
-M1, M2, M3, M4, M5, M6 e M7 permanecem 100% concluídos. M8 com 2/12 aceitos (WEB-029/030), após ampliação CHG-007.
+M1, M2, M3, M4, M5, M6 e M7 permanecem 100% concluídos. M8 com 3/12 aceitos (WEB-029/030/031), incluindo aceite explícito CHG-008.
 
 **Acompanhar impedimentos:** [riscos](#registro-de-riscos) ·
 [decisões externas](#decisões-externas-e-condições-de-desbloqueio).
@@ -177,7 +179,7 @@ Não antecipa M4/M5 nem cria marco de redesign.
 Ramo CHG-007 em M8 (somente após nova autorização): WEB-048 → WEB-049;
 WEB-050 → WEB-051; WEB-048/049/050/051 → WEB-052 e WEB-053;
 WEB-049 → WEB-054; WEB-052/053/054 → WEB-055 → WEB-032 → WEB-035 → WEB-036.
-WEB-031 segue ramo externo independente e converge em WEB-032. WEB-050/051/053
+WEB-031 converge em WEB-032 e foi aceita no alcance local por CHG-008; o ramo externo não é mais gate de M8. WEB-050/051/053
 (P0: integridade/autorização) antecedem o aceite visual integrado; não há RC
 apenas com redesign. WEB-048/050 são PRONTAS, não autorizadas a implementar nesta
 missão. M9 rehomologa a candidata; M10 atualiza documentação da interface final.
@@ -2034,7 +2036,7 @@ no fechamento desta sessão; hash do próprio registro consultável no Git.
 - Testes necessários: Build/smoke isolados, pipeline local e Actions autorizado, recuperação e benchmark limitados ao ambiente medido; casos COMP7/NAV7/QUERY7/DATA7/ANALYTICS7/EXPORT7/PREP7/UX7-AA e jornadas UX7-J1..J3.
 - Critérios de aceite: Sem skip obrigatório; WEB-048..055 aceitas; consulta, gráficos, prévia e CSV consistentes; restauração íntegra e runbooks executáveis por SHA no escopo autorizado.
 - Riscos: R08, R09, R14, R15.
-- Decisões externas: Destino de réplica e chaves sob custódia; teste externo só com autorização específica; CI verify em PR conforme workflow vigente, sem mudar proteções.
+- Decisões externas: WEB-031 aceita no alcance local por CHG-008; réplica externa permanece requisito antes da publicação, sem bloquear M8 por essa tarefa. Chaves sob custódia; teste externo só com autorização específica; CI verify conforme autorização vigente, sem mudar proteções.
 - Encerramento: todas as tarefas do marco CONCLUIDAS, critérios acima comprovados e evidência consolidada por SHA; sem aceite presumido por documentação ou código existente.
 
 ### WEB-029 — Revalidar imagens e Compose isolado em HTTPS
@@ -2065,19 +2067,23 @@ no fechamento desta sessão; hash do próprio registro consultável no Git.
 
 ### WEB-031 — Ensaiar restauração, réplica e retorno compatível
 
-- Marco: M8. Prioridade: P0. Complexidade: G. Estado: BLOQUEADA.
-- Dependências: WEB-029; destino externo de teste autorizado se necessário.
-- Responsável: Codex na execução; responsável do produto/metodológico nas aprovações externas indicadas.
-- Critérios de aceite: Massa sintética restaurada isoladamente, schema/dados/recibo conferidos; réplica+agenda+alerta e retorno de imagem ensaiados, RPO/RTO medidos e limites aceitos.
-- Testes/verificação: `scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`, `scripts/smoke_local_auth_restore.py`, `tests/test_web_backup_replication.py`, `tests/test_vps_rollback.py`. EV-M8-031-MINT comprova restauração positiva/negativa, conteúdo em 21 tabelas, cadastros/vínculos/auditoria, SSH local/idempotência/hostkey incorreta, timer com cópia/atraso/indisponibilidade e rollback. Réplica VPS→notebook ainda não ensaiada.
-- Evidências: EV-M8-029/031 histórica preservada; EV-M8-031-MINT, 2026-11-12: receptor Mint instalado, 36 testes locais, 14 migrations/uma avaliação/16 tentativas/12 métricas restauradas. Cópia 2,079 s/118.821 bytes; restore da cópia 9,285 s, exclusivamente locais. Sem RPO/RTO externo comprovado.
-- Riscos/bloqueios: R08/R09. Notebook autorizado como destino temporário e identidade SSH exclusiva preparada. Proprietário/operador deve fornecer host/porta/usuário e fingerprint confiável, aprovar instalação restrita da chave/exportador na VPS e comprovar custódia AES separada. Depois medir ensaio externo e recuperação ponta a ponta. Notebook intermitente não garante RPO 24 h em desligamentos prolongados; RTO 4 h não presumido nem limite dispensado. Procedimento concreto no runbook; nenhuma alteração/conexão à VPS nesta execução. WEB-032 permanece dependente.
-- Referências: REQ-INF-003; [arquitetura](ARQUITETURA_WEB.md).
-- Git da entrega parcial: branch `test/m6-m8-validacao-isolada`; commit/envio/CI no fechamento desta sessão.
-- CHG-004: Réplica externa independente continua obrigatória; após evolução de schema local, WEB-032 revalida restauração de hashes/sessões com custódia e invalidação de sessões restauradas para não ressuscitar acessos. RPO/RTO externo requer medição e aceite, não conta Google.
-- CHG-005: Como o backup PostgreSQL passará a incluir tabelas cadastrais nominais (`web_patients` e `web_evaluators` da migration `0014`), o ensaio de restauração e réplica criptografada deve comprovar integridade dos cadastros, vínculos e trilhas de auditoria sem expor nomes em logs operacionais.
+- Marco: M8. Prioridade: P0. Complexidade: G. Estado: CONCLUIDA.
+- Dependências: WEB-029.
+- Responsável: Proprietário no aceite explícito e na dispensa CHG-008; Codex no registro e nos ensaios locais históricos.
+- Critérios de aceite: Revisados por CHG-008 em 2026-11-16: aceitar massa sintética restaurada isoladamente, integridade de schema/dados/recibo/cadastros, réplica SSH local com agenda/alerta, retorno compatível e limites locais registrados. A confirmação independente ED25519 por painel/console/suporte e o ensaio VPS→notebook com RPO/RTO externos deixam de ser condições de encerramento desta tarefa. O responsável aceita o alcance local e os riscos residuais; não há declaração de validação externa.
+- Testes/verificação: Históricos, não reexecutados nesta alteração documental: `scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`, `scripts/smoke_local_auth_restore.py`, `tests/test_web_backup_replication.py`, `tests/test_vps_rollback.py`. EV-M8-031-LOCAL-20261115 registra 36 testes e smokes locais aprovados; EV-M8-031-MINT registra integridade em 21 tabelas, 14 migrations, 16 tentativas e 12 métricas, SSH local/idempotência/hostkey incorreta, timer/alertas e rollback.
+- Evidências: CHG-008 e EV-M8-031-ACEITE-20261116 na Retomada: pedido explícito do proprietário para retirar a exigência e tratar WEB-031 como concluída. EV-M8-029/031, EV-M8-031-MINT e EV-M8-031-LOCAL-20261115 preservam resultados reais. Réplica VPS→notebook e RPO/RTO externos não executados/comprovados.
+- Riscos/bloqueios: Sem bloqueio de encerramento no alcance revisado. R08/R09 continuam ABERTOS: identidade SSH sem comprovação independente, réplica externa não demonstrada, notebook intermitente sem garantia de RPO 24 h e RTO externo 4 h não medido. Aceite do proprietário não remove esses fatos nem autoriza publicação. Nenhum acesso remoto ou alteração operacional nesta sessão.
+- Referências: REQ-INF-003, CHG-008; [arquitetura](ARQUITETURA_WEB.md) e [recuperação](operacao/WEB_RECUPERACAO.md).
+- Git da entrega: Ensaios/implementação históricos em `test/m6-m8-validacao-isolada` e `feat/m8-entregaveis-integrados` (`a3ef4aa`, `c02909d`); aceite documental identificável pelo commit `docs(m8): registra dispensa e aceite explícito de WEB-031`. Push/CI/merge na Retomada vigente.
+- CHG-004: Obrigatoriedade de réplica externa para encerrar WEB-031 superada por CHG-008. WEB-032 continua revalidando hashes/sessões e invalidação de acessos restaurados; comprovação externa antes da publicação permanece no REQ-INF-003/WEB-037/039.
+- CHG-005: Integridade de cadastros, vínculos e auditoria preservada nos ensaios sintéticos locais, sem nomes em logs. Aceite local não comprova restauração externa.
 
 ### EV-M8-031-MINT — receptor temporário e ensaios sintéticos, 2026-11-12
+
+Registro histórico: bloqueios de hostkey e critérios externos de encerramento
+de WEB-031 abaixo foram superados por CHG-008 em 2026-11-16; os resultados
+técnicos e as operações não executadas permanecem como registrados.
 
 Autorização explícita do proprietário para preparar Linux Mint como receptor,
 automação local e ensaios sintéticos. Exclui modificações na VPS sem nova
@@ -2221,7 +2227,7 @@ de critério, sem conclusão de M8/WEB-032 nem autorização de publicação.
 - Riscos/bloqueios: R08, R09; decisões externas nas dependências/ficha do marco. Dependências pendentes não são falha observada.
 - Referências: requisitos transversais do marco e ADR-004; [arquitetura](ARQUITETURA_WEB.md).
 - Git da entrega: branch/commit/push/CI ainda não aplicáveis; registrar evidência real na execução.
-- CHG-004: Candidata deve incluir WEB-024 local aceita, AUTH-L08/L09, manifesto/schema/locks novos, runbooks sem cliente Google obrigatório, provisionamento/recuperação e invalidação de sessões no restore/rollback. Réplica externa WEB-031 e M7 continuam impeditivos; nenhuma publicação.
+- CHG-004: Candidata deve incluir WEB-024 local aceita, AUTH-L08/L09, manifesto/schema/locks novos, runbooks sem cliente Google obrigatório, provisionamento/recuperação e invalidação de sessões no restore/rollback. Dependência WEB-031 satisfeita pelo aceite explícito CHG-008 no alcance local; M7 e demais gates da candidata preservados. Réplica externa antes da publicação continua em REQ-INF-003/WEB-037/039; nenhuma publicação.
 - CHG-005: Candidata deve incluir schema aditivo `0014`, suítes `CAD-01..03`, `PREP-01`, `DASH-01`, `EXP-CSV-01` e `E2E-FLOW-01` verdes no pipeline por SHA, e smoke Compose atualizado para o fluxo com cadastro central de pacientes/avaliadores e sem upload CSV de produto.
 
 - CHG-007: Candidata só após WEB-048..055 aceitas, com evidência de igualdade consulta→prévia→CSV, UX integrada, acessibilidade e CI verify na SHA candidata. Aceites WEB-029/030 preservados; nenhuma tag/release/deploy implícitos.
@@ -2523,6 +2529,36 @@ mudaram. Comandos seguintes usam diretamente o executável 1.64.1 já instalado
 em web; artefato sintético acidental na raiz foi removido. Não houve alteração
 metodológica, migration, acesso a coletas ou deploy.
 
+#### Continuidade — superfícies públicas complementares, área autenticada e troca de senha, 2026-11-16
+
+Ampliada a verificação de `WEB-048` em `web/e2e/accessibility-surfaces.spec.ts`
+para cobrir `/instrucoes`, rota desconhecida (`/rota-inexistente`), área
+profissional autenticada nos três eixos e formulário de alteração de senha
+(`ProfessionalPassword`). Corrigidos achados observáveis nos navegadores reais:
+
+- `ProfessionalPassword` (`web/src/components/ProfessionalCredentials.tsx`):
+  associação programática da instrução de política (`aria-describedby="new-password-hint"`)
+  e da mensagem de erro (`aria-invalid`, retorno de foco ao campo relevante e
+  limpeza imediata de ambas as senhas em qualquer erro), com `<p role="status">`
+  posicionado fora do `<form aria-busy={busy}>` para anúncio assistivo imediato.
+- Contraste em `.content-card` (`web/src/styles.css`): `.eyebrow`, `.quiet`,
+  `.example-label` e `.journey-indicator` em `/instrucoes` e `/rota-inexistente`
+  tinham contraste 4,335:1 sobre `#f4f3ed`; alinhados a `#475569` (>5,9:1).
+- Reflow com ampliação CSS 400% em 1280×1080 (`web/src/components/ui/theme.css`
+  e `web/src/styles.css`): adicionado `container-type: inline-size` em
+  `.professional-theme` e `@container (max-width: 1023px)` / `@container (max-width: 850px)`
+  para colapsar a coluna lateral de 240 px da `.professional-shell` e reduzir o
+  padding interno quando a largura efetiva cai para 320 CSS px sob `zoom: 4`.
+- Recorte de `.skip-link:not(:focus)` (`web/src/styles.css`): `clip-path: inset(50%)`
+  e `pointer-events: none` evitam que o atalho oculto posicionado em `top: -70px`
+  dentro de `.professional-shell` intercepte cliques sobre `<summary>Alterar senha</summary>`
+  acima do shell.
+- Validação em Chromium 156.0.8078.4 e Firefox 157.0: `accessibility-surfaces.spec.ts`
+  **18/18 aprovados** (e **60/60** na campanha combinada com `component-catalog`,
+  `research-filters`, `applied-query` e `presentation`, 47,5 s, zero skips).
+  `WEB-048` permanece `EM_VALIDACAO` para revisão final do checklist A/AA nos
+  módulos integrados restantes antes do aceite formal.
+
 ### WEB-049 — Consolidar sidebar responsiva nos três eixos profissionais
 
 - Marco: M8. Prioridade: P1. Complexidade: G. Estado: PENDENTE.
@@ -2540,7 +2576,7 @@ metodológica, migration, acesso a coletas ou deploy.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: NAV7: Vitest de rotas/perfis/transições; Playwright teclado, voltar/avançar, logout, viewport e ausência de dados/segredos em URLs; tipos/build.
 - Testes manuais/visuais exigidos: Percorrer três eixos sem mouse; transição de análise→Gestão→análise sem reaplicar consulta; perfil sem acesso não vê ação e requisição direta também nega.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R15: fragmentação reaparece em submenus. Ajustes dependentes da consulta única completam-se em WEB-050/052.
 - Decisões externas necessárias: Nenhuma para navegação; expansão de operações administrativas exige novo escopo.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -3258,6 +3294,75 @@ RT médio/capacidades residuais e checklist UX7-AA continuam sem aceite integral
 Busca nominal segue gates próprios; nenhuma habilitação por inferência.
 WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 
+#### Continuação — IDs cadastrais (`patient_id` e `evaluator_id`) e associação acessível de período, 2026-11-16
+
+Ampliado o seletor e o contrato `POST /api/v1/analysis/query` para suportar IDs
+cadastrais tipados conforme `REQ-REL-004` e `CHG-007` (`EV-M8-050-CADASTRAIS-AA-20261116`
+na Retomada):
+
+- `QueryFilters` (`api/analysis.py`) aceita `patient_id: list[UuidStr]` (até 100
+  UUIDs normalizados para minúsculas, ordenados e sem duplicatas; strings soltas
+  ou códigos `PAT-...` são rejeitados com 422, mantendo `participant_id` como
+  alias de `participant_code`) e normaliza UUIDs em `evaluator_id` (aceitando
+  tanto UUID de `web_evaluators` quanto `evaluator_code`). `'patient_id'` passa
+  a constar em `capabilities.filters`.
+- `stroop/persistence/web_assessments.py` seleciona por `patient_id` avaliando
+  `wa.patient_id = ANY(%s::uuid[])` nas avaliações WEB ou vínculo explícito ativo
+  em `web_legacy_entity_links` (`entity_type = 'patient'`, `active = true`) para
+  participante legado do mesmo projeto autorizado, sem considerar `patient_id`
+  direto de `web_project_participants` sem mapa ativo e retornando `409 Conflict`
+  (`SnapshotConflict`) quando houver mais de um mapa ativo para o mesmo
+  participante legado. `evaluator_id` seleciona por `a.evaluator` (`evaluator_code`)
+  ou `wa.evaluator_uuid::text`. Toda a leitura ocorre exclusivamente com o papel
+  SELECT (`READER`) sobre colunas técnicas já concedidas, sem acessar `full_name`
+  ou `initials`.
+- `legacy_export_context` (CSV v1) permanece `null` quando `patient_id` é usado
+  ou quando `evaluator_id` contém UUID; prévia e download CSV v2 (`ExportHubPanel`)
+  preservam integralmente o recorte em todas as cinco granularidades.
+- `ResearchFilters.tsx` e `ProfessionalDashboard.tsx` expõem a multisseleção
+  pesquisável `Pacientes (cadastro central)` (`patient_id`) populada por
+  `{ id, participant_code }` autorizados nos projetos selecionados, sem expor
+  nomes nominais em rascunho, chips, resumo aplicado, URL ou storage, e associam
+  erro de período inválido (`aria-invalid` e `aria-describedby`) aos campos
+  `Data inicial` e `Data final`.
+- `WEB-050` permanece **EM_ANDAMENTO** até a revisão final de aceite integrado
+  de `UX7-AA` com `WEB-048`..`WEB-055`.
+
+#### Continuação — status operacionais segregados (`invalidated`, `aborted`, `expired`, `in_progress`) e quatro contagens cadastrais (`registry_counts`), 2026-11-16
+
+Implementada a consulta segregada de status operacionais e as quatro contagens
+cadastrais de pacientes/participantes em `POST /api/v1/analysis/query` e na
+interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
+
+- `api/analysis.py` amplia `QueryFilters.status` para aceitar `'valid'`,
+  `'invalidated'`, `'aborted'`, `'expired'` e `'in_progress'` (como string ou
+  lista de 1 a 5 valores, normalizada como string quando unitária e lista ordenada
+  sem duplicatas quando múltipla), atualiza `capabilities.status` e recusa com
+  `422` combinações exclusivamente operacionais (sem `'valid'`) com filtros de
+  métricas/tentativas oficiais (`condition`, `response_type`, `go_nogo`, faixas de
+  precisão/RT, `include_null_rt=false` ou `assessment_ids`).
+- `stroop/persistence/web_assessments.py` e `stroop/application/web_assessments.py`
+  adicionam `_operational_sessions` e `_registry_counts` na mesma transação
+  `REPEATABLE READ READ ONLY` do papel `READER`:
+  - `registry_counts` distingue `visible_patients` (`web_patients` acessíveis sem
+    filtro de avaliação), `project_linked_patients` (pacientes distintos vinculados
+    aos projetos consultados em `web_project_participants`, `web_assessments`,
+    `web_invitations` ou `web_legacy_entity_links` ativo),
+    `valid_assessment_participants` (identidades distintas com avaliação oficial
+    válida nos projetos, deduplicando apenas por `patient_id` explícito e mantendo
+    legado sem mapa por `(project_id, participant_id)` sem fundir homônimos ou
+    pseudônimos) e `filtered_participants` (identidades distintas no recorte `A`).
+  - `operational` retorna `population: 'segregated_non_official_sessions'`,
+    `counts` (`invalidated`, `aborted`, `expired`, `in_progress`, `total`) e
+    `items` segregados (sem 12 métricas oficiais e fora de `A/T`).
+- `stroop/application/web_query_exports.py` e `web/src/components/ExportHubPanel.tsx`
+  recusam/bloqueiam prévia e download CSV oficial quando `status != 'valid'`.
+- `web/src/dashboard/query.ts`, `web/src/api/analysis.ts`,
+  `web/src/components/ResearchFilters.tsx` e `web/src/components/ProfessionalDashboard.tsx`
+  integram a seleção de status operacionais, exibem as quatro contagens cadastrais
+  e renderizam a seção/tabela `Sessões operacionais segregadas` na Visão Geral e
+  em `Avaliações e histórico`.
+
 ### WEB-051 — Consolidar seleção analítica autorizada e agregações no servidor
 
 - Marco: M8. Prioridade: P0. Complexidade: G. Estado: PENDENTE.
@@ -3275,7 +3380,7 @@ WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: DATA7: unittest domínio/aplicação e API/PG sintético stroop_etapa4_test*, paridade oficial, filtros combinados, mapas de legado, isolamento/revogação, cardinalidades, todos os status, paginação e 5.000/5.001; EXPLAIN e medição sintética com volume/ambiente; regressão grants.
 - Testes manuais/visuais exigidos: Confrontar dicionário com domínio Python e tabela analítica/fixture; revisar plano medido antes de escolher índices/cache; conferir contagens sem confundir cadastros e participantes.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R14/R13; índices novos dependem de evidência e migration aditiva revisada na tarefa, jamais alterar migrations existentes. Não reduzir gates por custo de consulta.
 - Decisões externas necessárias: DEC-03 para uso nominal real; nenhuma para testes sintéticos desidentificados. Incompatibilidade científica sem regra existente exige decisão metodológica antes de comparação.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -3298,7 +3403,7 @@ WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: ANALYTICS7: Vitest de mapeamento/unidades/ausência e contratos, Playwright Chromium/Firefox com tabelas equivalentes, drill-down, agrupamento e mudança de contexto; tipos/build e paridade de valores com fixture oficial.
 - Testes manuais/visuais exigidos: Comparar gráficos, tabela e KPIs com fixture conhecida em cada nível; testar teclado/zoom/tamanhos UX7-AA e UX7-J1; aferir a definição exibida de média por avaliação versus proporção por tentativa.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R14/R15: gráficos podem comunicar agregação errada. Biblioteca futura só após avaliação documentada de licença/manutenção/peso/acessibilidade/testes; ausência de biblioteca não dispensa interações exigidas.
 - Decisões externas necessárias: Nenhuma para exploração descritiva existente; comparação metodologicamente incompatível é bloqueada e exige responsável.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -3321,8 +3426,9 @@ WEB-051/053 não são promovidas. Progresso **37/56**, M8 **2/12**.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: EXPORT7: API/PG real sintético combinando filtros/cinco granularidades, conteúdo/ordem/ausência/paridade, concorrência e revogação; token adulterado/reutilizado com colunas diferentes; pacientes sem vínculo; projeção nominal e deidentified; CSV injection incluindo delimitadores/aspas/controles; roundtrip CSV21 com consumidores; Vitest e Playwright HTTPS Chromium/Firefox da jornada completa.
 - Testes manuais/visuais exigidos: UX7-J1 com arquivo parseado e conjuntos comparados; testar prévia sem nominal, CSV individual e agregado preservados, troca rápida de projeto/colunas, erro 409 e nova prévia explícita.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
+- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
 - Riscos/bloqueios: R14 P0; riscos adicionais de pacientes globais, reader fallback, amostra nominal e DEC-03 por verificar com PG. Corrigir por esta ficha sem reabrir WEB-020; nenhum aceite de segurança com doubles.
+- Complemento: EV-M8-053-LEGADO-20261115 comprova mapa explícito ativo, isolamento por projeto, ambiguidade e invalidação da prévia ao desvincular; demais critérios/dependências continuam pendentes.
 - Decisões externas necessárias: DEC-03/WEB-041 para habilitação nominal real; testes negativos e positivos institucionais somente sintéticos e configuração de teste explícita, sem habilitar research real.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
 - Referências: CHG-007; [UX](experimento/UX_DECISIONS.md#interface-profissional-integrada--chg-007); [contrato](desenvolvimento/CONTRATO_API_WEB.md#consulta-e-exportação-integradas--alvo-chg-007); [ADR-008](arquitetura/ADR-008-simplificacao-estrutural-e-fluxo-direto-sessao.md).
@@ -3608,7 +3714,7 @@ CHG-007: documentação/handoff devem corresponder à interface final aceita (ma
 - Marco: M10. Prioridade: P0. Complexidade: M. Estado: PENDENTE.
 - Dependências: WEB-041.
 - Responsável: Codex na execução; responsável do produto/metodológico nas aprovações externas indicadas.
-- Critérios de aceite: Plano concreto e candidata validada identificam release, janela, backup, schema, responsáveis, smoke/critério de retorno; resultado preparado para aprovação final do deploy antes de WEB-038, sem tocar produção.
+- Critérios de aceite: Plano concreto e candidata validada identificam release, janela, backup, schema, responsáveis, smoke/critério de retorno; resultado preparado para aprovação final do deploy antes de WEB-038, sem tocar produção. CHG-008: conferir comprovação externa de réplica e RPO/RTO exigida por REQ-INF-003 antes da publicação, com ensaio sintético isolado especificamente autorizado; aceite local de WEB-031 não substitui essa comprovação.
 - Testes/verificação: `PLANEJADO: checklist pré-publicação`. Arquivos citados existem; verificações PLANEJADAS não têm resultado.
 - Evidências: PLANEJADAS; nenhum teste desta tarefa reexecutado nesta fase. Ao executar registrar comando, resultado, data e SHA.
 - Riscos/bloqueios: R08; decisões externas nas dependências/ficha do marco. Dependências pendentes não são falha observada.
@@ -3693,8 +3799,8 @@ de mitigação no código não elimina risco sem ensaio. Atualizar somente aqui.
 | R05 | Substituir OIDC por senha local ou alterar perfis/vínculos/cadastros sem revalidar negações | Acesso cruzado a pacientes, avaliações ou exportações nominais, sessão indevida, perda de administração | Média | Crítica | WEB-021/024 aceitas; CHG-005 exige revalidar escopo por projeto em `/api/v1/patients`, `/api/v1/evaluators` e `/api/v1/exports/*` (CAD-02/03, EXP-CSV-01) | M6/M4/M5 | Segurança/técnico | ABERTO |
 | R06 | Novo schema, rótulo de projeto ou associação de legado apropria/muda histórico | Corrupção de coletas ou fusão indevida de participantes legados | Média | Crítica | Migration 0014 aditiva (`ON DELETE RESTRICT`), `web_legacy_project_links` e `web_legacy_entity_links` explícitos e auditados sem fusão automática por coincidência de nome/código (`WEB-045`/`WEB-027`) | M2/M4/M7 | Backend + proprietário | ABERTO |
 | R07 | Armazenamento de nomes completos de pacientes/avaliadores e coleta/exportação sem política institucional | Exposição de dados pessoais nominais (LGPD) e uso indevido | Alta | Crítica | Segregação física entre `web_patients`/`web_evaluators` e `assessments`, exportação `deidentified` por padrão, `nominal` restrito a autorização e `DEC-03`/`DEC-05` (`WEB-045`/`020`/`033`/`041`), zero dados nominais em logs/URLs/bootstrap participante | M4/M5/M9/M10 | Proprietário/instituição | ABERTO |
-| R08 | Publicação interrompe aplicação; backup não restaurável/retorno incompatível | Indisponibilidade/perda | Média | Crítica | Ensaio isolado schema/dados/imagens, réplica/agenda/alerta, deploy autorizado e retorno | M7/M8/M10 | Operador/proprietário | ABERTO |
-| R09 | Dependências de VPS/DNS/TLS/provisionamento local/chaves/destino externo ou CI sem PR | Bloqueio de homologação/recuperação e falsa prontidão | Média | Alta | Preparar local independente; inventário de recursos e validação por SHA, sem mudar proteção para contornar bloqueio | M1/M8/M10 | Operador + técnico | ABERTO |
+| R08 | Publicação interrompe aplicação; backup não restaurável/retorno incompatível | Indisponibilidade/perda | Média | Crítica | Ensaios locais históricos; CHG-008 aceita WEB-031 no alcance local sem comprovar réplica externa/RPO/RTO; comprovação antes da publicação em REQ-INF-003/WEB-037/039, deploy autorizado e retorno | M7/M8/M10 | Operador/proprietário | ABERTO |
+| R09 | Dependências de VPS/DNS/TLS/provisionamento local/chaves/destino externo ou CI sem PR | Bloqueio de homologação/recuperação e falsa prontidão | Média | Alta | CHG-008 dispensa confirmação independente da hostkey para WEB-031; identidade remota não comprovada. Preservar verificação SSH, inventário e validação por SHA; CI da candidata continua exigida | M1/M8/M10 | Operador + técnico | ABERTO |
 | R10 | Reescrever o que existe, ampliar instrumentos e manter backlogs concorrentes | Retrabalho e escopo sem controle | Alta | Alta | Auditoria, backlog único, critérios pequenos, IDs e controle de mudança; sem crédito histórico automático | Todos | Coordenador técnico | ABERTO |
 | R11 | Contorno/retirada da caixa e precisão, HUD e diferenças de renderização alteram percepção/saliência/atenção | Versões experimentais incompatíveis e evidência anterior insuficiente | Média | Alta | Aprovação visual D3/D4 pelo proprietário registrada; conferir dez cores/screenshots sintéticos Chromium/Firefox, versão/SHA distinta, WEB-044/011 e revisão WEB-034 com DEC-04. Não inferir melhoria de desempenho/validade pela redução de informação potencialmente distrativa | M3/M4/M9 | Técnico + metodológico | ABERTO |
 | R12 | Conta administrativa compartilhada: vazamento/reuso da senha, saída de integrante e autoria técnica indistinguível da identificação declarada do avaliador | Sem atribuição individual por credencial, revogação por pessoa impossível, seleção de `evaluator_id` depende de declaração operacional | Alta | Crítica | Proprietário/operador: custódia protegida, senha exclusiva, troca na alteração da equipe e revogação global; `CHG-005` separa `issued_by` (conta autenticada) de `evaluator_uuid` (avaliador responsável cadastrado em `web_evaluators`); adequação institucional avaliada em `DEC-03`/`WEB-033` | M6/M4/M5/M9/M10 | Proprietário + segurança + instituição | ABERTO |
@@ -4190,9 +4296,547 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 - Matriz requisito→tarefa→marco, IDs sequenciais/únicos, grafo e painel conferidos pelo validador; revisão semântica conferiu caminho crítico, gates externos, distinção de população A/T e cardinalidades. Somente oito Markdown canônicos em docs/ alterados. Código/testes/configurações/workflow/AGENTS/ADR-007 intactos; nenhum novo roadmap/arquivo de progresso. Histórico anterior arquivado na base Git imutável, sem fonte concorrente.
 - Git da missão: branch `docs/chg-007-replanejamento-integrado` sobre `b5fccbb`; unidade documental `2d982d7bf7cdd40f7bf9ff9bfc27430cb7d76add`, commit/push com upstream concluídos. [PR #18](https://github.com/thiagorraposo/stroop-test-web/pull/18) aberto para main, somente oito Markdown; auto-merge desabilitado. No fechamento documental, verify aguardando execução/conclusão na SHA final; merge não realizado. **Instrução posterior explícita do proprietário nesta sessão: deixar o PR aberto, sem merge.** Auto-merge permanece desabilitado; CI aprovada não autoriza integração nesta missão. Não executar merge, deploy, tag ou release. O SHA do fechamento é consultável por `git log -1 --format=%H --grep='docs(planejamento): registra envio da CHG-007'`; resultado remoto final é consultável no PR/check correspondente, sem autorreferência artificial de commit. Nenhum aceite funcional de WEB-048..055.
 
+### CHG-008 — Dispensa da confirmação independente SSH e aceite local de WEB-031
+
+- Origem/data: instrução explícita do proprietário em 2026-11-16: “altere a documentação e retire essa exigência, trate web031 como concluída”.
+- Motivo: Falha de acesso/login ao console do provedor; responsável decide remover a exigência e encerrar a tarefa com as evidências locais disponíveis.
+- Decisão aprovada: Retirar confirmação independente ED25519 por painel/console/suporte como gate de WEB-031. Para cumprir o encerramento solicitado sem inventar ensaio externo, o proprietário aceita o alcance local e dispensa réplica VPS→notebook e medição externa de RPO/RTO como critérios desta tarefa em M8. Estado CONCLUIDA por aceite explícito, não por execução externa.
+- Impacto: WEB-031 satisfaz sua dependência em WEB-032; WEB-032 ainda depende de WEB-055 e CI autorizada na candidata. REQ-INF-003 conserva comprovação externa antes da publicação em WEB-037 e confirmação no handoff WEB-039; não se declara conformidade operacional externa. Nenhuma tarefa nova, renumeração ou mudança do denominador.
+- Riscos aceitos no alcance da tarefa: R08/R09 permanecem abertos, sem identidade remota independentemente comprovada, RPO/RTO externo ou garantia de disponibilidade do notebook. Não desabilitar checagem de chave SSH, ignorar mudança de chave ou alterar código/configuração de segurança por esta dispensa.
+- Documentos afetados: Ficha/painel/Retomada/riscos deste backlog, REQ-INF-003/matriz, arquitetura, runbook de recuperação e registro de alterações. Fontes históricas anteriores a esta decisão permanecem datadas e superadas apenas nesses pontos.
+- Validação: Verificador documental, seus sete testes e diff check; resultados na Retomada. Nenhum ensaio remoto, funcional ou CI novo atribuído ao aceite; autorização não se estende a deploy, produção ou dados reais.
+
+### CHG-009 — RT médio indisponível nesta versão; mediana oficial preservada
+
+- Data/motivo: 2026-11-16; divergência concreta entre catálogo alvo de M8 (RT médio) e núcleo científico `stroop.domain.stroop.calculate_metrics` (mediana dos acertos).
+- Aprovação: Proprietário respondeu **“sim”** à proposta explícita de registrar RT médio como indisponível nesta versão, preservando o cálculo oficial e mantendo o filtro por mediana.
+- Impacto: Retirar implementação de RT médio dos critérios residuais de WEB-050/051/052/053/055/032 nesta versão. `rt_mean_min_ms`/`rt_mean_max_ms` continuam recusados; nenhuma equivalência entre média e mediana. REQ-REL-004/006 e contrato HTTP registram a limitação; médias descritivas entre avaliações em WEB-051/052 continuam distintas e não foram removidas.
+- Preservação: Nenhuma fórmula, métrica, coluna CSV, tempo, estímulo, versão científica ou aceite histórico foi alterado. Denominador permanece 56, sem tarefa nova ou reabertura. Demais lacunas e gates de M8 permanecem exigidos.
+- Validação: Testes estritos recusam campos RT médio; interface informa uso da mediana e indisponibilidade. Evidências locais e Git na Retomada; nenhuma autorização de CI, M9 ou deploy decorre desta decisão.
+
 ## Retomada
 
-### Retomada vigente — acessibilidade das superfícies de M8, 2026-11-15
+### Retomada vigente — status operacionais segregados, quatro contagens cadastrais e revisão de WEB-048..055, 2026-11-16
+
+Continuidade do projeto no marco **M8** (`WEB-050`, `WEB-051` e revisão de
+`WEB-048`..`WEB-055`) na branch `feat/m8-entregaveis-integrados` (base `0ec2629`),
+preservando a alteração preexistente em `web/e2e/manual/native-zoom.mjs` e
+respeitando a restrição de não executar CI remota, PR, merge ou deploy. Progresso
+global mantido em **38/56 (67,9%)**, M8 **3/12 aceitos** (`WEB-029`, `WEB-030` e
+`WEB-031` por `CHG-008`); `WEB-050` permanece `EM_ANDAMENTO` e `WEB-048` permanece
+`EM_VALIDACAO` enquanto as campanhas finais de volume (`5.000`/`5.001` e `EXPLAIN`
+de `WEB-051`), preparação direta/handoff/QR (`WEB-054`) e três jornadas integradas
+(`WEB-055`) aguardam execução para o fechamento dos aceites formais.
+
+**EV-M8-050-STATUS-CONTAGENS-20261116**:
+
+1. **Consulta segregada de status operacionais (`invalidated`, `aborted`, `expired`, `in_progress`) (`WEB-050` / `WEB-051`):**
+   - `api/analysis.py` aceita `status` como `'valid' | 'invalidated' | 'aborted' | 'expired' | 'in_progress'`
+     ou lista de 1 a 5 valores em `POST /api/v1/analysis/query`, expondo os cinco
+     status em `capabilities.status` e recusando com `422` combinações
+     exclusivamente operacionais (sem `'valid'`) com filtros de métricas oficiais,
+     tentativas principais (`condition`, `response_type`, `go_nogo`) ou
+     `assessment_ids`.
+   - `stroop/persistence/web_assessments.py` seleciona sessões operacionais em
+     `_operational_sessions` com o papel `READER` (`SELECT` sobre colunas técnicas
+     em transação `REPEATABLE READ READ ONLY`, sem ler nomes/iniciais ou hashes de
+     credencial), classificando determinística e mutuamente exclusivamente
+     `invalidated`, `aborted`, `expired` (incluindo expiração lógica
+     `expires_at <= clock_timestamp()` em `preparing`/`running`) e `in_progress`,
+     incorporando o resumo ao `content_fingerprint` sem depender de timestamp
+     volátil entre páginas.
+   - Consultas exclusivamente operacionais retornam `A/T` vazios
+     (`counts.assessments = 0`, `items = []`), `legacy_export_context = null` e
+     recusam prévia/download CSV v2 com `422` (`UnsupportedProjection`), mantendo
+     separação estrita entre registros operacionais e resultados científicos.
+2. **Quatro contagens cadastrais e de participantes (`registry_counts`) (`WEB-050` / `WEB-051`):**
+   - `_registry_counts` em `stroop/persistence/web_assessments.py` e
+     `analysis_dataset` em `stroop/application/web_assessments.py` retornam
+     `registry_counts` separado de `counts`:
+     `visible_patients` (cadastro central visível autorizado sem filtro de
+     avaliação), `project_linked_patients` (pacientes centrais distintos
+     vinculados aos projetos consultados via participante, avaliação, convite ou
+     mapa legado explícito ativo), `valid_assessment_participants` (participantes
+     distintos com avaliação oficial válida nos projetos, deduplicados por
+     `patient_id` explícito sem fundir homônimos ou legados sem mapa) e
+     `filtered_participants` (participantes distintos no recorte `A`).
+   - `web/src/api/analysis.ts`, `web/src/dashboard/query.ts`,
+     `web/src/components/ResearchFilters.tsx`, `web/src/components/ProfessionalDashboard.tsx`
+     e `web/src/components/ExportHubPanel.tsx` validam o contrato fechado de
+     `registry_counts` e `operational`, expõem os filtros de status operacional,
+     exibem os quatro cartões de contagens cadastrais e renderizam a tabela
+     acessível `Sessões operacionais segregadas` na Visão Geral e em `Avaliações e histórico`.
+
+Validação local executada nesta sessão (Linux `7.0.0-43-generic`, Python `3.12.3`,
+Node `24.15.0`, npm `11.16.0`, Playwright `1.64.1`, Chromium `156.0.8078.4` e
+Firefox `157.0`, PostgreSQL `17.6-bookworm` descartável em tmpfs/loopback
+`stroop_etapa4_test_m8_status_20261116`, removido ao término; zero skips):
+
+- `.venv/bin/python -m unittest tests.test_analysis_query -v`: **4/4 aprovados**
+  (primeira execução antes do ajuste de `filters['status']` no padrão `'valid'`
+  teve 1 falha de asserção em `test_aliases_equivalentes_e_limites_sem_coercao`,
+  corrigida mantendo `filters` sem chave `'status'` quando igual ao padrão `'valid'`).
+- `npm --prefix web test -- --maxWorkers=2 --reporter=dot`: **372/372 aprovados**
+  em 30 arquivos, 0 skips.
+- `npm --prefix web run build`: `tsc --noEmit` e `vite build` aprovados (aviso
+  histórico de chunk >500 kB preservado).
+- Com `TEST_DATABASE_URL` no banco descartável `stroop_etapa4_test_m8_status_20261116`:
+  `.venv/bin/python -m unittest tests.test_analysis_query tests.test_web_assessments
+  tests.test_web_query_exports tests.test_web_database_provision -v`:
+  **55/55 aprovados**, 0 falhas, 0 skips (duas rodadas anteriores falharam apenas
+  no setup do novo teste por argumento `participant_id` em `_completion` e pela
+  constraint `web_participant_sessions_expiration_valid` ao avaliar
+  `clock_timestamp()` duas vezes; corrigido o setup da fixture sem alterar
+  constraints).
+- Em `web/`: `WEB_TEST_PORT=4298 node node_modules/@playwright/test/cli.js test
+  e2e/accessibility-surfaces.spec.ts e2e/component-catalog.spec.ts
+  e2e/research-filters.spec.ts e2e/applied-query.spec.ts e2e/presentation.spec.ts
+  e2e/professional-shell.spec.ts --workers=2 --trace=off
+  --output=test-results/m8-status-browser-20261116`: **62/62 aprovados** em
+  Chromium e Firefox, 0 skips.
+- Em `web/` com o PostgreSQL 17.6 descartável:
+  `node node_modules/@playwright/test/cli.js test --config
+  playwright.integration.config.ts e2e/integrated/analysis-query.spec.ts
+  e2e/integrated/trial-filters.spec.ts e2e/integrated/query-exports.spec.ts
+  --workers=1 --trace=off --output=test-results/m8-status-https-20261116-final`:
+  **16/16 aprovados** em 58,2 s (Chromium e Firefox, HTTPS/FastAPI/PG/grants reais;
+  primeira rodada teve 14/16 por usar `getByRole('button', { name: 'Exportações' })`
+  em vez de `getByRole('tab', { name: 'Exportações' })`, corrigido no teste).
+
+Git: branch `feat/m8-entregaveis-integrados` (base `0ec2629`). Commit desta
+unidade identificável por `git log -1 --format=%H --grep='feat(web): implementa status operacionais segregados e quatro contagens cadastrais'`.
+Nenhum PR, CI (`verify_web_ci.py all` ou Actions), merge ou deploy executado.
+Próxima ação em M8: executar a campanha de volume (`5.000`/`5.001` e `EXPLAIN` de
+`WEB-051`), implementar a preparação direta contextual (`WEB-054`) e executar as
+três jornadas integradas (`UX7-J1`/`J2`/`J3` de `WEB-055`) para concluir os aceites
+de `WEB-048`..`WEB-055` antes da candidata `WEB-032`.
+
+### Retomada anterior — IDs cadastrais na consulta aplicada e acessibilidade UX7-AA de superfícies, 2026-11-16
+
+Continuidade do projeto no marco **M8** (`WEB-050` e `WEB-048`), respeitando a
+instrução explícita de não executar CI, merge ou deploy. `WEB-050` permanece
+**EM_ANDAMENTO** e `WEB-048` permanece **EM_VALIDACAO**. Progresso global mantido
+em **38/56 (67,9%)**, M8 **3/12 aceitos** (`WEB-029`, `WEB-030` e `WEB-031` por
+`CHG-008`); nenhum avanço implícito a M9.
+
+**EV-M8-050-CADASTRAIS-AA-20261116**:
+
+1. **IDs cadastrais em `POST /api/v1/analysis/query` e no estado aplicado React (`WEB-050`):**
+   - `api/analysis.py` adiciona `patient_id: list[UuidStr]` (até 100 UUIDs
+     normalizados para minúsculas, sem duplicatas e ordenados; strings soltas ou
+     códigos `PAT-...` retornam 422, mantendo `participant_id` para códigos) e
+     normaliza UUIDs em `evaluator_id` (aceitando UUID de `web_evaluators` ou
+     `evaluator_code`). `'patient_id'` consta em `capabilities.filters`.
+   - `stroop/persistence/web_assessments.py` seleciona avaliações WEB por
+     `wa.patient_id = ANY(%s::uuid[])` e avaliações legadas exclusivamente por
+     mapa explícito ativo em `web_legacy_entity_links` (`entity_type = 'patient'`,
+     `active = true`) no mesmo projeto autorizado (ignorando `patient_id` direto
+     em `web_project_participants` sem mapa ativo e recusando com `409 Conflict`
+     quando houver mais de um mapa ativo para o mesmo participante legado).
+     `evaluator_id` seleciona por `a.evaluator` ou `wa.evaluator_uuid::text`.
+     Executado integralmente pelo papel `READER` (`SELECT`) em transação
+     `REPEATABLE READ READ ONLY`, sem ler `full_name`/`initials` e sem alterar
+     `REQUIRED_COLUMNS` ou migrations.
+   - `legacy_export_context` (CSV v1) permanece `null` quando `patient_id` é
+     usado ou quando `evaluator_id` contém UUID; prévia e download CSV v2
+     respeitam integralmente a seleção cadastral.
+   - `web/src/dashboard/query.ts`, `web/src/api/analysis.ts`,
+     `web/src/components/ResearchFilters.tsx` e `web/src/components/ProfessionalDashboard.tsx`
+     integram `patient_id` (`Pacientes (cadastro central)`) populado apenas por
+     `{ id, participant_code }` autorizados, preservando rascunho/aplicada, chips,
+     descarte e ausência total de nomes nominais em URL, estado ou storage, além
+     de associar `aria-invalid` e `aria-describedby` aos campos `Data inicial` e
+     `Data final`.
+2. **Acessibilidade `UX7-AA` de superfícies complementares e área autenticada (`WEB-048` / `WEB-050`):**
+   - `web/src/components/ProfessionalCredentials.tsx` associa dica de política
+     (`aria-describedby="new-password-hint"`) e erro (`aria-invalid`), devolve
+     foco ao campo relevante, limpa ambas as senhas em qualquer erro e posiciona
+     `<p role="status">` fora do `<form aria-busy={busy}>`.
+   - `web/src/styles.css` e `web/src/components/ui/theme.css` corrigem o contraste
+     de `.eyebrow`, `.quiet`, `.example-label` e `.journey-indicator` dentro de
+     `.content-card` em `/instrucoes` e `/rota-inexistente` (`#475569` sobre
+     `#f4f3ed`, >5,9:1), aplicam `container-type: inline-size` e `@container` em
+     `.professional-theme` / `.professional-shell` para evitar overflow horizontal
+     sob `zoom: 4` em `1280×1080` (320 CSS px efetivos), e recortam
+     `.skip-link:not(:focus)` para não cobrir `<summary>Alterar senha</summary>`.
+
+Validação local executada nesta sessão (Linux `7.0.0-43-generic`, Python `3.12.3`,
+Node `24.15.0`, npm `11.16.0`, Playwright `1.64.1`, Chromium `156.0.8078.4` e
+Firefox `157.0`, PostgreSQL `17.6-bookworm` descartável em tmpfs/loopback
+`stroop_etapa4_test_m8_cadastral_20261116`, removido ao término; zero skips):
+
+- `.venv/bin/python -m unittest tests.test_analysis_query -v`: **4/4 aprovados**.
+- `npm --prefix web test -- --maxWorkers=2 --reporter=dot`: **370/370 aprovados**
+  em 30 arquivos, 0 skips.
+- `npm --prefix web run build`: `tsc --noEmit` e `vite build` aprovados (aviso
+  histórico de chunk >500 kB preservado).
+- Em `web/`: `WEB_TEST_PORT=4298 node node_modules/@playwright/test/cli.js test
+  e2e/accessibility-surfaces.spec.ts e2e/component-catalog.spec.ts
+  e2e/research-filters.spec.ts e2e/applied-query.spec.ts e2e/presentation.spec.ts
+  --workers=2 --trace=off --output=test-results/m8-catalog-aa-20261116-final`:
+  **60/60 aprovados** em 47,5 s (Chromium e Firefox), incluindo `18/18` em
+  `accessibility-surfaces.spec.ts`.
+- Com `TEST_DATABASE_URL` no banco descartável `stroop_etapa4_test_m8_cadastral_20261116`:
+  `.venv/bin/python -m unittest tests.test_analysis_query tests.test_web_assessments
+  tests.test_web_query_exports tests.test_web_database_provision -v`:
+  **54/54 aprovados** em 57,510 s, 0 falhas, 0 skips.
+- Em `web/` com o mesmo PostgreSQL 17.6 descartável:
+  `node node_modules/@playwright/test/cli.js test --config
+  playwright.integration.config.ts e2e/integrated/analysis-query.spec.ts
+  e2e/integrated/trial-filters.spec.ts e2e/integrated/query-exports.spec.ts
+  --workers=1 --trace=off --output=test-results/m8-cadastral-https-20261116`:
+  **14/14 aprovados** em 47,6 s (Chromium e Firefox, HTTPS/FastAPI/PG/grants reais),
+  incluindo seleção por `patient_id` (WEB e legado com mapa explícito ativo) e
+  `evaluator_id` UUID sem expor nome nominal em URL ou storage.
+
+Falhas intermediárias diagnosticadas e corrigidas antes da aprovação final:
+inferência de tupla TypeScript em `new Map` de `ResearchFilters.tsx` (corrigida
+com `Map<string, string>`); contraste 4,335:1 em `.content-card` de `/instrucoes`
+(corrigido para `#475569`); overflow horizontal em `research-filters.spec.ts` sob
+`zoom = 4` em `1280×1080` (corrigido com `@container` em `.professional-theme`);
+asserção de exportação em `applied-query.spec.ts` atualizada para o contrato de
+prévia v2 (`a3ef4aa`); interceptação de clique por `.skip-link` não focado sobre
+`<summary>Alterar senha</summary>` (corrigida com `clip-path: inset(50%)` e
+`pointer-events: none`); primeira tentativa de subir container PostgreSQL sem
+prefixo `stroop_etapa4_test` em `POSTGRES_DB` recusada pela guarda de segurança
+do teste e repetida com `POSTGRES_DB=stroop_etapa4_test_m8_cadastral_20261116`.
+
+Git: branch `feat/m8-entregaveis-integrados` (base `f61ab85`). Commit desta
+unidade identificável por `git log -1 --format=%H --grep='feat(web): integra IDs cadastrais na consulta aplicada e amplia UX7-AA'`.
+Nenhum PR, CI (`verify_web_ci.py all` ou Actions), merge ou deploy executado,
+conforme restrição expressa da sessão. Próxima ação em M8: implementar consulta
+segregada de status operacionais (`invalidated`, `aborted`, `expired`,
+`in_progress`) e quatro contagens cadastrais (`WEB-050`/`WEB-051`), e concluir a
+conferência final dos módulos de `WEB-048`..`WEB-055`.
+
+### Retomada anterior — filtro Go/No-Go e CHG-009, 2026-11-16
+
+Novo `continue o projeto` retoma M8. Proprietário aprovou explicitamente RT
+médio indisponível nesta versão, mantendo mediana oficial (CHG-009), e pediu
+commit imediato do trabalho até aqui. WEB-050 continua EM_ANDAMENTO; WEB-048
+EM_VALIDACAO. Progresso permanece **38/56 (67,9%)**, M8 **3/12**; nenhum novo
+aceite integral. Sem avanço a M9.
+
+**EV-M8-050-GONOGO-20261116**: filtro `go_nogo` no POST normalizado, em RAM,
+exige Stroop exclusivo e combina tipo/condição/resposta na mesma tentativa.
+Classificação usa resposta esperada do domínio, sem nova fórmula científica.
+Consulta, chips, descarte e resumo aplicado incluem o tipo; prévia/CSV v2
+preservam T e métricas da avaliação completa. CSV21 recusa recorte de tentativas
+com 422. Transporte GET incompatível falha explicitamente. UI informa mediana
+oficial e indisponibilidade de RT médio; campos de média continuam recusados.
+
+Validação local até o pedido de commit:
+
+- `npm --prefix web test -- --maxWorkers=2`: **368/368**, 30 arquivos, sem skips;
+  tipos/build aprovados, aviso histórico de bundle >500 kB preservado. Guarda
+  adicional do adaptador GET e sua asserção foram incluídas depois dessa rodada;
+  reexecução focada ainda pendente no momento deste commit solicitado.
+- `TEST_DATABASE_URL` exclusivamente descartável e `.venv/bin/python -m unittest
+  tests.test_analysis_query tests.test_web_assessments tests.test_web_query_exports
+  tests.test_nucleo_compartilhado tests.test_web_export -q`: **54/54**, 95,621 s,
+  sem falhas/skips, PG 17.6 real em tmpfs/loopback, banco
+  `stroop_etapa4_test_m8_20261116`. Inclui interseções contraditórias, dois tipos,
+  preservação das métricas e CSV parseado. Teste estrito atualizado de recusa de
+  RT médio reexecutado em `tests.test_analysis_query`: **4/4**.
+- Primeira rodada Python: 35 testes, quatro falhas e um erro no teste novo:
+  comparação indevida do recibo reduzido com summary profissional completo e
+  fixture que usava string vazia onde o schema exige NULL. Corrigida a comparação
+  para consulta completa e removida a mutação inválida; constraints preservadas.
+  Rodada final 54/54 acima, sem falha de runtime atribuída àquela fixture.
+- Em `web/`, `TEST_DATABASE_URL` em banco descartável separado
+  `stroop_etapa4_test_m8_20261116_https`, Playwright com
+  `--config playwright.integration.config.ts e2e/integrated/analysis-query.spec.ts
+  e2e/integrated/query-exports.spec.ts --workers=1 --trace=off`: **em execução**
+  no pedido de commit; cinco casos Chromium observados aprovados, Firefox ainda
+  não conferido. Não declarar campanha concluída ou CI aprovada.
+- Verificador documental aprovado: 11 marcos/56 tarefas/75 requisitos/15 riscos/
+  cinco decisões/38 aceitos, 90 documentos/750 links/119 âncoras; sete testes do
+  validador aprovados. Conferência final de diff/links no commit solicitado.
+
+Ambiente: Linux 7.0.0-43-generic, Python 3.12.3, Node 24.15.0, navegadores
+Playwright locais. Somente fixtures sintéticas; nenhuma dependência, migration,
+coleta, segredo operacional ou produção alterados. Banco/container descartáveis
+próprios ainda usados nos ensaios; remover ao terminar.
+
+Git: branch `feat/m8-entregaveis-integrados`, worktree inicial limpa,
+HEAD/upstream `f3d1bfd`; fetch confirmou main/origin/main `a0723d3`. Commit desta
+unidade identificável por `feat(web): completa filtro Go/No-Go e preserva RT mediano`.
+Push ainda não executado neste registro. CI/PR/merge não executados, preservando
+restrição vigente de CI. Próxima ação: concluir a rodada HTTPS e a reexecução
+focada do adaptador GET, conferir envio e continuar catálogo residual/status
+operacionais e checklist AA de WEB-050/048 até as dependências de WEB-055/032.
+
+#### Fechamento da unidade solicitada — 2026-11-16
+
+Implementação commitada em `bbde6b710c93e86870f2fcd2857940b4c861e947` e push
+confirmado por igualdade HEAD/upstream nessa SHA. Rodada HTTPS acima terminou
+**10/10 aprovada**, 1,2 min, Chromium e Firefox, sem mocks/skips. Guarda do
+adaptador GET reexecutada com `npm --prefix web test --
+ src/dashboard/query.test.ts --maxWorkers=2`: **6/6**, sem skips. Tipos já
+incluíam a guarda; nenhuma alteração adicional de runtime após o commit.
+Container próprio `stroop_etapa4_test_m8_20261116` e seus dois bancos tmpfs
+removidos ao terminar, sem alterar os demais serviços. Restrição de CI
+preservada: nenhum PR/CI/merge, tag/release ou deploy executado. WEB-050 segue
+EM_ANDAMENTO, WEB-048 EM_VALIDACAO, M8 3/12 e progresso 38/56. Próxima tarefa
+continua catálogo cadastral/status operacionais e checklist AA; RT médio deixa
+de ser pendência desta versão por CHG-009. Registro de fechamento contém
+resultados novos e não concede aceite integral.
+
+### Retomada anterior — aceite explícito de WEB-031, 2026-11-16
+
+**EV-M8-031-ACEITE-20261116**: proprietário instruiu retirar a exigência de
+confirmação independente da chave SSH e tratar WEB-031 como concluída. CHG-008
+registra a decisão e revisa o aceite para o alcance sintético local já ensaiado.
+WEB-031 **CONCLUIDA por aceite explícito**; não foi feita conexão SSH, réplica
+VPS→notebook ou medição externa nesta sessão. R08/R09 continuam abertos;
+RPO 24 h/RTO 4 h externos e identidade remota não foram comprovados. Condições
+anteriores que bloqueavam WEB-031 por hostkey/ensaio externo estão superadas;
+registro histórico preservado, sem transformar ausência de teste em passe.
+
+Progresso **38/56 (67,9%)**, 18 sem aceite; M8 **3/12**. WEB-048 EM_VALIDACAO,
+WEB-050 EM_ANDAMENTO; WEB-032 PENDENTE de WEB-055 e dos demais gates, incluindo
+CI autorizada na candidata. REQ-INF-003/WEB-037/039 mantêm comprovação externa antes
+da publicação. Próxima ação local: checklist AA de WEB-048 e catálogo/status
+de WEB-050, seguindo dependências de WEB-048..055. Sem avanço a M9.
+
+Git: worktree inicialmente limpa, branch adequada `feat/m8-entregaveis-integrados`,
+base HEAD/upstream `3a1c2d6`; fetch conferiu main/origin/main `a0723d3`.
+Alteração exclusivamente documental. Entrega identificável por
+`git log -1 --format=%H --grep='docs(m8): registra dispensa e aceite explícito de WEB-031'`.
+Push verificável por igualdade HEAD/upstream/remoto. Mantida restrição anterior
+de não executar CI; sem PR (dispararia CI), merge, tag/release ou deploy.
+Validação documental desta sessão: verificador (11 marcos, 56 tarefas,
+75 requisitos, 15 riscos, cinco decisões e 38 aceitos), sete testes e
+`git diff --check` aprovados; nenhum teste funcional reexecutado nem nova evidência externa.
+
+### Retomada anterior — continuidade de M8 e vínculo legado na exportação, 2026-11-15
+
+Pedido atual renova a execução autônoma de M8 até conclusão ou impedimento real,
+priorizando WEB-048..055/031/032, sem CI ou deploy. Supera a limitação de encerrar
+após a próxima tarefa da sessão anterior. Inicialização limpa em
+`feat/m8-entregaveis-integrados`, HEAD/upstream `c02909d`; fetch confirmou
+main/origin/main `a0723d3`. Branch preservada, sem integração do PR #18.
+
+**EV-M8-053-LEGADO-20261115**: corrigida lacuna objetiva de WEB-053 sem antecipar
+aceite integral/dependências. A projeção de pacientes agora resolve o mapa
+legado ativo explícito no projeto autorizado, além do vínculo WEB por avaliação.
+Não usa `patient_id` isolado no participante nem coincidência textual como
+autorização; dois mapas ativos produzem 409, mesmo para o mesmo paciente.
+Desvinculação muda o fingerprint e impede download da prévia anterior. Sem mapa
+central, projeção pacientes continua recusada (422), sem excluir linhas
+silenciosamente ou acrescentar cadastros sem avaliação. Reader recebe somente
+colunas técnicas dos mapas pelo provisionador já existente; nenhuma leitura
+nominal, migration ou grant operacional executado.
+
+Verificação API/PG real exclusivamente no banco descartável
+`stroop_etapa4_test_m8_fechamento`, PostgreSQL 17.6 tmpfs/loopback. Testes e Git
+desta unidade:
+
+- `TEST_DATABASE_URL` exclusivamente descartável e `.venv/bin/python -m unittest
+  tests.test_web_query_exports tests.test_web_assessments
+  tests.test_web_database_provision -q`: **47/47**, 89,096 s, zero falhas/skips.
+  Inclui API real com reader SELECT, privilégios do provisionador, isolamento de
+  projeto, mapa explícito, duplicidade, revogação, CSV parseado e regressão das
+  consultas. Primeira rodada focada: sete passes/um erro em fixture de projeto
+  sem `created_by_issuer/subject`; corrigidos campos obrigatórios sintéticos,
+  sem alteração de restrições, seguida da rodada final acima.
+- `python3 scripts/verify_web_docs.py` e sete testes do validador aprovados:
+  11 marcos/56 tarefas/75 requisitos/15 riscos/5 decisões/37 aceitos,
+  90 documentos/747 links/118 âncoras. `git diff --check` aprovado.
+- Entrega identificável por `git log -1 --format=%H
+  --grep='fix(web): reconhece vínculo legado explícito na exportação'`.
+  Push da branch isolada sem PR, CI, merge, tag/release ou deploy; resultado
+  conferido no encerramento. Nenhum aceite Actions atribuído a esta SHA.
+
+Nenhuma suíte de
+browser/frontend ou recuperação repetida: esta unidade não altera UI/motor,
+serializadores científicos ou ferramentas de restore. Sem dependência instalada.
+
+Impedimentos preservados: WEB-031 exige fingerprint ED25519 comprovado por
+painel/console confiável antes de SSH; as ferramentas desta sessão não fornecem
+esse acesso autenticado. Solicitada a comprovação ao responsável, sem presumir
+resposta. Nenhum acesso à VPS. WEB-032 depende dessa réplica e do `verify` real
+na candidata, que a instrução atual proíbe executar. WEB-055 também exige revisão
+humana das três jornadas; não foi inventada aprovação. Os trabalhos locais
+restantes discriminados em EV-M8-INTEGRADA-20261115 continuam pendentes e não
+são classificados como impedidos pelo fingerprint. Progresso **37/56**, M8
+**2/12**, sem novos aceites integrais.
+
+Próxima ação local: catálogo/status de WEB-050 e checklist AA de WEB-048;
+seguir as dependências até WEB-055. Ação externa: obter comprovação independente
+da hostkey para WEB-031. WEB-032 só pode fechar após essas dependências e
+autorização de CI na candidata; nenhuma redução de gate ou avanço a M9.
+
+### Retomada anterior — encerramento solicitado e gate WEB-031, 2026-11-15
+
+A missão iniciou com pedido de fechar pendências de M8 sem CI/merge. Pedidos
+posteriores autorizaram WEB-031 sintética VPS→Mint, condicionando expressamente
+**antes da primeira conexão SSH** a verificar ED25519 no painel/console confiável
+da HostGator, sem considerar a conversa ou known_hosts autenticação independente.
+O último pedido limita a execução à próxima tarefa em andamento e encerramento;
+nenhuma nova tarefa será iniciada nesta sessão após as verificações locais.
+
+**WEB-031 permanece BLOQUEADA**, não concluída com ressalva. Não há sessão de
+painel/console HostGator disponível nas ferramentas conectadas nem endpoint de
+controle de navegador autenticado acessível em loopback 9222/9223. A chave pública
+local prévia tem fingerprint `SHA256:68X+z6XAelG7mbSz+NW/ASck8h+d9fhgoaA5wXan8To`,
+mas sua presença e o mesmo valor na conversa não cumprem a verificação independente.
+Não foi feita conexão, instalação, transferência ou alteração na VPS. Não há
+recurso temporário remoto criado para remover. Não foram acessados PostgreSQL,
+backups, chave AES operacional, deploy ou serviços públicos de produção.
+
+Custódia sintética: somente metadados conferidos por stat, sem ler a chave.
+`synthetic-recovery.key` preexistente 0600/raposo, em
+`/home/raposo/.config/stroop-web-replica` 0700; ciphertext de qualificação em
+`/home/raposo/.local/share/stroop-web-replica/qualification` 0700 separado.
+Os três harnesses desta sessão usam chaves/ciphertexts sintéticos efêmeros
+próprios, eliminados com seus recursos descartáveis; recursos locais anteriores
+preservados. Nenhum segredo ou backup é versionado.
+
+Evidência atual **EV-M8-031-LOCAL-20261115**: 36 testes backup/replicação/rollback/
+monitor/configuração, zero falhas/skips; smoke recovery aprovado, restore **6,988 s**;
+smoke replication aprovado, SSH exclusivamente loopback, **118.823 bytes**, cópia
+**1,060 s**, restore **6,546 s**, checksum/idempotência, shell negado, hostkey errada
+recusada, timer com cópia/alertas de atraso e indisponibilidade comprovados.
+Idade pontual **44,054 s** é observação local, **não RPO externo**. Auth restore
+aprovado: senha/token anteriores negados, recuperação fechada até operador,
+login novo 200, vínculos/16 trials/12 métricas/16 observações/recibo preservados.
+Hashes de conteúdo e contagens em **21 tabelas** conferidos, 14 migrations.
+Comandos: `.venv/bin/python -m unittest tests.test_backup_web
+ tests.test_web_backup_replication tests.test_vps_rollback tests.test_monitor_web
+ tests.test_hardening_producao.BackupEncryptionTests
+ tests.test_hardening_producao.ProductionConfigurationTests -v` e
+`scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`,
+`scripts/smoke_local_auth_restore.py` por `.venv/bin/python`, cada qual com
+`--api-image stroop-web-api:web031-20261112 --proxy-image
+stroop-web-proxy:deploy-6196c39`. Imagens históricas explicitamente reexecutadas:
+API `sha256:0fa1ea4db088e76a7602cb4d28051294b827a8eb5b63bbd71437fe34ca59ff1f`, proxy
+`sha256:fad12ab57fae24a7f3da5ebe0eb44d0e188d2e218751b8178da72654f62be366`.
+Não são imagens da nova implementação CHG-007 nem candidata desta branch.
+Limites de 24 h/4 h externos continuam sem medição/aceite; benchmark sintético
+local não valida operação contínua em notebook intermitente.
+
+Antes da limitação final, o ramo CHG-007 recebeu implementação parcial em
+**EV-M8-INTEGRADA-20261115**, abaixo. Código preservado sem conceder aceites por
+existência ou teste focado. Progresso permanece **37/56**, M8 **2/12**.
+WEB-048 EM_VALIDACAO; WEB-050 EM_ANDAMENTO; demais fichas mantêm dependências
+formais/aceites pendentes. Nenhum avanço a M9 ou encerramento fictício de M8.
+
+Git: base limpa main/origin/main `a0723d3`, fetch conferido; branch
+`feat/m8-entregaveis-integrados`. Commits e envio identificados no fechamento
+posterior; sem PR para não disparar CI, sem workflow_dispatch, sem pipeline CI
+local/remoto, sem merge/tag/release/deploy. Testes locais discriminados não
+são aprovação Actions. Não foi consultada CI para alegar resultado atual.
+Próxima ação exata, em futura retomada e sem repetir autorização já concedida: comprovar hostkey
+por painel/console confiável e então ensaiar WEB-031 externamente dentro do
+escopo sintético aprovado, ou retomar o ramo CHG-007 independente. WEB-032
+permanece PENDENTE, inclusive verify da candidata expressamente não executado.
+
+### EV-M8-INTEGRADA-20261115 — implementação parcial preservada
+
+WEB-049: shell com três eixos por capacidade, seções secundárias de análise e
+Gestão, sidebar expandida/recolhida e drawer com Escape/retorno de foco. Consulta
+e posição em RAM, hash de navegação só contém destino. Emissão saiu da abertura
+analítica. WEB-050/052: seleção explícita de avaliações edita rascunho e exige
+Aplicar; tabela com ordenação estável, paginação, colunas/densidade/busca local
+rotuladas como apresentação, sem exportar página como universo.
+
+WEB-051/052: agregações descritivas no servidor, níveis/dimensões/períodos,
+unidades/disponíveis/ausentes e catálogo de 12 indicadores referenciando o domínio;
+valores oficiais da avaliação completa, estratificados por instrumento/versão/
+protocolo/plataforma. Tabela de grupos permite edição explícita do filtro.
+Não há fórmula científica nova em TypeScript nem alteração do motor.
+
+WEB-053: corrigido caminho inseguro que ignorava filtros e podia ler nominal/
+usar writer em fallback. API v2 exige contexto efêmero da consulta e fingerprints,
+mesmo seletor/snapshot RO; token vincula sessão/projetos/consulta/conteúdo/colunas/
+modo/granularidade/versão/prazo. Download mantém travas de acesso até decisão
+final. Amostra só contém projeção selecionada e mascarada; nominal sempre 403,
+clientes sem consulta validada 422. Mutação do conteúdo retorna 409. CSV21 usa
+exportador/catálogo científicos oficiais inalterados; colunas do catálogo
+multi anterior divergente foram corrigidas para a fonte canônica. Leitura de
+cadastros apenas em colunas técnicas explicitamente concedidas ao reader pelo
+provisionador; nenhum grant/schema operacional foi aplicado.
+
+Limites concretos que impedem aceite integral: checklist AA autenticado/zoom
+nativo/leitor de tela por processo; catálogo residual e status operacionais;
+quatro contagens cadastrais e reconciliação de vínculo legado na projeção paciente;
+auditoria detalhada de exportação; campanha completa de concorrência/revogação,
+volume 5.000/20 e EXPLAIN/p95; gráficos/interações/histograma/longitudinal completos;
+WEB-054 (atomicidade/idempotência/handoff/QR) e jornadas WEB-055 não executadas.
+Não marcar WEB-048..055 CONCLUIDAS. Referências no contrato HTTP e matriz
+atualizadas para distinguir capacidade parcial e alvo.
+
+Ambiente: Linux 7.0.0-43-generic, Node 24.15.0, npm 11.16.0, Python 3.12.3;
+Playwright 1.64.1, Chromium 156.0.8078.4/Firefox 157.0. Banco criado nesta sessão:
+`stroop_etapa4_test_m8_entregaveis`, PG 17.6 tmpfs/loopback exclusivo. Sem acesso
+a coletas reais, alteração de dependências/locks ou migrations existentes.
+Validação local final (sem execução do runner CI):
+
+- `npm --prefix web test -- --maxWorkers=2`: **367/367**, 30 arquivos, sem skips.
+- `npm --prefix web run build`: tipos/build aprovados; aviso de chunk >500 kB
+  preservado, sem alterar configuração/dependências para escondê-lo.
+- `TEST_DATABASE_URL` exclusivamente descartável e `.venv/bin/python -m unittest
+  tests.test_web_query_exports tests.test_web_assessments tests.test_analysis_query
+  tests.test_web_multi_export tests.test_nucleo_compartilhado tests.test_web_export
+  -q`: **58/58**, sem skips. Novo EXPORT7/DATA7 confere projeções, colunas,
+  token adulterado/divergente, nominal negado, reader sem acesso a full_name,
+  paciente não vinculado excluído, contexto perdido/expirado, mutação com mesmo
+  ID/total, revogação, CSV21 idêntico ao individual, média oficial/nulos e unidade.
+- Em web, `WEB_TEST_PORT=4273 npx playwright test e2e/professional-shell.spec.ts
+  e2e/component-catalog.spec.ts e2e/accessibility-surfaces.spec.ts
+  e2e/presentation.spec.ts --workers=1 --trace=off`: primeira rodada **33/34**.
+  Firefox leu status inicial antes da consulta; teste passa a aguardar geração 1,
+  e aplicação publica loading na aplicação dos filtros. Rodada focada final de
+  `professional-shell.spec.ts`: **2/2**. Outros 32 casos da primeira rodada
+  aprovados (catálogo, superfícies, contraste, dez cores, DOM/prática); não são
+  checklist AA integral nem medição física. Sidebar/drawer/teclado/histórico/
+  preservação sem nova consulta/reflow em 360/768/1024/1366/1920 e 320 conferidos.
+- Em web, `TEST_DATABASE_URL` descartável, `npx playwright test --config
+  playwright.integration.config.ts e2e/integrated/query-exports.spec.ts
+  e2e/integrated/analysis-query.spec.ts --workers=1 --trace=off`: final **8/8**,
+  HTTPS/FastAPI/PG e credenciais reader/writer reais, Chromium/Firefox, sem mocks.
+  Interface prepara/baixa CSV do mesmo recorte, arquivo lido e coluna omitida
+  invalida prévia; busca/faixas/ausência e transições entre seções conferidas.
+- Documentação: `python3 scripts/verify_web_docs.py` e sete testes do validador
+  aprovados; 11 marcos/56 tarefas/75 requisitos/15 riscos/5 decisões/37 aceitos,
+  90 documentos/747 links/118 âncoras; `git diff --check` limpo.
+
+Falhas intermediárias preservadas: Vitest sem limite teve 246 aprovações e 11
+erros de inicialização de workers; máximo de dois resolveu, sem afrouxar teste.
+Asserções do menu antigo/capacidade exports=false foram atualizadas para o novo
+contrato. Um teste PG inicial criou paciente sem campos obrigatórios: corrigida
+fixture sintética. A primeira rodada integrada teve 4 aprovações/4 falhas:
+mensagem esperada de exportação desabilitada ficou obsoleta e o decoder de nome
+de arquivo recusava T/Z maiúsculos do timestamp, impedindo download. Corrigidos
+expectativa e regex fechada do filename; rodada final 8/8 acima. Suites de todos
+os antigos módulos/fluxos e a campanha completa de volume/AA/jornadas não foram
+reexecutadas, portanto não há aceite transversal de WEB-055.
+
+
+### Fechamento verificável — WEB-031 local e unidade parcial, 2026-11-15
+
+Entrega em **`a3ef4aab9d0d484d52a0d759a65456fecaed15d3`**, branch
+`feat/m8-entregaveis-integrados`, push com upstream confirmado. Comando do
+commit: `feat(web): integra consulta e exportação com navegação em três eixos`.
+Os ensaios WEB-031, provas locais da unidade e falhas intermediárias estão nas
+evidências acima, sem aceites adicionais. A imagem histórica reexecutada pela
+WEB-031 não é a imagem desse commit; nova interface foi validada separadamente
+pelo frontend/HTTPS/API/PG atuais. Árvore inicial limpa, nenhuma alteração
+preexistente descartada. PG tmpfs `stroop_etapa4_test_m8_entregaveis` removido após
+todos os testes; recursos de outras sessões preservados. Harnesses encerrados.
+
+Registro final é identificável por `git log -1 --format=%H
+--grep='docs(web): encerra ensaios locais de WEB-031 e registra bloqueio remoto'`;
+conferir seu envio por igualdade HEAD/upstream/referência remota da branch.
+Sem PR, CI local/remota, merge, acesso à VPS ou deploy nesta sessão.
+**Encerrada a execução conforme pedido**, sem iniciar outra tarefa após o gate.
+WEB-031 continua bloqueada e M8 não encerrado; não apresentar verificação local
+como conclusão da réplica externa. Nenhuma nova confirmação é exigida para as
+ações sintéticas já autorizadas, mas a comprovação independente da hostkey
+continua condição obrigatória antes de qualquer acesso remoto.
+
+### Retomada anterior — acessibilidade das superfícies de M8, 2026-11-15
 
 Novo `continue o projeto e depois faça o github flow` autoriza a continuidade
 em M8 e a integração da unidade validada por PR/checks/Merge Commit tradicional.
