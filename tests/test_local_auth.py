@@ -117,6 +117,7 @@ class LocalPostgresTests(unittest.TestCase):
                 '0012_local_authentication.sql',
                 '0013_local_user_management.sql',
                 '0014_central_patients_evaluators.sql',
+                '0015_direct_evaluation_operations.sql',
             ],
         )
         self.bootstrap()

@@ -10,7 +10,9 @@ def indicator_catalog():
     return [{'code': code, 'label': label, 'unit': unit, 'source': 'stroop.domain.stroop.calculate_metrics',
              'population': 'complete_assessment', 'aggregation': 'mean_of_assessment_values',
              'missing': 'excluded_from_mean_and_counted', 'denominator': 'assessments_with_value',
-             'numerator': 'sum_of_official_assessment_values'} for code, (label, unit) in METRIC_DEFINITIONS.items()]
+             'numerator': 'sum_of_official_assessment_values',
+             'exclusions': 'invalidated_aborted_expired_and_practice_trials',
+             'version': 'stroop_go_nogo_ptbr/0.2.2-web.1'} for code, (label, unit) in METRIC_DEFINITIONS.items()]
 
 
 def descriptive_groups(rows, trials, grouping):

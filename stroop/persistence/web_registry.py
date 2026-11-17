@@ -994,6 +994,59 @@ def update_evaluator(
         raise PersistenceError from exc
 
 
+def _relink_via_definer(
+    database_url: str,
+    *,
+    target_kind: str,
+    project_id: UUID,
+    assessment_id: str | None,
+    invitation_id: UUID | None,
+    patient_id: UUID | None,
+    evaluator_id: UUID | None,
+    reason_code: str,
+    issuer: str,
+    subject: str,
+) -> dict:
+    try:
+        with psycopg.connect(database_url, row_factory=dict_row) as connection:
+            row = connection.execute(
+                """SELECT status, out_patient_id, out_evaluator_uuid, out_session_id
+                   FROM public.web_relink_identity(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (
+                    target_kind,
+                    project_id,
+                    assessment_id,
+                    invitation_id,
+                    patient_id,
+                    evaluator_id,
+                    reason_code,
+                    issuer,
+                    subject,
+                ),
+            ).fetchone()
+    except psycopg.Error as exc:
+        raise PersistenceError from exc
+    if row is None:
+        raise PersistenceError
+    status = row["status"]
+    if status == "forbidden":
+        raise ForbiddenRegistryError
+    if status == "missing":
+        raise MissingRegistryError
+    if status == "inactive_patient":
+        raise InvalidRegistryDataError("Paciente inativo nao pode receber vinculo.")
+    if status == "inactive_evaluator":
+        raise InvalidRegistryDataError("Avaliador inativo nao pode receber vinculo.")
+    if status != "ok":
+        raise InvalidRegistryDataError("Parametros invalidos para revinculacao.")
+    return {
+        "patient_id": str(row["out_patient_id"]) if row["out_patient_id"] is not None else None,
+        "evaluator_id": str(row["out_evaluator_uuid"]) if row["out_evaluator_uuid"] is not None else None,
+        "session_id": str(row["out_session_id"]) if row["out_session_id"] is not None else None,
+        "relinked": True,
+    }
+
+
 def relink_assessment(
     database_url: str,
     *,
@@ -1005,148 +1058,25 @@ def relink_assessment(
     issuer: str,
     subject: str,
 ) -> dict:
-    try:
-        with psycopg.connect(database_url, row_factory=dict_row) as connection:
-            authorized_projects = _authorized_projects(
-                connection, issuer, subject, require_write=True
-            )
-            if project_id not in authorized_projects:
-                raise ForbiddenRegistryError
-
-            current = connection.execute(
-                """SELECT wa.assessment_id, wa.project_id, wa.patient_id,
-                          wa.evaluator_uuid, wa.session_id, a.participant_id, a.evaluator
-                   FROM web_assessments wa
-                   JOIN assessments a USING (assessment_id)
-                   WHERE wa.assessment_id = %s AND wa.project_id = %s
-                   FOR UPDATE""",
-                (assessment_id, project_id),
-            ).fetchone()
-            if current is None:
-                raise MissingRegistryError
-
-            new_patient_id = current["patient_id"]
-            if patient_id is not None:
-                pat = connection.execute(
-                    "SELECT id, participant_code, active FROM web_patients WHERE id = %s",
-                    (patient_id,),
-                ).fetchone()
-                if pat is None:
-                    raise MissingRegistryError
-                if not pat["active"]:
-                    raise InvalidRegistryDataError("Paciente inativo nao pode receber vinculo.")
-                part_code = pat["participant_code"]
-                connection.execute(
-                    """INSERT INTO web_project_participants(participant_uuid, project_id, pseudonym, patient_id)
-                       VALUES (%s, %s, %s, %s)
-                       ON CONFLICT (project_id, pseudonym) DO UPDATE
-                       SET patient_id = COALESCE(web_project_participants.patient_id, EXCLUDED.patient_id)""",
-                    (uuid4(), project_id, part_code, patient_id),
-                )
-                new_part_uuid = connection.execute(
-                    "SELECT participant_uuid FROM web_project_participants WHERE project_id = %s AND pseudonym = %s",
-                    (project_id, part_code),
-                ).fetchone()["participant_uuid"]
-                connection.execute(
-                    "UPDATE web_assessments SET patient_id = %s WHERE assessment_id = %s",
-                    (patient_id, assessment_id),
-                )
-                connection.execute(
-                    "UPDATE assessments SET participant_id = %s WHERE assessment_id = %s",
-                    (part_code, assessment_id),
-                )
-                inv_row = connection.execute(
-                    "SELECT visit FROM web_invitations WHERE session_id = %s",
-                    (current["session_id"],),
-                ).fetchone()
-                if inv_row is not None:
-                    visit_label = inv_row["visit"]
-                    connection.execute(
-                        """INSERT INTO web_participant_visits(visit_uuid, project_id, participant_uuid, label)
-                           VALUES (%s, %s, %s, %s)
-                           ON CONFLICT (project_id, participant_uuid, label) DO NOTHING""",
-                        (uuid4(), project_id, new_part_uuid, visit_label),
-                    )
-                    new_visit_uuid = connection.execute(
-                        """SELECT visit_uuid FROM web_participant_visits
-                           WHERE project_id = %s AND participant_uuid = %s AND label = %s""",
-                        (project_id, new_part_uuid, visit_label),
-                    ).fetchone()["visit_uuid"]
-                    connection.execute(
-                        """UPDATE web_invitations
-                           SET patient_id = %s, participant_id = %s, participant_uuid = %s, visit_uuid = %s
-                           WHERE session_id = %s""",
-                        (patient_id, part_code, new_part_uuid, new_visit_uuid, current["session_id"]),
-                    )
-                connection.execute(
-                    """INSERT INTO web_registry_audit_events (
-                           entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
-                       )
-                       VALUES ('participant_link', %s, 'relink', %s, %s, %s)""",
-                    (patient_id, issuer, subject, reason_code),
-                )
-                if current["patient_id"] is not None and current["patient_id"] != patient_id:
-                    connection.execute(
-                        """INSERT INTO web_registry_audit_events (
-                               entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
-                           )
-                           VALUES ('participant_link', %s, 'relink', %s, %s, %s)""",
-                        (current["patient_id"], issuer, subject, reason_code),
-                    )
-                new_patient_id = patient_id
-
-            new_evaluator_uuid = current["evaluator_uuid"]
-            if evaluator_id is not None:
-                ev = connection.execute(
-                    "SELECT id, evaluator_code, active FROM web_evaluators WHERE id = %s",
-                    (evaluator_id,),
-                ).fetchone()
-                if ev is None:
-                    raise MissingRegistryError
-                if not ev["active"]:
-                    raise InvalidRegistryDataError("Avaliador inativo nao pode receber vinculo.")
-                ev_code = ev["evaluator_code"]
-                connection.execute(
-                    "UPDATE web_assessments SET evaluator_uuid = %s WHERE assessment_id = %s",
-                    (evaluator_id, assessment_id),
-                )
-                connection.execute(
-                    "UPDATE assessments SET evaluator = %s WHERE assessment_id = %s",
-                    (ev_code, assessment_id),
-                )
-                connection.execute(
-                    "UPDATE web_invitations SET evaluator_uuid = %s, evaluator_id = %s WHERE session_id = %s",
-                    (evaluator_id, ev_code, current["session_id"]),
-                )
-                connection.execute(
-                    """INSERT INTO web_registry_audit_events (
-                           entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
-                       )
-                       VALUES ('invitation_link', %s, 'relink', %s, %s, %s)""",
-                    (evaluator_id, issuer, subject, reason_code),
-                )
-                if current["evaluator_uuid"] is not None and current["evaluator_uuid"] != evaluator_id:
-                    connection.execute(
-                        """INSERT INTO web_registry_audit_events (
-                               entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
-                           )
-                           VALUES ('invitation_link', %s, 'relink', %s, %s, %s)""",
-                        (current["evaluator_uuid"], issuer, subject, reason_code),
-                    )
-                new_evaluator_uuid = evaluator_id
-
-            _audit_auth(connection, issuer, subject, "manage_patients")
-            return {
-                "assessment_id": assessment_id,
-                "project_id": str(project_id),
-                "patient_id": str(new_patient_id) if new_patient_id is not None else None,
-                "evaluator_id": str(new_evaluator_uuid) if new_evaluator_uuid is not None else None,
-                "relinked": True,
-            }
-    except (ForbiddenRegistryError, MissingRegistryError):
-        raise
-    except psycopg.Error as exc:
-        raise PersistenceError from exc
+    res = _relink_via_definer(
+        database_url,
+        target_kind="assessment",
+        project_id=project_id,
+        assessment_id=assessment_id,
+        invitation_id=None,
+        patient_id=patient_id,
+        evaluator_id=evaluator_id,
+        reason_code=reason_code,
+        issuer=issuer,
+        subject=subject,
+    )
+    return {
+        "assessment_id": assessment_id,
+        "project_id": str(project_id),
+        "patient_id": res["patient_id"],
+        "evaluator_id": res["evaluator_id"],
+        "relinked": True,
+    }
 
 
 def relink_invitation(
@@ -1160,131 +1090,26 @@ def relink_invitation(
     issuer: str,
     subject: str,
 ) -> dict:
-    try:
-        with psycopg.connect(database_url, row_factory=dict_row) as connection:
-            authorized_projects = _authorized_projects(
-                connection, issuer, subject, require_write=True
-            )
-            if project_id not in authorized_projects:
-                raise ForbiddenRegistryError
-
-            current = connection.execute(
-                """SELECT invitation_id, session_id, project_id, patient_id, evaluator_uuid
-                   FROM web_invitations
-                   WHERE invitation_id = %s AND project_id = %s
-                   FOR UPDATE""",
-                (invitation_id, project_id),
-            ).fetchone()
-            if current is None:
-                raise MissingRegistryError
-
-            new_patient_id = current["patient_id"]
-            if patient_id is not None:
-                pat = connection.execute(
-                    "SELECT id, participant_code, active FROM web_patients WHERE id = %s",
-                    (patient_id,),
-                ).fetchone()
-                if pat is None:
-                    raise MissingRegistryError
-                if not pat["active"]:
-                    raise InvalidRegistryDataError("Paciente inativo nao pode receber vinculo.")
-                part_code = pat["participant_code"]
-                connection.execute(
-                    """INSERT INTO web_project_participants(participant_uuid, project_id, pseudonym, patient_id)
-                       VALUES (%s, %s, %s, %s)
-                       ON CONFLICT (project_id, pseudonym) DO UPDATE
-                       SET patient_id = COALESCE(web_project_participants.patient_id, EXCLUDED.patient_id)""",
-                    (uuid4(), project_id, part_code, patient_id),
-                )
-                new_part_uuid = connection.execute(
-                    "SELECT participant_uuid FROM web_project_participants WHERE project_id = %s AND pseudonym = %s",
-                    (project_id, part_code),
-                ).fetchone()["participant_uuid"]
-                inv_row = connection.execute(
-                    "SELECT visit FROM web_invitations WHERE invitation_id = %s",
-                    (invitation_id,),
-                ).fetchone()
-                if inv_row is not None:
-                    visit_label = inv_row["visit"]
-                    connection.execute(
-                        """INSERT INTO web_participant_visits(visit_uuid, project_id, participant_uuid, label)
-                           VALUES (%s, %s, %s, %s)
-                           ON CONFLICT (project_id, participant_uuid, label) DO NOTHING""",
-                        (uuid4(), project_id, new_part_uuid, visit_label),
-                    )
-                    new_visit_uuid = connection.execute(
-                        """SELECT visit_uuid FROM web_participant_visits
-                           WHERE project_id = %s AND participant_uuid = %s AND label = %s""",
-                        (project_id, new_part_uuid, visit_label),
-                    ).fetchone()["visit_uuid"]
-                    connection.execute(
-                        """UPDATE web_invitations
-                           SET patient_id = %s, participant_id = %s, participant_uuid = %s, visit_uuid = %s
-                           WHERE invitation_id = %s""",
-                        (patient_id, part_code, new_part_uuid, new_visit_uuid, invitation_id),
-                    )
-                connection.execute(
-                    """INSERT INTO web_registry_audit_events (
-                           entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
-                       )
-                       VALUES ('participant_link', %s, 'relink', %s, %s, %s)""",
-                    (patient_id, issuer, subject, reason_code),
-                )
-                if current["patient_id"] is not None and current["patient_id"] != patient_id:
-                    connection.execute(
-                        """INSERT INTO web_registry_audit_events (
-                               entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
-                           )
-                           VALUES ('participant_link', %s, 'relink', %s, %s, %s)""",
-                        (current["patient_id"], issuer, subject, reason_code),
-                    )
-                new_patient_id = patient_id
-
-            new_evaluator_uuid = current["evaluator_uuid"]
-            if evaluator_id is not None:
-                ev = connection.execute(
-                    "SELECT id, evaluator_code, active FROM web_evaluators WHERE id = %s",
-                    (evaluator_id,),
-                ).fetchone()
-                if ev is None:
-                    raise MissingRegistryError
-                if not ev["active"]:
-                    raise InvalidRegistryDataError("Avaliador inativo nao pode receber vinculo.")
-                ev_code = ev["evaluator_code"]
-                connection.execute(
-                    "UPDATE web_invitations SET evaluator_uuid = %s, evaluator_id = %s WHERE invitation_id = %s",
-                    (evaluator_id, ev_code, invitation_id),
-                )
-                connection.execute(
-                    """INSERT INTO web_registry_audit_events (
-                           entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
-                       )
-                       VALUES ('invitation_link', %s, 'relink', %s, %s, %s)""",
-                    (evaluator_id, issuer, subject, reason_code),
-                )
-                if current["evaluator_uuid"] is not None and current["evaluator_uuid"] != evaluator_id:
-                    connection.execute(
-                        """INSERT INTO web_registry_audit_events (
-                               entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
-                           )
-                           VALUES ('invitation_link', %s, 'relink', %s, %s, %s)""",
-                        (current["evaluator_uuid"], issuer, subject, reason_code),
-                    )
-                new_evaluator_uuid = evaluator_id
-
-            _audit_auth(connection, issuer, subject, "manage_patients")
-            return {
-                "invitation_id": str(invitation_id),
-                "session_id": str(current["session_id"]),
-                "project_id": str(project_id),
-                "patient_id": str(new_patient_id) if new_patient_id is not None else None,
-                "evaluator_id": str(new_evaluator_uuid) if new_evaluator_uuid is not None else None,
-                "relinked": True,
-            }
-    except (ForbiddenRegistryError, MissingRegistryError):
-        raise
-    except psycopg.Error as exc:
-        raise PersistenceError from exc
+    res = _relink_via_definer(
+        database_url,
+        target_kind="invitation",
+        project_id=project_id,
+        assessment_id=None,
+        invitation_id=invitation_id,
+        patient_id=patient_id,
+        evaluator_id=evaluator_id,
+        reason_code=reason_code,
+        issuer=issuer,
+        subject=subject,
+    )
+    return {
+        "invitation_id": str(invitation_id),
+        "session_id": res["session_id"],
+        "project_id": str(project_id),
+        "patient_id": res["patient_id"],
+        "evaluator_id": res["evaluator_id"],
+        "relinked": True,
+    }
 
 
 def link_legacy_entity(

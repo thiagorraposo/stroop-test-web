@@ -48,7 +48,7 @@ export type AnalysisPage = {
   }
   analytics: { grouping: AnalysisBody['grouping']; timezone: 'UTC'; week_start: 'monday'; population: string; compatibility: string
     groups: { key: (string | number | null)[]; label: string; assessments: number; trials: number; value: number | null; present: number; missing: number; unit: string }[]
-    indicators: { code: string; label: string; unit: string; source: string; population: string; aggregation: string; missing: string; denominator: string; numerator: string }[] }
+    indicators: { code: string; label: string; unit: string; source: string; population: string; aggregation: string; missing: string; denominator: string; numerator: string; exclusions: string; version: string }[] }
   aggregates: { project_id: string; assessments: number; trials: number }[]
   items: (Assessment & { project_id: string })[]; next_cursor: string | null
   legacy_export_context: ExportContext | null
@@ -107,7 +107,8 @@ export function decodeAnalysisPage(value: unknown, body: AnalysisBody): Analysis
   const expectedDefinitions = {
     counts: { kind: 'operational_count', population: 'official_assessments_and_main_trials', timezone: 'UTC',
       participant_identity: ['project_id', 'participant_code'], visit_identity: ['project_id', 'participant_code', 'visit'] },
-    summary: { source: 'stroop.domain.stroop.calculate_metrics', population: 'complete_assessment', rt_unit: 'seconds' },
+    summary: { source: 'stroop.domain.stroop.calculate_metrics', population: 'complete_assessment', rt_unit: 'seconds',
+      exclusions: 'invalidated_aborted_expired_and_practice_trials', version: '0.2.2-web.1' },
   }
   if (contextKey(value.indicator_definitions) !== contextKey(expectedDefinitions)
     || !closed(value.capabilities, 'filters status trial_filters grouping sort platform max_assessments max_projects exports nominal_search')
@@ -131,7 +132,7 @@ export function decodeAnalysisPage(value: unknown, body: AnalysisBody): Analysis
       || typeof group.label !== 'string' || typeof group.unit !== 'string'
       || ![group.assessments, group.trials, group.present, group.missing].every(count)
       || !(group.value === null || typeof group.value === 'number' && Number.isFinite(group.value)))
-    || value.analytics.indicators.some(item => !closed(item, 'code label unit source population aggregation missing denominator numerator') || Object.values(item).some(x => typeof x !== 'string'))) return invalid()
+    || value.analytics.indicators.some(item => !closed(item, 'code label unit source population aggregation missing denominator numerator exclusions version') || Object.values(item).some(x => typeof x !== 'string'))) return invalid()
   const items = value.items.map(item => {
     if (!record(item) || typeof item.project_id !== 'string' || !body.query.projects.includes(item.project_id)) return invalid()
     const { project_id, ...assessment } = item

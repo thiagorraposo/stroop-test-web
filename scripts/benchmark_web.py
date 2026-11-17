@@ -126,6 +126,8 @@ def measure(stack: WebComposeSmoke, clients: int, seconds: int,
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-images', action='store_true')
+    parser.add_argument('--api-image', default=API_IMAGE)
+    parser.add_argument('--proxy-image', default=PROXY_IMAGE)
     parser.add_argument('--duration-seconds', type=int, default=30, choices=range(5, 121))
     parser.add_argument('--levels', default='1,4,8,16')
     parser.add_argument('--output', type=Path, required=True)
@@ -148,7 +150,7 @@ def main(argv=None) -> int:
     try:
         with tempfile.TemporaryDirectory(prefix='stroop-w21-') as directory:
             stack = WebComposeSmoke(Path(directory), options.build_images,
-                                    api_image=API_IMAGE, proxy_image=PROXY_IMAGE)
+                                    api_image=options.api_image, proxy_image=options.proxy_image)
             try:
                 stack.start_stack()
                 stage = 'transport'
@@ -158,7 +160,7 @@ def main(argv=None) -> int:
                 stage = 'collection'
                 project, assessment, _, _ = stack._collect_and_query()
                 report['images'] = {label: _run(['docker', 'image', 'inspect', '--format', '{{.Id}}', image])
-                                    for label, image in [('api', API_IMAGE), ('proxy', PROXY_IMAGE)]}
+                                    for label, image in [('api', options.api_image), ('proxy', options.proxy_image)]}
                 report['host'] = {'logical_cpus': os.cpu_count()}
                 report['resource_limits'] = {}
                 for service in ('web-postgres', 'web-api', 'web-proxy'):

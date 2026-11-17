@@ -10,7 +10,7 @@ import json
 from uuid import UUID
 
 import psycopg
-from psycopg.rows import dict_row
+from psycopg.rows import dict_row, tuple_row
 
 from stroop.persistence.auth import PersistenceError
 from stroop.domain.stroop import ALLOWED_CONDITIONS, ALLOWED_KEYS, calculate_metrics, expected_outcome
@@ -81,15 +81,18 @@ def _connect(database_url: str):
 
 def _validate_schema(connection) -> None:
     try:
+        rows = connection.execute(
+            """SELECT table_name, column_name FROM information_schema.columns
+               WHERE table_schema='public' AND table_name = ANY(%s)""",
+            (sorted(REQUIRED_COLUMNS),),
+        ).fetchall()
+        found: dict[str, set[str]] = {}
+        for row in rows:
+            found.setdefault(row["table_name"], set()).add(row["column_name"])
         missing_tables: list[str] = []
         missing_columns: list[str] = []
         for table, expected in REQUIRED_COLUMNS.items():
-            actual = {
-                row["column_name"] for row in connection.execute(
-                    """SELECT column_name FROM information_schema.columns
-                       WHERE table_schema='public' AND table_name=%s""", (table,)
-                ).fetchall()
-            }
+            actual = found.get(table, set())
             if not actual:
                 missing_tables.append(table)
             elif expected - actual:
@@ -113,10 +116,12 @@ def _authorized_project(connection, project_id: UUID, issuer: str, subject: str)
     return row is not None
 
 
-def _base_query(where_clause: str, *, history=False) -> str:
+def _base_query(where_clause: str, *, history=False, multi_project: bool = False) -> str:
     # where_clause is selected only from the fixed call sites below.
     valid_clause = "" if history else "AND NOT EXISTS (SELECT 1 FROM web_session_invalidations inv WHERE inv.session_id=wa.session_id)"
-    return f"""SELECT a.assessment_id, a.participant_id, a.visit, p.code AS project_code,
+    project_col = "p.project_id AS scoped_project_id, " if multi_project else ""
+    project_cond = "p.project_id = ANY(%s)" if multi_project else "p.project_id=%s"
+    return f"""SELECT {project_col}a.assessment_id, a.participant_id, a.visit, p.code AS project_code,
                       CASE WHEN wa.assessment_id IS NULL THEN NULL ELSE a.evaluator END AS evaluator_id,
                       COALESCE(wa.completed_at, a.imported_at::timestamptz) AS created_at,
                       a.started_at, COALESCE(wa.platform, 'psychopy') AS platform,
@@ -128,7 +133,7 @@ def _base_query(where_clause: str, *, history=False) -> str:
                FROM assessments a
                LEFT JOIN web_assessments wa ON wa.assessment_id=a.assessment_id
                LEFT JOIN web_csv_imports wi ON wi.assessment_id=a.assessment_id AND wi.status='importado'
-               JOIN web_projects p ON p.project_id=%s
+               JOIN web_projects p ON {project_cond}
                  AND ((wa.assessment_id IS NOT NULL AND wa.project_id=p.project_id)
                    OR (wi.assessment_id IS NOT NULL AND wi.project_id=p.project_id)
                    OR (wa.assessment_id IS NULL AND wi.assessment_id IS NULL AND EXISTS (
@@ -236,14 +241,14 @@ def assessment_options(database_url, project_id, issuer, subject, *, filters):
         raise PersistenceError from exc
 
 
-def _scoped_query(project_id, issuer, subject, filters, participant_id=None, visit=None):
+def _scoped_query(project_id, issuer, subject, filters, participant_id=None, visit=None, *, multi_project: bool = False):
     clauses, params = [], [project_id, issuer, subject]
     for column, value in (('participant_id', participant_id), ('visit', visit)):
         if value is not None:
             clauses.append(f'AND a.{column}=%s')
             params.append(value)
     where, values = _filters(filters)
-    return _base_query(' '.join(clauses) + ' ' + where), [*params, *values]
+    return _base_query(' '.join(clauses) + ' ' + where, multi_project=multi_project), [*params, *values]
 
 
 def _snapshot(connection, base, params):
@@ -251,52 +256,51 @@ def _snapshot(connection, base, params):
     if len(entries) > 5000:
         raise FacetLimitError
     digest = hashlib.sha256()
-    def update(value):
-        digest.update(json.dumps(value, sort_keys=True, default=str, separators=(',', ':')).encode())
-        digest.update(b'\n')
-    update(entries)
+    digest.update(json.dumps(entries, sort_keys=True, default=str, separators=(',', ':')).encode())
+    digest.update(b'\n')
     # Hash exactly the source values used by professional summaries, never names.
     stroop = [row['assessment_id'] for row in entries if row['test_code'] == 'stroop_go_nogo_ptbr']
     generic = [row['assessment_id'] for row in entries if row['test_code'] != 'stroop_go_nogo_ptbr']
-    if stroop:
-        cursor = connection.execute("""SELECT assessment_id,trial_number,condition,key_pressed,reaction_time
-            FROM trial_results WHERE assessment_id=ANY(%s) AND block='main'
-            ORDER BY assessment_id,trial_number""", (stroop,))
-        for row in cursor:
-            update(row)
-    update('generic-metrics')
-    if generic:
-        cursor = connection.execute("""SELECT assessment_id,metric_code,metric_value FROM assessment_metrics
-            WHERE assessment_id=ANY(%s) ORDER BY assessment_id,metric_code""", (generic,))
-        for row in cursor:
-            update(row)
+    with connection.cursor(row_factory=tuple_row) as tcur:
+        if stroop:
+            trows = tcur.execute("""SELECT assessment_id,trial_number,condition,key_pressed,reaction_time
+                FROM trial_results WHERE assessment_id=ANY(%s) AND block='main'
+                ORDER BY assessment_id,trial_number""", (stroop,)).fetchall()
+            digest.update(json.dumps(trows, default=str, separators=(',', ':')).encode())
+        digest.update(b'\n"generic-metrics"\n')
+        if generic:
+            grows = tcur.execute("""SELECT assessment_id,metric_code,metric_value FROM assessment_metrics
+                WHERE assessment_id=ANY(%s) ORDER BY assessment_id,metric_code""", (generic,)).fetchall()
+            digest.update(json.dumps(grows, default=str, separators=(',', ':')).encode())
     return entries, digest.hexdigest()
 
 
-def _hydrate(connection, rows, project_id):
+def _hydrate(connection, rows, project_id, *, metrics_by_id=None, trials_by_id=None):
     if not rows:
         return []
     ids = [row["assessment_id"] for row in rows]
-    metrics = connection.execute(
-        """SELECT assessment_id, metric_code, metric_value
-           FROM assessment_metrics WHERE assessment_id = ANY(%s)
-           ORDER BY assessment_id, metric_code""", (ids,),
-    ).fetchall()
-    metrics_by_id: dict[str, dict[str, float]] = {}
-    for metric in metrics:
-        metrics_by_id.setdefault(metric["assessment_id"], {})[
-            metric["metric_code"]
-        ] = float(metric["metric_value"])
-    stroop_ids = [row["assessment_id"] for row in rows if row["test_code"] == "stroop_go_nogo_ptbr"]
-    trials_by_id: dict[str, list[dict]] = {}
-    if stroop_ids:
-        source_trials = connection.execute(
-            """SELECT assessment_id,condition,key_pressed,reaction_time FROM trial_results
-               WHERE assessment_id=ANY(%s) AND block='main' ORDER BY assessment_id,trial_number""",
-            (stroop_ids,),
+    if metrics_by_id is None:
+        metrics = connection.execute(
+            """SELECT assessment_id, metric_code, metric_value
+               FROM assessment_metrics WHERE assessment_id = ANY(%s)
+               ORDER BY assessment_id, metric_code""", (ids,),
         ).fetchall()
-        for trial in source_trials:
-            trials_by_id.setdefault(trial["assessment_id"], []).append(trial)
+        metrics_by_id = {}
+        for metric in metrics:
+            metrics_by_id.setdefault(metric["assessment_id"], {})[
+                metric["metric_code"]
+            ] = float(metric["metric_value"])
+    if trials_by_id is None:
+        stroop_ids = [row["assessment_id"] for row in rows if row["test_code"] == "stroop_go_nogo_ptbr"]
+        trials_by_id = {}
+        if stroop_ids:
+            source_trials = connection.execute(
+                """SELECT assessment_id,condition,key_pressed,reaction_time FROM trial_results
+                   WHERE assessment_id=ANY(%s) AND block='main' ORDER BY assessment_id,trial_number""",
+                (stroop_ids,),
+            ).fetchall()
+            for trial in source_trials:
+                trials_by_id.setdefault(trial["assessment_id"], []).append(trial)
     result = []
     for row in rows:
         item = dict(row)
@@ -584,62 +588,61 @@ def _operational_sessions(connection, projects, filters):
         values.append([instruments] if isinstance(instruments, str) else list(instruments))
     where_sql = ' '.join(clauses)
     op_rows = []
-    for project_id in projects:
-        rows = connection.execute(
-            f"""SELECT s.session_id, i.project_id, p.code AS project_code,
-                       i.participant_id, i.visit, i.evaluator_id,
-                       i.test_code, i.test_version, i.protocol_id,
-                       s.state, s.activated_at AS created_at, s.started_at, s.expires_at,
-                       s.abort_reason, s.revoked_at, i.revoked_at AS invitation_revoked_at,
-                       inv.reason AS invalidation_reason,
-                       c.confirmed_through, c.prefix_hash,
-                       (s.expires_at <= clock_timestamp()) AS deadline_passed
-                FROM web_participant_sessions s
-                JOIN web_invitations i USING (session_id)
-                JOIN web_projects p ON p.project_id = i.project_id
-                LEFT JOIN web_session_checkpoints c USING (session_id)
-                LEFT JOIN web_session_invalidations inv USING (session_id)
-                LEFT JOIN web_assessments wa ON wa.session_id = s.session_id
-                WHERE i.project_id = %s AND p.active
-                  AND (inv.session_id IS NOT NULL OR s.state <> 'completed')
-                  {where_sql}
-                ORDER BY COALESCE(s.started_at, s.activated_at) DESC, s.session_id ASC
-                LIMIT 5001""",
-            (project_id, *values),
-        ).fetchall()
-        for row in rows:
-            if row['invalidation_reason'] is not None:
-                op_status = 'invalidated'
-            elif row['state'] == 'aborted' or row['revoked_at'] is not None or row['invitation_revoked_at'] is not None:
-                op_status = 'aborted'
-            elif row['state'] == 'expired' or row['deadline_passed']:
-                op_status = 'expired'
-            else:
-                op_status = 'in_progress'
-            op_rows.append({
-                'session_id': str(row['session_id']),
-                'project_id': str(project_id),
-                'project_code': row['project_code'],
-                'participant_id': row['participant_id'],
-                'visit': row['visit'],
-                'evaluator_id': row['evaluator_id'],
-                'test_code': row['test_code'],
-                'test_version': row['test_version'],
-                'protocol_id': row['protocol_id'],
-                'platform': 'web',
-                'status': op_status,
-                'state': row['state'],
-                'created_at': iso_utc(row['created_at']),
-                'started_at': iso_utc(row['started_at']),
-                'expires_at': iso_utc(row['expires_at']),
-                'abort_reason': row['abort_reason'],
-                'invalidation_reason': row['invalidation_reason'],
-                'confirmed_through': int(row['confirmed_through'] or 0),
-                'valid_for_result': False,
-                '_prefix_hash': row['prefix_hash'],
-            })
-        if len(op_rows) > 5000:
-            raise FacetLimitError
+    rows = connection.execute(
+        f"""SELECT s.session_id, i.project_id, p.code AS project_code,
+                   i.participant_id, i.visit, i.evaluator_id,
+                   i.test_code, i.test_version, i.protocol_id,
+                   s.state, s.activated_at AS created_at, s.started_at, s.expires_at,
+                   s.abort_reason, s.revoked_at, i.revoked_at AS invitation_revoked_at,
+                   inv.reason AS invalidation_reason,
+                   c.confirmed_through, c.prefix_hash,
+                   (s.expires_at <= clock_timestamp()) AS deadline_passed
+            FROM web_participant_sessions s
+            JOIN web_invitations i USING (session_id)
+            JOIN web_projects p ON p.project_id = i.project_id
+            LEFT JOIN web_session_checkpoints c USING (session_id)
+            LEFT JOIN web_session_invalidations inv USING (session_id)
+            LEFT JOIN web_assessments wa ON wa.session_id = s.session_id
+            WHERE i.project_id = ANY(%s) AND p.active
+              AND (inv.session_id IS NOT NULL OR s.state <> 'completed')
+              {where_sql}
+            ORDER BY COALESCE(s.started_at, s.activated_at) DESC, s.session_id ASC
+            LIMIT 5001""",
+        (list(projects), *values),
+    ).fetchall()
+    if len(rows) > 5000:
+        raise FacetLimitError
+    for row in rows:
+        if row['invalidation_reason'] is not None:
+            op_status = 'invalidated'
+        elif row['state'] == 'aborted' or row['revoked_at'] is not None or row['invitation_revoked_at'] is not None:
+            op_status = 'aborted'
+        elif row['state'] == 'expired' or row['deadline_passed']:
+            op_status = 'expired'
+        else:
+            op_status = 'in_progress'
+        op_rows.append({
+            'session_id': str(row['session_id']),
+            'project_id': str(row['project_id']),
+            'project_code': row['project_code'],
+            'participant_id': row['participant_id'],
+            'visit': row['visit'],
+            'evaluator_id': row['evaluator_id'],
+            'test_code': row['test_code'],
+            'test_version': row['test_version'],
+            'protocol_id': row['protocol_id'],
+            'platform': 'web',
+            'status': op_status,
+            'state': row['state'],
+            'created_at': iso_utc(row['created_at']),
+            'started_at': iso_utc(row['started_at']),
+            'expires_at': iso_utc(row['expires_at']),
+            'abort_reason': row['abort_reason'],
+            'invalidation_reason': row['invalidation_reason'],
+            'confirmed_through': int(row['confirmed_through'] or 0),
+            'valid_for_result': False,
+            '_prefix_hash': row['prefix_hash'],
+        })
     counts = {
         'invalidated': sum(1 for row in op_rows if row['status'] == 'invalidated'),
         'aborted': sum(1 for row in op_rows if row['status'] == 'aborted'),
@@ -662,7 +665,7 @@ def _operational_sessions(connection, projects, filters):
     return counts, items, digest_entries
 
 
-def _registry_counts(connection, projects, issuer, subject):
+def _registry_counts(connection, projects, issuer, subject, *, precomputed_valid=None):
     visible_patients = int(
         connection.execute('SELECT COUNT(*) AS cnt FROM web_patients').fetchone()['cnt']
     )
@@ -687,6 +690,18 @@ def _registry_counts(connection, projects, issuer, subject):
             (project_list, project_list, project_list, project_list),
         ).fetchone()['cnt']
     )
+    if precomputed_valid is not None:
+        valid_identities = set()
+        for project, aid, participant_id, pid in precomputed_valid:
+            if pid is not None:
+                valid_identities.add(('patient', str(pid)))
+            else:
+                valid_identities.add(('project_participant', str(project), participant_id))
+        return {
+            'visible_patients': visible_patients,
+            'project_linked_patients': project_linked_patients,
+            'valid_assessment_participants': len(valid_identities),
+        }
     valid_entries = []
     for project in projects:
         rows = connection.execute(
@@ -741,24 +756,42 @@ def analysis_selection(database_url, projects, issuer, subject, *, filters, asse
             raise PersistenceError from exc
     _validate_schema(connection)
     # Reautorizar TODOS antes de ler/popular qualquer resultado.
-    if not all(_authorized_project(connection, project, issuer, subject) for project in projects):
+    authorized_rows = connection.execute(
+        """SELECT DISTINCT p.project_id
+           FROM web_projects p
+           JOIN web_project_members m ON m.project_id=p.project_id
+           JOIN app_users u ON (u.issuer,u.subject)=(m.issuer,m.subject)
+           WHERE p.project_id = ANY(%s) AND p.active AND m.active AND u.active
+             AND m.issuer=%s AND m.subject=%s
+             AND u.role IN ('consulta','importacao','administracao')""",
+        (list(projects), issuer, subject),
+    ).fetchall()
+    if len({row['project_id'] for row in authorized_rows}) != len(set(projects)):
         return False, [], [], None, [], {}, {'population': 'segregated_non_official_sessions', 'counts': {'invalidated': 0, 'aborted': 0, 'expired': 0, 'in_progress': 0, 'total': 0}, 'items': []}
     raw_statuses = filters.get('status') or ['valid']
     statuses = [raw_statuses] if isinstance(raw_statuses, str) else list(raw_statuses)
     include_valid = 'valid' in statuses
     official_filters = {k: v for k, v in filters.items() if k != 'status'}
-    selected, sources = [], []
+    selected, project_entries = [], []
     if include_valid:
+        base, params = _scoped_query(list(projects), issuer, subject, official_filters, multi_project=True)
+        if assessment_ids is not None:
+            base += ' AND a.assessment_id=ANY(%s)'
+            params.append(assessment_ids)
+        all_rows = connection.execute(
+            'SELECT * FROM (' + base + ') scoped ORDER BY scoped_project_id, assessment_id LIMIT 5001',
+            params,
+        ).fetchall()
+        if len(all_rows) > 5000:
+            raise FacetLimitError
+        rows_by_project: dict[UUID, list[dict[str, Any]]] = {project: [] for project in projects}
+        for row in all_rows:
+            pid = row.pop('scoped_project_id')
+            rows_by_project.setdefault(pid, []).append(row)
         for project in projects:
-            base, params = _scoped_query(project, issuer, subject, official_filters)
-            if assessment_ids is not None:
-                base += ' AND a.assessment_id=ANY(%s)'
-                params.append(assessment_ids)
-            rows, fingerprint = _snapshot(connection, base, params)
-            selected.extend((project, row) for row in rows)
-            sources.append((str(project), fingerprint))
-            if len(selected) > 5000:
-                raise FacetLimitError
+            proj_rows = rows_by_project.get(project, [])
+            project_entries.append((project, proj_rows))
+            selected.extend((project, row) for row in proj_rows)
     if len({row['assessment_id'] for _, row in selected}) != len(selected):
         # Vínculos legados ambíguos não podem duplicar o universo A/T.
         raise SnapshotConflict
@@ -767,15 +800,74 @@ def analysis_selection(database_url, projects, issuer, subject, *, filters, asse
         if not set(assessment_ids) <= eligible:
             raise SnapshotConflict
         selected = [(project, row) for project, row in selected if row['assessment_id'] in assessment_ids]
+    all_selected_ids = sorted({row['assessment_id'] for _, row in selected})
+    # Pré-busca única de métricas e tentativas para snapshots e hidratação.
+    metrics_by_id: dict[str, dict[str, float]] = {}
+    generic_tuples_by_id: dict[str, list[tuple[Any, ...]]] = {}
+    generic_ids = sorted({row['assessment_id'] for _, rows in project_entries for row in rows if row['test_code'] != 'stroop_go_nogo_ptbr'})
+    if generic_ids:
+        with connection.cursor(row_factory=tuple_row) as tcur:
+            for aid, mcode, mval in tcur.execute(
+                """SELECT assessment_id, metric_code, metric_value
+                   FROM assessment_metrics WHERE assessment_id = ANY(%s)
+                   ORDER BY assessment_id, metric_code""",
+                (generic_ids,),
+            ).fetchall():
+                generic_tuples_by_id.setdefault(aid, []).append((aid, mcode, mval))
+                metrics_by_id.setdefault(aid, {})[mcode] = float(mval)
+    all_trial_aids = sorted({row['assessment_id'] for _, rows in project_entries for row in rows})
+    trials: list[dict[str, Any]] = []
+    trials_by_id: dict[str, list[dict[str, Any]]] = {}
+    trial_tuples_by_id: dict[str, list[tuple[Any, ...]]] = {}
+    trials_sha = hashlib.sha256()
+    if all_trial_aids:
+        selected_id_set = set(all_selected_ids)
+        with connection.cursor(row_factory=tuple_row) as tcur:
+            raw_trials = tcur.execute(
+                '''SELECT tr.assessment_id,tr.trial_number,tr.block,tr.condition,tr.word,tr.ink_color,
+                   tr.correct_response,tr.key_pressed,tr.reaction_time,tr.correct,tr.error_type
+                   FROM trial_results tr WHERE tr.assessment_id=ANY(%s) AND tr.block='main'
+                   ORDER BY tr.assessment_id,tr.trial_number''',
+                (all_trial_aids,),
+            ).fetchall()
+        trials_sha.update(repr(raw_trials).encode())
+        for t in raw_trials:
+            aid = t[0]
+            trial_tuples_by_id.setdefault(aid, []).append((aid, t[1], t[3], t[7], t[8]))
+            if aid in selected_id_set:
+                td = {
+                    'assessment_id': aid, 'trial_number': t[1], 'block': t[2],
+                    'condition': t[3], 'word': t[4], 'ink_color': t[5],
+                    'correct_response': t[6], 'key_pressed': t[7],
+                    'reaction_time': t[8], 'correct': t[9], 'error_type': t[10],
+                }
+                trials.append(td)
+                trials_by_id.setdefault(aid, []).append(td)
+    sources = []
+    for project, entries in project_entries:
+        pdigest = hashlib.sha256()
+        pdigest.update(json.dumps(entries, sort_keys=True, default=str, separators=(',', ':')).encode())
+        pdigest.update(b'\n')
+        proj_trials = [tt for row in entries if row['test_code'] == 'stroop_go_nogo_ptbr' for tt in trial_tuples_by_id.get(row['assessment_id'], ())]
+        if proj_trials:
+            pdigest.update(json.dumps(proj_trials, default=str, separators=(',', ':')).encode())
+        pdigest.update(b'\n"generic-metrics"\n')
+        proj_generic = [gm for row in entries if row['test_code'] != 'stroop_go_nogo_ptbr' for gm in generic_tuples_by_id.get(row['assessment_id'], ())]
+        if proj_generic:
+            pdigest.update(json.dumps(proj_generic, default=str, separators=(',', ':')).encode())
+        sources.append((str(project), pdigest.hexdigest()))
+    ids = all_selected_ids
     result = []
     for project in projects:
-        result.extend(_hydrate(connection, [row for scope, row in selected if scope == project], project))
-    # Apenas colunas pseudonimizadas disponíveis ao papel SELECT.
-    ids = sorted({row['assessment_id'] for row in result})
-    trials = connection.execute('''SELECT tr.assessment_id,tr.trial_number,tr.block,tr.condition,tr.word,tr.ink_color,
-        tr.correct_response,tr.key_pressed,tr.reaction_time,tr.correct,tr.error_type
-        FROM trial_results tr WHERE tr.assessment_id=ANY(%s) AND tr.block='main'
-        ORDER BY tr.assessment_id,tr.trial_number''', (ids,)).fetchall() if ids else []
+        result.extend(
+            _hydrate(
+                connection,
+                [row for scope, row in selected if scope == project],
+                project,
+                metrics_by_id=metrics_by_id,
+                trials_by_id=trials_by_id,
+            )
+        )
     # WEB tem vínculo por avaliação. Legado só ganha identidade central pelo
     # mapa ativo explícito do projeto; pseudônimo sozinho nunca autoriza fusão.
     links = connection.execute('''SELECT a.assessment_id,scope.project_id,
@@ -804,13 +896,37 @@ def analysis_selection(database_url, projects, issuer, subject, *, filters, asse
         by_id[key] = dict(link)
     for row in result:
         row['registry'] = by_id.get((str(row['project_id']), row['assessment_id']))
-    registry_base = _registry_counts(connection, projects, issuer, subject)
+    precomputed_valid = None
+    unfiltered_official = (
+        not any(k != 'include_null_rt' for k in official_filters)
+        and official_filters.get('include_null_rt', True)
+    )
+    if include_valid and unfiltered_official and assessment_ids is None:
+        precomputed_valid = [
+            (
+                row['project_id'],
+                row['assessment_id'],
+                row['participant_id'],
+                row['registry']['patient_id'] if row['registry'] else None,
+            )
+            for row in result
+        ]
+    registry_base = _registry_counts(connection, projects, issuer, subject, precomputed_valid=precomputed_valid)
     op_counts, op_items, op_digest = _operational_sessions(connection, projects, filters)
     operational = {
         'population': 'segregated_non_official_sessions',
         'counts': op_counts,
         'items': op_items,
     }
-    content = hashlib.sha256(json.dumps([sources, result, trials, registry_base, op_digest], sort_keys=True, default=str,
-                                       separators=(',', ':')).encode()).hexdigest()
+    result_digest = [
+        (
+            r['project_id'], r['assessment_id'], r['participant_id'], r['visit'],
+            r['test_code'], r['test_version'], r['evaluator_id'], r['started_at'],
+            r['summary'], r['registry'],
+        )
+        for r in result
+    ]
+    content = hashlib.sha256(
+        json.dumps([sources, result_digest, trials_sha.hexdigest(), registry_base, op_digest], default=str, separators=(',', ':')).encode()
+    ).hexdigest()
     return True, result, trials, content, sources, registry_base, operational

@@ -45,6 +45,10 @@ class MissingError(Exception):
     """Recurso inexistente ou fora do escopo atual."""
 
 
+class ForbiddenError(Exception):
+    """Operacao nao permitida ao papel autenticado."""
+
+
 class UnknownCredentialError(MissingError):
     """Credencial estruturalmente valida, mas nao emitida pelo servidor."""
 
@@ -825,3 +829,506 @@ def logout_participant_session(database_url: str, token_hash: str, replacement_h
                 (replacement_hash, row[0], token_hash),
             )
     return _run(operation)
+
+
+def _insert_cadastral_invitation_tx(
+    connection,
+    *,
+    invitation_id: UUID,
+    session_id: UUID,
+    project_id: UUID,
+    project_code: str,
+    project_name: str,
+    code_hash: str,
+    patient_id: UUID,
+    evaluator_id: UUID,
+    visit: str,
+    test_code: str,
+    test_version: str,
+    protocol_id: str,
+    initials: str | None,
+    issuer: str,
+    subject: str,
+):
+    patient = connection.execute(
+        """SELECT id,participant_code,full_name,initials,active
+           FROM web_patients WHERE id=%s FOR SHARE""",
+        (patient_id,),
+    ).fetchone()
+    if patient is None:
+        raise MissingError
+    if not patient[4]:
+        raise ConflictError
+
+    evaluator = connection.execute(
+        """SELECT id,evaluator_code,full_name,initials,active
+           FROM web_evaluators WHERE id=%s FOR SHARE""",
+        (evaluator_id,),
+    ).fetchone()
+    if evaluator is None:
+        raise MissingError
+    if not evaluator[4]:
+        raise ConflictError
+
+    participant_code = patient[1]
+    evaluator_code = evaluator[1]
+    effective_initials = initials if initials is not None else patient[3]
+
+    connection.execute(
+        """INSERT INTO web_project_participants(participant_uuid,project_id,pseudonym,patient_id)
+           VALUES (%s,%s,%s,%s)
+           ON CONFLICT (project_id,pseudonym) DO UPDATE
+           SET patient_id = COALESCE(web_project_participants.patient_id, EXCLUDED.patient_id)""",
+        (uuid4(), project_id, participant_code, patient_id),
+    )
+    participant_row = connection.execute(
+        """SELECT participant_uuid,patient_id
+           FROM web_project_participants
+           WHERE project_id=%s AND pseudonym=%s""",
+        (project_id, participant_code),
+    ).fetchone()
+    if participant_row[1] != patient_id:
+        raise ConflictError
+    participant_uuid = participant_row[0]
+
+    connection.execute(
+        """INSERT INTO web_participant_visits(visit_uuid,project_id,participant_uuid,label)
+           VALUES (%s,%s,%s,%s) ON CONFLICT (project_id,participant_uuid,label) DO NOTHING""",
+        (uuid4(), project_id, participant_uuid, visit),
+    )
+    visit_uuid = connection.execute(
+        """SELECT visit_uuid FROM web_participant_visits
+           WHERE project_id=%s AND participant_uuid=%s AND label=%s""",
+        (project_id, participant_uuid, visit),
+    ).fetchone()[0]
+
+    expires_at = connection.execute(
+        """INSERT INTO web_invitations (
+               invitation_id,session_id,project_id,code_sha256,
+               participant_id,visit,evaluator_issuer,evaluator_subject,
+               participant_uuid,visit_uuid,patient_id,evaluator_uuid,
+               evaluator_id,participant_initials,test_code,test_version,
+               protocol_id,expires_at
+           )
+           VALUES (
+               %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+               CURRENT_TIMESTAMP + INTERVAL '24 hours'
+           )
+           RETURNING expires_at""",
+        (
+            invitation_id,
+            session_id,
+            project_id,
+            code_hash,
+            participant_code,
+            visit,
+            issuer,
+            subject,
+            participant_uuid,
+            visit_uuid,
+            patient_id,
+            evaluator_id,
+            evaluator_code,
+            effective_initials,
+            test_code,
+            test_version,
+            protocol_id,
+        ),
+    ).fetchone()[0]
+    _audit(connection, issuer, subject, "create_invitation")
+    summary = {
+        "project_id": str(project_id),
+        "project_code": project_code,
+        "project_name": project_name,
+        "patient_id": str(patient[0]),
+        "participant_code": participant_code,
+        "participant_name": patient[2],
+        "initials": effective_initials,
+        "evaluator_id": str(evaluator[0]),
+        "evaluator_code": evaluator_code,
+        "evaluator_name": evaluator[2],
+        "test_code": test_code,
+        "test_version": test_version,
+        "protocol_id": protocol_id,
+        "visit": visit,
+    }
+    return expires_at, summary
+
+
+def create_direct_evaluation(
+    database_url: str,
+    *,
+    operation_id: UUID,
+    request_hash: str,
+    invitation_id: UUID,
+    session_id: UUID,
+    project_id: UUID,
+    code_hash: str,
+    patient_id: UUID | None,
+    new_patient: dict | None,
+    evaluator_id: UUID,
+    visit: str,
+    test_code: str,
+    test_version: str,
+    protocol_id: str,
+    initials: str | None,
+    mode: str,
+    issuer: str,
+    subject: str,
+) -> dict:
+    from stroop.domain.registry import DuplicateCandidateError, format_patient_code
+    from stroop.persistence.web_registry import _hydrate_patients
+
+    def operation():
+        with psycopg.connect(database_url) as connection:
+            connection.execute(
+                "SELECT pg_advisory_xact_lock(hashtext(%s))",
+                (f"direct_eval:{project_id}:{issuer}:{subject}:{operation_id}",),
+            )
+            project = connection.execute(
+                "SELECT active,collection_mode,code,name FROM web_projects WHERE project_id=%s FOR SHARE",
+                (project_id,),
+            ).fetchone()
+            member = connection.execute(
+                "SELECT active FROM web_project_members WHERE project_id=%s AND issuer=%s AND subject=%s FOR SHARE",
+                (project_id, issuer, subject),
+            ).fetchone()
+            user = connection.execute(
+                "SELECT active,role FROM public.web_lock_emitter(%s,%s)",
+                (issuer, subject),
+            ).fetchone()
+            if (
+                project is None
+                or not project[0]
+                or project[1] != "synthetic"
+                or member is None
+                or not member[0]
+                or user is None
+                or not user[0]
+            ):
+                raise MissingError
+            if user[1] not in {"importacao", "administracao"}:
+                raise ForbiddenError
+
+            existing = connection.execute(
+                """SELECT op.request_hash, op.invitation_id, op.session_id, op.mode,
+                          op.summary_json, op.expires_at, inv.state
+                   FROM web_direct_evaluation_operations op
+                   JOIN web_invitations inv ON inv.invitation_id = op.invitation_id
+                   WHERE op.project_id=%s AND op.actor_issuer=%s
+                     AND op.actor_subject=%s AND op.operation_id=%s""",
+                (project_id, issuer, subject, operation_id),
+            ).fetchone()
+            if existing is not None:
+                if existing[0] != request_hash:
+                    raise ConflictError
+                return {
+                    "created": False,
+                    "operation_id": operation_id,
+                    "invitation_id": existing[1],
+                    "session_id": existing[2],
+                    "state": existing[6],
+                    "mode": existing[3],
+                    "summary": existing[4],
+                    "expires_at": existing[5],
+                    "credential_available": False,
+                }
+
+            resolved_patient_id = patient_id
+            if resolved_patient_id is None:
+                assert new_patient is not None
+                normalized_name = new_patient["normalized_name"]
+                connection.execute(
+                    "SELECT pg_advisory_xact_lock(hashtext(%s))",
+                    (f"web_patients:{normalized_name}",),
+                )
+                with connection.cursor(row_factory=dict_row) as dict_cur:
+                    existing_patients = dict_cur.execute(
+                        """SELECT * FROM web_patients wp
+                           WHERE wp.normalized_name = %s
+                           ORDER BY wp.active DESC, wp.created_at DESC""",
+                        (normalized_name,),
+                    ).fetchall()
+                if existing_patients and not new_patient["confirm_homonym"]:
+                    # Hidrata candidatos já commitados em conexão dict_row separada.
+                    with psycopg.connect(database_url, row_factory=dict_row) as read_conn:
+                        candidates = _hydrate_patients(read_conn, existing_patients, [project_id])
+                    for item in candidates:
+                        item["exact_match"] = True
+                    raise DuplicateCandidateError(candidates)
+
+                seq_row = connection.execute(
+                    """SELECT nextval('web_patient_code_seq') AS seq_val,
+                              (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date AS today_utc"""
+                ).fetchone()
+                resolved_patient_id = uuid4()
+                participant_code = format_patient_code(seq_row[1], int(seq_row[0]))
+                is_homonym_confirmed = bool(new_patient["confirm_homonym"] and existing_patients)
+                connection.execute(
+                    """INSERT INTO web_patients (
+                           id, participant_code, full_name, normalized_name,
+                           initials, disambiguation_note, is_homonym_confirmed,
+                           active, created_by_issuer, created_by_subject
+                       )
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,TRUE,%s,%s)""",
+                    (
+                        resolved_patient_id,
+                        participant_code,
+                        new_patient["full_name"],
+                        normalized_name,
+                        new_patient["initials"],
+                        new_patient["disambiguation_note"],
+                        is_homonym_confirmed,
+                        issuer,
+                        subject,
+                    ),
+                )
+                reason_code = "homonym_confirmed" if is_homonym_confirmed else "initial_registration"
+                connection.execute(
+                    """INSERT INTO web_registry_audit_events (
+                           entity_type, entity_id, action, actor_issuer, actor_subject, reason_code
+                       )
+                       VALUES ('patient', %s, 'create', %s, %s, %s)""",
+                    (resolved_patient_id, issuer, subject, reason_code),
+                )
+                _audit(connection, issuer, subject, "manage_patients")
+
+            expires_at, summary = _insert_cadastral_invitation_tx(
+                connection,
+                invitation_id=invitation_id,
+                session_id=session_id,
+                project_id=project_id,
+                project_code=project[2],
+                project_name=project[3],
+                code_hash=code_hash,
+                patient_id=resolved_patient_id,
+                evaluator_id=evaluator_id,
+                visit=visit,
+                test_code=test_code,
+                test_version=test_version,
+                protocol_id=protocol_id,
+                initials=initials,
+                issuer=issuer,
+                subject=subject,
+            )
+            connection.execute(
+                """INSERT INTO web_direct_evaluation_operations (
+                       project_id, actor_issuer, actor_subject, operation_id,
+                       request_hash, mode, patient_id, evaluator_id,
+                       invitation_id, session_id, summary_json, expires_at
+                   )
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (
+                    project_id,
+                    issuer,
+                    subject,
+                    operation_id,
+                    request_hash,
+                    mode,
+                    resolved_patient_id,
+                    evaluator_id,
+                    invitation_id,
+                    session_id,
+                    Jsonb(summary),
+                    expires_at,
+                ),
+            )
+            return {
+                "created": True,
+                "operation_id": operation_id,
+                "invitation_id": invitation_id,
+                "session_id": session_id,
+                "state": "issued",
+                "mode": mode,
+                "summary": summary,
+                "expires_at": expires_at,
+                "credential_available": True,
+            }
+
+    try:
+        return operation()
+    except (MissingError, ForbiddenError, ConflictError, DuplicateCandidateError):
+        raise
+    except (psycopg.Error, ValueError) as exc:
+        raise PersistenceError from exc
+
+
+def get_direct_evaluation(
+    database_url: str,
+    *,
+    project_id: UUID,
+    operation_id: UUID,
+    issuer: str,
+    subject: str,
+) -> dict | None:
+    def operation():
+        with psycopg.connect(database_url) as connection:
+            project = connection.execute(
+                "SELECT active FROM web_projects WHERE project_id=%s",
+                (project_id,),
+            ).fetchone()
+            member = connection.execute(
+                "SELECT active FROM web_project_members WHERE project_id=%s AND issuer=%s AND subject=%s",
+                (project_id, issuer, subject),
+            ).fetchone()
+            user = connection.execute(
+                "SELECT active,role FROM app_users WHERE issuer=%s AND subject=%s",
+                (issuer, subject),
+            ).fetchone()
+            if (
+                project is None
+                or not project[0]
+                or member is None
+                or not member[0]
+                or user is None
+                or not user[0]
+                or user[1] not in {"consulta", "importacao", "administracao"}
+            ):
+                raise MissingError
+            row = connection.execute(
+                """SELECT op.invitation_id, op.session_id, inv.state, op.mode,
+                          op.summary_json, op.expires_at
+                   FROM web_direct_evaluation_operations op
+                   JOIN web_invitations inv ON inv.invitation_id = op.invitation_id
+                   WHERE op.project_id=%s AND op.actor_issuer=%s
+                     AND op.actor_subject=%s AND op.operation_id=%s""",
+                (project_id, issuer, subject, operation_id),
+            ).fetchone()
+            if row is None:
+                return None
+            return {
+                "operation_id": operation_id,
+                "invitation_id": row[0],
+                "session_id": row[1],
+                "state": row[2],
+                "mode": row[3],
+                "summary": row[4],
+                "expires_at": row[5],
+                "credential_available": False,
+            }
+
+    try:
+        return operation()
+    except MissingError:
+        raise
+    except (psycopg.Error, ValueError) as exc:
+        raise PersistenceError from exc
+
+
+def handoff_direct_evaluation(
+    database_url: str,
+    *,
+    project_id: UUID,
+    operation_id: UUID,
+    code_hash: str,
+    token_hash: str,
+    condition_order: tuple[int, ...],
+    issuer: str,
+    subject: str,
+    professional_token_hash: str,
+    local_auth: bool,
+) -> dict:
+    def operation():
+        with psycopg.connect(database_url) as connection:
+            project = connection.execute(
+                "SELECT active,collection_mode FROM web_projects WHERE project_id=%s FOR SHARE",
+                (project_id,),
+            ).fetchone()
+            member = connection.execute(
+                "SELECT active FROM web_project_members WHERE project_id=%s AND issuer=%s AND subject=%s FOR SHARE",
+                (project_id, issuer, subject),
+            ).fetchone()
+            user = connection.execute(
+                "SELECT active,role FROM public.web_lock_emitter(%s,%s)",
+                (issuer, subject),
+            ).fetchone()
+            if (
+                project is None
+                or not project[0]
+                or project[1] != "synthetic"
+                or member is None
+                or not member[0]
+                or user is None
+                or not user[0]
+            ):
+                raise MissingError
+            if user[1] not in {"importacao", "administracao"}:
+                raise ForbiddenError
+
+            op = connection.execute(
+                """SELECT invitation_id, session_id, mode
+                   FROM web_direct_evaluation_operations
+                   WHERE project_id=%s AND actor_issuer=%s
+                     AND actor_subject=%s AND operation_id=%s""",
+                (project_id, issuer, subject, operation_id),
+            ).fetchone()
+            if op is None:
+                raise MissingError
+            if op[2] != "onsite":
+                raise ConflictError
+
+            row = connection.execute(
+                """SELECT invitation_id,session_id,state,expires_at,revoked_at,code_sha256
+                   FROM web_invitations WHERE invitation_id=%s FOR UPDATE""",
+                (op[0],),
+            ).fetchone()
+            if row is None or row[4] is not None or row[5] != code_hash:
+                raise MissingError
+            if row[2] == "redeemed":
+                raise ConflictError
+            if row[2] == "revoked":
+                raise MissingError
+            if row[2] == "expired" or row[3] <= connection.execute("SELECT CURRENT_TIMESTAMP").fetchone()[0]:
+                connection.execute("UPDATE web_invitations SET state='expired' WHERE invitation_id=%s", (row[0],))
+                connection.commit()
+                raise ExpiredError
+            if row[2] != "issued":
+                raise MissingError
+
+            connection.execute(
+                "UPDATE web_invitations SET state='redeemed',redeemed_at=CURRENT_TIMESTAMP WHERE invitation_id=%s",
+                (row[0],),
+            )
+            session = connection.execute(
+                """INSERT INTO web_participant_sessions
+                   (session_id,participant_token_sha256,state,activated_at,expires_at)
+                   VALUES (%s,%s,'preparing',CURRENT_TIMESTAMP,
+                           CURRENT_TIMESTAMP+INTERVAL '30 minutes')
+                   RETURNING activated_at,expires_at""",
+                (row[1], token_hash),
+            ).fetchone()
+            connection.cursor().executemany(
+                "INSERT INTO web_session_main_order(session_id,trial_number,condition_id) VALUES (%s,%s,%s)",
+                [(row[1], index, condition_id) for index, condition_id in enumerate(condition_order, 1)],
+            )
+            # Encerra a sessão profissional na mesma decisão transacional (WEB-054).
+            if local_auth:
+                revoked_row = connection.execute(
+                    """UPDATE web_local_sessions SET revoked_at=clock_timestamp()
+                       WHERE token_sha256=%s AND revoked_at IS NULL RETURNING principal_id""",
+                    (professional_token_hash,),
+                ).fetchone()
+                if revoked_row:
+                    connection.execute(
+                        "INSERT INTO web_local_auth_events(principal_id,action) VALUES (%s,'logout')",
+                        (revoked_row[0],),
+                    )
+            else:
+                connection.execute(
+                    "DELETE FROM web_professional_sessions WHERE token_sha256=%s",
+                    (professional_token_hash,),
+                )
+            return {
+                "invitation_id": row[0],
+                "session_id": row[1],
+                "state": "preparing",
+                "activated_at": session[0],
+                "expires_at": session[1],
+            }
+
+    try:
+        return operation()
+    except (MissingError, ForbiddenError, ExpiredError, ConflictError):
+        raise
+    except (psycopg.Error, ValueError) as exc:
+        raise PersistenceError from exc

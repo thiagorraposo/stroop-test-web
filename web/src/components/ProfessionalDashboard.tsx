@@ -59,9 +59,11 @@ const filterLabels: Record<string, string> = {
 export function ProfessionalDashboard({
   profile,
   initialModule = 'dashboard',
+  onHandoffToParticipant,
 }: {
   profile: ProfessionalProfile
   initialModule?: AdministrativeModule
+  onHandoffToParticipant?(): void
 }) {
   const [activeModule, setActiveModule] = useState<AdministrativeModule>(profile.role === 'consulta' && ['preparar', 'administracao'].includes(initialModule) ? 'dashboard' : initialModule)
   const [grouping, setGrouping] = useState<AnalysisBody['grouping']>({ level: 'project', dimension: 'project' })
@@ -622,8 +624,14 @@ export function ProfessionalDashboard({
                           if (!draft) return
                           if (dimension === 'project') editQuery({ ...draft, projects: [value] })
                           else if (dimension === 'condition') editQuery({ ...draft, advanced: { ...normalizeQuery(draft).advanced!, condition: [value as 'congruent' | 'incongruent'] } })
+                          else if (dimension === 'go_nogo') editQuery({ ...draft, advanced: { ...normalizeQuery(draft).advanced!, goNogo: [value as 'go' | 'no_go'] } })
                           else if (dimension === 'response_type') editQuery({ ...draft, advanced: { ...normalizeQuery(draft).advanced!, responseType: [value as 'hit' | 'omission' | 'commission' | 'correct_rejection'] } })
                           else if (dimension === 'visit' || dimension === 'evaluator') editQuery({ ...draft, filters: { ...draft.filters, [dimension === 'visit' ? 'visit' : 'evaluator_id']: [value] } })
+                          else if (dimension === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(value)) editQuery({ ...draft, filters: { ...draft.filters, start_date: value, end_date: value } })
+                          else if (dimension === 'instrument_version' && value.includes('/')) {
+                            const [testCode, testVersion] = value.split('/')
+                            if (testCode && testVersion) editQuery({ ...draft, filters: { ...draft.filters, test_code: [testCode], test_version: [testVersion] } })
+                          }
                         }} />}
                       {/* KPIs Executivos da Visão Geral */}
                       {/* KPIs da Visão Geral (CHG-005 / REQ-REL-004) */}
@@ -754,7 +762,7 @@ export function ProfessionalDashboard({
                           </dl>
 
                           <figure className="dashboard-chart analytics-card" style={{ margin: '1rem 0' }}>
-                            <figcaption>Avaliações por data de início</figcaption>
+                            <figcaption>Avaliações por data de início (unidade: avaliações · n={visible.length})</figcaption>
                             <ul className="chart-meter-list">
                               {dates.map(([day, count]) => (
                                 <li key={day}>
@@ -769,13 +777,23 @@ export function ProfessionalDashboard({
                                 </li>
                               ))}
                             </ul>
+                            <details style={{ marginTop: '0.75rem' }}>
+                              <summary>Tabela equivalente: avaliações por data de início</summary>
+                              <div className="table-scroll">
+                                <table>
+                                  <caption>Avaliações por data de início</caption>
+                                  <thead><tr><th>Data</th><th>Avaliações</th></tr></thead>
+                                  <tbody>{dates.map(([day, count]) => <tr key={day}><td>{day}</td><td className="tabular-nums">{count}</td></tr>)}</tbody>
+                                </table>
+                              </div>
+                            </details>
                           </figure>
 
                           {selectedInstrument === 'stroop_go_nogo_ptbr' && (
                             <>
                               <div className="comparison-tables-grid">
                               <figure className="dashboard-chart analytics-card">
-                                <figcaption>Precisão média por visita (%)</figcaption>
+                                <figcaption>Precisão média por visita (% · n={visible.length})</figcaption>
                                 <ul className="chart-meter-list">
                                   {accuracyByVisit(visible).map(([v, accuracy]) => (
                                     <li key={v}>
@@ -790,10 +808,20 @@ export function ProfessionalDashboard({
                                     </li>
                                   ))}
                                 </ul>
+                                <details style={{ marginTop: '0.75rem' }}>
+                                  <summary>Tabela equivalente: precisão média por visita</summary>
+                                  <div className="table-scroll">
+                                    <table>
+                                      <caption>Precisão média por visita (%)</caption>
+                                      <thead><tr><th>Visita</th><th>Precisão média (%)</th></tr></thead>
+                                      <tbody>{accuracyByVisit(visible).map(([v, accuracy]) => <tr key={v}><td>{v}</td><td className="tabular-nums">{number(accuracy, 1)}%</td></tr>)}</tbody>
+                                    </table>
+                                  </div>
+                                </details>
                               </figure>
 
                               <figure className="dashboard-chart analytics-card">
-                                <figcaption>Distribuição dos tempos medianos por avaliação</figcaption>
+                                <figcaption>Distribuição dos tempos medianos por avaliação (s · n={visible.length})</figcaption>
                                 <ul className="chart-meter-list">
                                   {responseDistribution(visible).map(([range, count]) => (
                                     <li key={range}>
@@ -809,8 +837,18 @@ export function ProfessionalDashboard({
                                   ))}
                                 </ul>
                                 <p className="quiet" style={{ marginTop: '8px' }}>
-                                  Avaliações sem acertos não possuem tempo mediano e ficam fora desta distribuição.
+                                  Avaliações sem acertos não possuem tempo mediano ({visible.filter(r => !('metrics' in r.summary) && r.summary.response_time_seconds === null).length} ausente(s)) e ficam fora desta distribuição.
                                 </p>
+                                <details style={{ marginTop: '0.75rem' }}>
+                                  <summary>Tabela equivalente: distribuição de tempos medianos</summary>
+                                  <div className="table-scroll">
+                                    <table>
+                                      <caption>Distribuição dos tempos medianos por avaliação</caption>
+                                      <thead><tr><th>Faixa (s)</th><th>Avaliações</th></tr></thead>
+                                      <tbody>{responseDistribution(visible).map(([range, count]) => <tr key={range}><td>{range}</td><td className="tabular-nums">{count}</td></tr>)}</tbody>
+                                    </table>
+                                  </div>
+                                </details>
                               </figure>
                               </div>
 
@@ -853,7 +891,7 @@ export function ProfessionalDashboard({
                             <div className="analytics-card-header">
                               <h4 className="analytics-card-title">Volume de coletas ao longo do tempo</h4>
                             </div>
-                            <figcaption>Avaliações por data de início</figcaption>
+                            <figcaption>Avaliações por data de início (unidade: avaliações · n={visible.length})</figcaption>
                             <ul className="chart-meter-list">
                               {dates.map(([day, count]) => (
                                 <li key={day}>
@@ -868,6 +906,16 @@ export function ProfessionalDashboard({
                                 </li>
                               ))}
                             </ul>
+                            <details style={{ marginTop: '0.75rem' }}>
+                              <summary>Tabela equivalente: volume por data de início</summary>
+                              <div className="table-scroll">
+                                <table>
+                                  <caption>Volume de coletas ao longo do tempo</caption>
+                                  <thead><tr><th>Data</th><th>Avaliações</th></tr></thead>
+                                  <tbody>{dates.map(([day, count]) => <tr key={day}><td>{day}</td><td className="tabular-nums">{count}</td></tr>)}</tbody>
+                                </table>
+                              </div>
+                            </details>
                           </figure>
 
                           {selectedInstrument === 'stroop_go_nogo_ptbr' && (
@@ -1005,6 +1053,7 @@ export function ProfessionalDashboard({
               key={`invitation-mod:${project}`}
               project={currentProject}
               profile={profile}
+              onHandoffToParticipant={onHandoffToParticipant}
             />
           ) : profile.role === 'consulta' ? (
             <p className="notice" role="status">

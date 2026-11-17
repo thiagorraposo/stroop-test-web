@@ -131,12 +131,18 @@ test('PREP-01: seleciona paciente e avaliador, revisa resumo para conferencia e 
   await page.unroute('**/api/v1/evaluators*')
   await page.route('**/api/v1/patients*', route => route.fulfill({ json: { items: [patient], total: 1, page: 1, page_size: 50 } }))
   await page.route('**/api/v1/evaluators*', route => route.fulfill({ json: { items: [evaluator], total: 1, page: 1, page_size: 50 } }))
-  await page.route(endpoint, route => {
-    expect(route.request().postDataJSON()).toEqual({
-      patient_id: patient.id, evaluator_id: evaluator.id, visit: 'T1',
-      test_code: 'stroop_go_nogo_ptbr', initials: 'PSP',
+  await page.route(`**/api/v1/projects/${id}/direct-evaluations`, route => {
+    const body = route.request().postDataJSON()
+    expect(body).toMatchObject({
+      patient: { patient_id: patient.id }, evaluator_id: evaluator.id, visit: 'T1',
+      test_code: 'stroop_go_nogo_ptbr', initials: 'PSP', mode: 'remote',
     })
-    return route.fulfill({ status: 201, json: { ...invitation, summary } })
+    expect(typeof body.operation_id).toBe('string')
+    return route.fulfill({ status: 201, json: {
+      operation_id: body.operation_id, invitation_id: invitation.invitation_id, session_id: invitation.session_id,
+      state: 'issued', mode: 'remote', expires_at: invitation.expires_at,
+      code: invitation.code, public_entry_url: '/pratica', credential_available: true, summary,
+    } })
   })
   await page.getByLabel('Buscar paciente cadastrado', { exact: true }).fill('Paciente')
   await page.getByLabel('Paciente cadastrado', { exact: true }).selectOption(patient.id)

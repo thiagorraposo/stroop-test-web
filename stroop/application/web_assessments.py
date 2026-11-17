@@ -233,12 +233,24 @@ def analysis_query(database_url, actor, *, query, filters, sort, offset, size, s
         rows = present + absent
     else:
         rows.sort(key=key, reverse=sort.endswith('_desc'))
-    aggregates = []
-    for project in query['projects']:
-        scoped = [row for row in rows if str(row['project_id']) == project]
-        ids = {row['assessment_id'] for row in scoped}
-        aggregates.append({'project_id': project, 'assessments': len(scoped),
-                           'trials': sum(trial['assessment_id'] in ids for trial in selected_trials)})
+    project_by_assessment = {row['assessment_id']: str(row['project_id']) for row in rows}
+    trials_per_project: dict[str, int] = {}
+    for trial in selected_trials:
+        pid = project_by_assessment.get(trial['assessment_id'])
+        if pid is not None:
+            trials_per_project[pid] = trials_per_project.get(pid, 0) + 1
+    assessments_per_project: dict[str, int] = {}
+    for row in rows:
+        pid = str(row['project_id'])
+        assessments_per_project[pid] = assessments_per_project.get(pid, 0) + 1
+    aggregates = [
+        {
+            'project_id': project,
+            'assessments': assessments_per_project.get(project, 0),
+            'trials': trials_per_project.get(project, 0),
+        }
+        for project in query['projects']
+    ]
     from stroop.domain.web_analytics import descriptive_groups
     analytics = descriptive_groups(rows, selected_trials, grouping or {'level': 'assessment', 'dimension': 'project'})
     return {'content_fingerprint': content, 'legacy_snapshots': sources, 'counts': counts,

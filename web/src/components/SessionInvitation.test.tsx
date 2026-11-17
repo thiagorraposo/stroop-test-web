@@ -84,7 +84,7 @@ afterEach(async () => {
 })
 
 test('seleciona paciente e avaliador cadastrados, preenche codigo readOnly e iniciais, exibe resumo para conferencia e emite convite', async () => {
-  fetchMock.mockImplementation(async input => {
+  fetchMock.mockImplementation(async (input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
     if (url.startsWith('/api/v1/patients')) {
       return jsonResponse({ items: [existingPatient], total: 1, page: 1, page_size: 50 })
@@ -92,14 +92,19 @@ test('seleciona paciente e avaliador cadastrados, preenche codigo readOnly e ini
     if (url.startsWith('/api/v1/evaluators')) {
       return jsonResponse({ items: [existingEvaluator], total: 1, page: 1, page_size: 50 })
     }
-    if (url.endsWith(`/projects/${project.id}/invitations`)) {
+    if (url.endsWith(`/projects/${project.id}/direct-evaluations`)) {
+      const reqBody = JSON.parse(String(init?.body ?? '{}'))
       return jsonResponse(
         {
+          operation_id: reqBody.operation_id ?? '00000000-0000-4000-8000-000000000399',
           invitation_id: '00000000-0000-4000-8000-000000000301',
           session_id: '00000000-0000-4000-8000-000000000302',
           code: 'SINTETICO_CONVITE_PREP01_1234567890',
           expires_at: '2026-11-07T14:00:00Z',
           state: 'issued',
+          mode: 'remote',
+          public_entry_url: '/pratica',
+          credential_available: true,
           summary: {
             project_id: project.id,
             project_code: project.code,
@@ -123,8 +128,9 @@ test('seleciona paciente e avaliador cadastrados, preenche codigo readOnly e ini
     return jsonResponse({}, 404)
   })
 
+  const handoff = vi.fn()
   await act(async () => {
-    root.render(<SessionInvitation project={project} profile={profile} />)
+    root.render(<SessionInvitation project={project} profile={profile} onHandoffToParticipant={handoff} />)
   })
 
   const patientSelect = container.querySelector('#session-patient-select') as HTMLSelectElement
@@ -167,6 +173,9 @@ test('seleciona paciente e avaliador cadastrados, preenche codigo readOnly e ini
   expect(container.textContent).toContain('Participante: PAT-0001 · Visita: T1')
   expect(container.textContent).toContain('Paciente: Ana Carolina Sintetica (PAT-0001)')
   expect(container.textContent).toContain('Avaliador: Dra. Beatriz Sintetica (EVA-0001)')
+  const qr = container.querySelector('svg[aria-label="QR code do código do convite"]')
+  expect(qr).not.toBeNull()
+  expect(container.textContent).toContain('/pratica')
 })
 
 test('cadastra paciente inline com alerta de homonimo e confirmacao consciente', async () => {
@@ -208,8 +217,9 @@ test('cadastra paciente inline com alerta de homonimo e confirmacao consciente',
     return jsonResponse({}, 404)
   })
 
+  const handoff = vi.fn()
   await act(async () => {
-    root.render(<SessionInvitation project={project} profile={profile} />)
+    root.render(<SessionInvitation project={project} profile={profile} onHandoffToParticipant={handoff} />)
   })
 
   const toggleNewPatient = [...container.querySelectorAll('button')].find(
@@ -279,8 +289,9 @@ test('cadastra novo avaliador, seleciona automaticamente e exibe resumo compacto
     return jsonResponse({}, 404)
   })
 
+  const handoff = vi.fn()
   await act(async () => {
-    root.render(<SessionInvitation project={project} profile={profile} />)
+    root.render(<SessionInvitation project={project} profile={profile} onHandoffToParticipant={handoff} />)
   })
 
   const toggleNewEvaluator = [...container.querySelectorAll('button')].find(
@@ -329,8 +340,9 @@ test('rejeita cadastro inválido de paciente com nome curto', async () => {
     return jsonResponse({}, 404)
   })
 
+  const handoff = vi.fn()
   await act(async () => {
-    root.render(<SessionInvitation project={project} profile={profile} />)
+    root.render(<SessionInvitation project={project} profile={profile} onHandoffToParticipant={handoff} />)
   })
 
   const toggleNewPatient = [...container.querySelectorAll('button')].find(
@@ -405,15 +417,19 @@ test('seleciona modalidade presencial e emite convite com parâmetros válidos',
     if (url.startsWith('/api/v1/evaluators')) {
       return jsonResponse({ items: [existingEvaluator], total: 1, page: 1, page_size: 50 })
     }
-    if (url.endsWith(`/projects/${project.id}/invitations`) && init?.method === 'POST') {
+    if (url.endsWith(`/projects/${project.id}/direct-evaluations`) && init?.method === 'POST') {
       createdPayload = JSON.parse(String(init.body))
       return jsonResponse(
         {
+          operation_id: createdPayload.operation_id,
           invitation_id: '00000000-0000-4000-8000-000000000301',
           session_id: '00000000-0000-4000-8000-000000000302',
           code: 'SINTETICO_PRESENCIAL_1234567890',
           expires_at: '2026-11-07T14:00:00Z',
           state: 'issued',
+          mode: 'onsite',
+          public_entry_url: '/pratica',
+          credential_available: true,
           summary: {
             project_id: project.id,
             project_code: project.code,
@@ -434,11 +450,24 @@ test('seleciona modalidade presencial e emite convite com parâmetros válidos',
         201,
       )
     }
+    if (url.endsWith('/handoff') && init?.method === 'POST') {
+      return jsonResponse(
+        {
+          session_id: '00000000-0000-4000-8000-000000000302',
+          state: 'preparing',
+          activated_at: '2026-11-07T13:00:00Z',
+          expires_at: '2026-11-07T13:30:00Z',
+          csrf_token: 'h'.repeat(43),
+        },
+        200,
+      )
+    }
     return jsonResponse({}, 404)
   })
 
+  const handoff = vi.fn()
   await act(async () => {
-    root.render(<SessionInvitation project={project} profile={profile} />)
+    root.render(<SessionInvitation project={project} profile={profile} onHandoffToParticipant={handoff} />)
   })
 
   // Seleciona paciente e avaliador
@@ -486,14 +515,20 @@ test('seleciona modalidade presencial e emite convite com parâmetros válidos',
     confirmBtn.click()
   })
 
-  expect(createdPayload).toEqual({
-    patient_id: existingPatient.id,
+  expect(createdPayload).toMatchObject({
+    patient: { patient_id: existingPatient.id },
     evaluator_id: existingEvaluator.id,
     visit: 'V1',
     test_code: 'stroop_go_nogo_ptbr',
     initials: 'ACS',
+    mode: 'onsite',
   })
+  expect(typeof createdPayload.operation_id).toBe('string')
   expect(container.textContent).toContain('SINTETICO_PRESENCIAL_1234567890')
+  const handoffBtn = [...container.querySelectorAll('button')].find(btn => btn.textContent === 'Iniciar neste dispositivo')!
+  expect(handoffBtn).toBeDefined()
+  await act(async () => { handoffBtn.click() })
+  expect(handoff).toHaveBeenCalledTimes(1)
 })
 
 test('busca paciente e avaliador por texto ou código atualizando resultados e informando quando vazio sem apagar formulário', async () => {
@@ -521,8 +556,9 @@ test('busca paciente e avaliador por texto ou código atualizando resultados e i
     return jsonResponse({}, 404)
   })
 
+  const handoff = vi.fn()
   await act(async () => {
-    root.render(<SessionInvitation project={project} profile={profile} />)
+    root.render(<SessionInvitation project={project} profile={profile} onHandoffToParticipant={handoff} />)
   })
 
   // Preenche visita previamente
@@ -565,4 +601,61 @@ test('busca paciente e avaliador por texto ou código atualizando resultados e i
   })
   expect(searchedEvaluatorTerm).toBe('Inexistente')
   expect(container.textContent).toContain('Nenhum avaliador encontrado para "Inexistente"')
+})
+
+test('PREP7: falha incerta na preparacao direta consulta operation_id antes de nova emissao', async () => {
+  let postCalls = 0
+  let getCalls = 0
+  fetchMock.mockImplementation(async (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    if (url.startsWith('/api/v1/patients')) return jsonResponse({ items: [existingPatient], total: 1, page: 1, page_size: 50 })
+    if (url.startsWith('/api/v1/evaluators')) return jsonResponse({ items: [existingEvaluator], total: 1, page: 1, page_size: 50 })
+    if (url.endsWith(`/projects/${project.id}/direct-evaluations`) && init?.method === 'POST') {
+      postCalls += 1
+      throw new TypeError('network failure')
+    }
+    if (url.includes(`/projects/${project.id}/direct-evaluations/`) && (!init || init.method === 'GET')) {
+      getCalls += 1
+      return jsonResponse({
+        operation_id: url.split('/').pop()!,
+        invitation_id: '00000000-0000-4000-8000-000000000301',
+        session_id: '00000000-0000-4000-8000-000000000302',
+        state: 'issued',
+        mode: 'remote',
+        expires_at: '2026-11-07T14:00:00Z',
+        public_entry_url: '/pratica',
+        credential_available: false,
+        summary: {
+          project_id: project.id,
+          project_code: project.code,
+          project_name: project.name,
+          patient_id: existingPatient.id,
+          participant_code: existingPatient.participant_code,
+          participant_name: existingPatient.full_name,
+          initials: 'ACS',
+          evaluator_id: existingEvaluator.id,
+          evaluator_code: existingEvaluator.evaluator_code,
+          evaluator_name: existingEvaluator.full_name,
+          test_code: 'stroop_go_nogo_ptbr',
+          test_version: '0.2.2-web.1',
+          protocol_id: 'stroop_go_nogo_ptbr/0.2.2-web.1',
+          visit: 'T1',
+        },
+      })
+    }
+    return jsonResponse({}, 404)
+  })
+
+  await act(async () => { root.render(<SessionInvitation project={project} profile={profile} />) })
+  await act(async () => {
+    setInputValue(container.querySelector('#session-patient-select') as HTMLSelectElement, existingPatient.id)
+    setInputValue(container.querySelector('#session-evaluator-select') as HTMLSelectElement, existingEvaluator.id)
+    setInputValue(container.querySelector('#session-visit') as HTMLInputElement, 'T1')
+  })
+  const submit = [...container.querySelectorAll('button')].find(btn => btn.getAttribute('type') === 'submit')!
+  await act(async () => { submit.click() })
+  expect(postCalls).toBe(1)
+  expect(getCalls).toBe(1)
+  expect(container.textContent).toContain('A operação foi confirmada no servidor')
+  expect(container.textContent).toContain('Revogar convite')
 })

@@ -264,3 +264,33 @@ test('UX7-AA: orientações, 404, barra autenticada e troca de senha mantêm con
     }
   }
 })
+
+test('UX7-AA: módulos autenticados (análise, histórico, exportação, nova avaliação e gestão) mantêm reflow e contraste', async ({ page }) => {
+  const projectId = '11111111-1111-4111-8111-111111111111'
+  await page.route('**/api/v1/auth/me', route => route.fulfill({ json: { user_id: 'synthetic', role: 'administracao', csrf_token: 's'.repeat(43), expires_at: new Date(Date.now() + 3600000).toISOString() } }))
+  await page.route('**/api/v1/projects?*', route => route.fulfill({ json: { items: [{ id: projectId, code: 'PROJ_AA', name: 'Projeto Acessível', active: true, created_at: '2026-11-16T00:00:00Z' }], next_cursor: null } }))
+  await page.route('**/api/v1/projects/*/members*', route => route.fulfill({ json: { items: [], next_cursor: null } }))
+  await page.route('**/api/v1/patients*', route => route.fulfill({ json: { items: [], total: 0, page: 1, page_size: 100 } }))
+  await page.route('**/api/v1/evaluators*', route => route.fulfill({ json: { items: [], total: 0, page: 1, page_size: 100 } }))
+  await page.route('**/api/v1/administration/users', route => route.fulfill({ json: { items: [], next_cursor: null } }))
+  await page.route('**/api/v1/projects/*/assessments/options*', route => route.fulfill({ json: { participant_id: [], visit: [], evaluator_id: [], test_version: ['0.2.2-web.1'], platform: ['web'], test_code: ['stroop_go_nogo_ptbr'] } }))
+  await page.route('**/api/v1/analysis/query', route => route.fulfill({ json: analysisFixture(route.request().postDataJSON(), []) }))
+
+  await page.goto('/equipe')
+  await expect(page.getByText('Sua sessão está ativa.', { exact: true })).toBeVisible()
+  for (const tabName of ['Avaliações e histórico', 'Resultados e análises', 'Exportações']) {
+    await page.getByRole('tab', { name: tabName, exact: true }).click()
+    for (const width of [360, 768, 1366, 320]) { await page.setViewportSize({ width, height: 900 }); await noOverflow(page) }
+  }
+  await page.setViewportSize({ width: 1366, height: 900 })
+  const axes = page.getByRole('navigation', { name: 'Eixos profissionais' })
+  await axes.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Preparar avaliação' })).toBeVisible()
+  for (const width of [360, 768, 1366, 320]) { await page.setViewportSize({ width, height: 900 }); await noOverflow(page) }
+  await page.setViewportSize({ width: 1366, height: 900 })
+  await axes.getByRole('button', { name: 'Gestão', exact: true }).click()
+  for (const tabName of ['Pacientes', 'Avaliadores', 'Administração']) {
+    await page.getByRole('tab', { name: tabName, exact: true }).click()
+    for (const width of [360, 768, 1366, 320]) { await page.setViewportSize({ width, height: 900 }); await noOverflow(page) }
+  }
+})

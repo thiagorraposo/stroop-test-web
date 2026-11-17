@@ -217,7 +217,7 @@ test('PREP-01 e E2E-FLOW-01: cadastro inline de paciente e avaliador, resumo par
   await expect(review).toContainText(`${evaluatorFullName} (${createdEvaluator.evaluator_code})`)
   await expect(review).toContainText('stroop_go_nogo_ptbr · 0.2.2-web.1')
 
-  const issuing = page.waitForResponse(res => res.url().endsWith(`/projects/${prepared.project_id}/invitations`) && res.request().method() === 'POST')
+  const issuing = page.waitForResponse(res => res.url().endsWith(`/projects/${prepared.project_id}/direct-evaluations`) && res.request().method() === 'POST')
   await review.getByRole('button', { name: 'Confirmar e emitir convite', exact: true }).click()
   const issuedResp = await issuing
   expect(issuedResp.status()).toBe(201)
