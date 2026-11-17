@@ -2233,7 +2233,7 @@ de critério, sem conclusão de M8/WEB-032 nem autorização de publicação.
 - Responsável: Codex na execução; responsável do produto/metodológico nas aprovações externas indicadas.
 - Critérios de aceite: Manifesto por SHA/imagens/schema, capacidade no ambiente medido, runbooks backup/retorno/incidente e custódia revisados; M8 aceito sem publicação.
 - Testes/verificação: `scripts/smoke_web_compose.py`, `scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`, `scripts/smoke_local_auth_restore.py`, `scripts/benchmark_web.py` e `scripts/verify_web_ci.py all` aprovados sem skips na candidata local `stroop-web-api:m8-rc` / `stroop-web-proxy:m8-rc` em 2026-11-17.
-- Evidências: `EV-M8-FECHAMENTO-20261117` e manifesto [RELEASE_CANDIDATA_M8](operacao/RELEASE_CANDIDATA_M8.md): imagens `sha256:0bd129d59afb54aa97b8d81dcc163911629f0a031c9547feb52f7142b5ecaecf` (API) e `sha256:5cfa526916e60fb29c98120c6e29726eac0eb5f5bda3e5e7d61bcb46bdf9bc4c` (proxy), schema `0001..0015`, 5 harnesses Compose/restore/replicação/carga (`highest_tested_clients_all_successful=8`, `p95=911.73 ms` em 8 clientes, `restoration_seconds=7.768`), runbooks `GUIA_DO_USUARIO.md`, `WEB_RECUPERACAO.md` e `HOMOLOGACAO_WEB.md` atualizados; M8 concluído sem deploy ou publicação.
+- Evidências: `EV-M8-FECHAMENTO-20261117` e manifesto [RELEASE_CANDIDATA_M8](operacao/RELEASE_CANDIDATA_M8.md): imagens `sha256:0bd129d59afb54aa97b8d81dcc163911629f0a031c9547feb52f7142b5ecaecf` (API) e `sha256:8ae99e296bf45909bb79d63dfcea9dbd855c05e3b9c4d1669c67373f4cd068c8` (proxy), schema `0001..0015`, 5 harnesses Compose/restore/replicação/carga (`highest_tested_clients_all_successful=8`, `p95=911.73 ms` em 8 clientes, `restoration_seconds=7.768`), runbooks `GUIA_DO_USUARIO.md`, `WEB_RECUPERACAO.md` e `HOMOLOGACAO_WEB.md` atualizados; M8 concluído sem deploy ou publicação.
 - Riscos/bloqueios: R08, R09; decisões externas mantidas explicitamente em M9 (`WEB-033..036`) e M10 (`WEB-037..041`).
 - Referências: requisitos transversais do marco e ADR-004; [arquitetura](ARQUITETURA_WEB.md).
 - Git da entrega: branch `feat/m8-fechamento-integrado`; commit, push, PR e merge tradicional com CI `verify` registrados em `EV-M8-FECHAMENTO-20261117`.
@@ -4378,7 +4378,7 @@ decisão explícita `CHG-008` no alcance local).
      neutralization e `load_instrument_csv`/`import_csv`).
 4. **Release candidata local e runbooks (`WEB-032` / `RELEASE_CANDIDATA_M8.md`):**
    - Imagens locais `stroop-web-api:m8-rc` (`sha256:0bd129d59afb54aa97b8d81dcc163911629f0a031c9547feb52f7142b5ecaecf`)
-     e `stroop-web-proxy:m8-rc` (`sha256:5cfa526916e60fb29c98120c6e29726eac0eb5f5bda3e5e7d61bcb46bdf9bc4c`).
+     e `stroop-web-proxy:m8-rc` (`sha256:8ae99e296bf45909bb79d63dfcea9dbd855c05e3b9c4d1669c67373f4cd068c8`).
    - Todos os 5 harnesses Compose/recuperação/carga aprovados em série (`0` falhas):
      `smoke_web_compose.py`, `smoke_web_recovery.py` (`7.768 s`), `smoke_web_replication.py`
      (`copy 1.329 s`, `restore 6.888 s`), `smoke_local_auth_restore.py` (`credential_version=3`,
@@ -4393,8 +4393,13 @@ decisão explícita `CHG-008` no alcance local).
      vulnerabilidades npm/pip), `browser` (`154` gerais em `2,7 min` + `4` `@timing`
      seriais em `3,5 min`, Chromium e Firefox) e `integration` (`68` casos HTTPS/API/PG
      em `19,5 min` + `10` casos `playwright.local-auth.config.ts` em `21,7 s`, Chromium
-     e Firefox). Integração GitHub Flow (commit, push, PR e merge tradicional após
-     `verify` remoto) executada nesta unidade.
+   - Ajuste de reflow `UX7-AA` (`320 px`) em `web/src/index.css` (`.button-toggle-registry`
+     com `white-space: normal`, `min-height: 42px` e `max-width: 100%` após detecção na CI do PR #23):
+     revalidado localmente com Vitest (`375/375`), build (`tsc --noEmit` + `vite build`),
+     Playwright browser (`46/46` em `accessibility-surfaces`, `invitations` e `presentation`
+     em Chromium/Firefox) e `scripts/smoke_web_compose.py` na imagem reconstruída
+     `stroop-web-proxy:m8-rc`.
+   - Integração GitHub Flow (commit, push, PR #23 e merge tradicional após `verify` remoto) executada nesta unidade.
 
 ### Retomada anterior — status operacionais segregados, quatro contagens cadastrais e revisão de WEB-048..055, 2026-11-16
 

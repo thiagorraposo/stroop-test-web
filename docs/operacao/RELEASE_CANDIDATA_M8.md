@@ -12,7 +12,7 @@ permanecem exclusivamente no [backlog canônico](../Projeto%20Stroop%20Test.md).
 | Schema relacional | Migrations `0001` a `0015` (`0015_direct_evaluation_operations.sql`, incluindo tabela `web_direct_evaluation_operations` e função `SECURITY DEFINER` `public.web_relink_identity`) |
 | Papel mínimo de escrita (`writer`) | Grants explícitos sobre tabelas operacionais; sem `UPDATE` direto em `assessments` ou `web_assessments`; `EXECUTE` restrito em `web_lock_emitter`, `web_manage_user` e `web_relink_identity` |
 | Imagem API candidata local | `stroop-web-api:m8-rc` (`sha256:0bd129d59afb54aa97b8d81dcc163911629f0a031c9547feb52f7142b5ecaecf`) |
-| Imagem Proxy candidata local | `stroop-web-proxy:m8-rc` (`sha256:5cfa526916e60fb29c98120c6e29726eac0eb5f5bda3e5e7d61bcb46bdf9bc4c`) |
+| Imagem Proxy candidata local | `stroop-web-proxy:m8-rc` (`sha256:8ae99e296bf45909bb79d63dfcea9dbd855c05e3b9c4d1669c67373f4cd068c8`) |
 | Ambiente local medido | `Linux-7.0.0-43-generic-x86_64`, Python `3.12.3`, Node `24.15.0`, PostgreSQL `17.6`, `12` CPUs lógicas |
 
 ## Síntese operacional e de recuperação (WEB-032)
