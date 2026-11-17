@@ -132,4 +132,9 @@ test('exibe distribuição de RTs, precisão Go/No-Go e comparações por visita
   const evalTable = table('Desempenho e contagens de erros por avaliador')
   expect(evalTable).toBeDefined()
   expect([...evalTable.tBodies[0]!.rows].map(r => r.cells[0]!.textContent)).toEqual(['EVA-000001', 'EVA-000002'])
+
+  // 5. Evolução longitudinal preserva versão e plataforma sem fundir
+  const longitudinal = table('Evolução do participante por avaliação')
+  expect(longitudinal.tBodies[0]!.rows[0]!.cells[7]!.textContent).toBe('stroop_go_nogo_ptbr / 1.0.0')
+  expect(longitudinal.tBodies[0]!.rows[0]!.cells[8]!.textContent).toBe('WEB')
 })

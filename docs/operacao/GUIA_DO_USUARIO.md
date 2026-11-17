@@ -43,122 +43,92 @@ para verificar o que foi efetivamente gravado antes de preparar outra sessao.
 
 ## Entrar como profissional
 
-Abra **Area da equipe** (`/equipe`) e escolha **Entrar com Google** usando sua
-conta previamente cadastrada. Quem nao tem cadastro deve solicitar acesso ao
-responsavel. Identidade Google e perfil sao verificados pelo servidor; e-mail
-auxiliar nao concede permissao. Mesmo administradores precisam de vinculo
-ativo ao projeto para acessar seus resultados.
+Abra **Area da equipe** (`/equipe`) e informe **Usuario** e **Senha** locais
+cadastrados pelo responsavel pelo sistema (ou entre com Google apenas quando
+expressamente habilitado em configuracao autorizada). Contas locais permitem
+colagem e gerenciador de senha; após login ou troca de senha, o painel carrega
+apenas os projetos vinculados a conta.
 
-O perfil **Consulta** acessa resultados e exportacoes autorizados. **Coleta e
-importacao** tambem prepara sessoes e importa CSV. **Administracao** permite
-gerenciar contas, projetos e vinculos, alem das operacoes de dados permitidas
-por seu vinculo. Ao terminar, use **Encerrar sessao** e aguarde a confirmacao.
+O perfil **Consulta** acessa analises e exportacoes dos projetos autorizados.
+**Coleta e importacao** tambem prepara novas avaliacoes e cadastro contextual.
+**Administracao** permite gerenciar contas locais, projetos, vinculos, pacientes
+e avaliadores, alem de correcoes auditadas de vinculo. Mesmo administradores
+precisam de vinculo ativo ao projeto para visualizar ou preparar dados de
+pesquisa. Ao terminar, use **Encerrar sessao** e aguarde o fechamento antes de
+deixar o terminal.
 
-## Preparar convite
+## Preparar nova avaliacao
 
-1. Selecione o projeto ativo no campo **Projeto** e localize **Preparar sessao**.
-2. Informe **Codigo do participante** e **Visita da sessao**. Use pseudonimos
-   definidos pela pesquisa, sem nome ou iniciais. Ambos aceitam de 1 a 64
-   letras ASCII, numeros, ponto, hifen ou sublinhado. Exemplo sintetico:
-   `SINTETICO_001`, visita `PILOTO_01`.
-3. Clique em **Gerar convite**. O servidor fixa o projeto, participante, visita
-   e sua conta como avaliador responsavel.
-4. Entregue o codigo de uso unico por canal apropriado e confira a expiracao
-   UTC mostrada na tela. **Abrir pratica em outra aba** abre a pagina onde o
-   participante digita o codigo; ele nao e incluido no endereco.
+1. No eixo **Nova Avaliacao**, selecione o **Projeto** ativo autorizado.
+2. Busque o **Paciente** existente por nome normalizado ou codigo estavel
+   (`PAT-...`). Quando houver homonimos, confira codigo, iniciais e nota de
+   desambiguacao; cadastros novos exigem confirmacao explicita se houver
+   duplicidade potencial.
+3. Selecione o **Avaliador responsavel** (`EVA-...`), a **Visita / Momento**
+   (1 a 64 letras ASCII, numeros, ponto, hifen ou sublinhado) e o **Instrumento**.
+4. Escolha a modalidade:
+   - **Remota**: revise o resumo para conferencia e emita codigo de uso unico com
+     QR code gerado em RAM; o endereco publico `/pratica` nunca leva o codigo na URL.
+   - **Presencial**: revise o resumo, confirme e use **Iniciar neste dispositivo**
+     para handoff atomico (resgata a sessao do participante e encerra a sessao
+     profissional no servidor antes de abrir `/pratica`).
 
-O codigo aparece uma unica vez. Recarregar, sair ou trocar projeto apaga sua
-exibicao, sem recuperacao posterior. Nao o coloque em URL, screenshot ou log.
-**Preparar outra sessao** limpa a tela sem revogar o convite anterior.
-**Revogar convite** so esta concluido depois da confirmacao do servidor;
-resultados ja concluidos sao preservados.
+O codigo aparece uma unica vez na tela de confirmacao. Em falha de rede, utilize
+**Consultar status da operacao** antes de tentar nova preparacao; nao repita em
+paralelo para evitar cadastros/convites duplicados.
 
-Se a criacao nao for confirmada, a sessao pode ter sido criada sem que o codigo
-chegasse a tela. Nao emita outra automaticamente: informe o responsavel e siga
-a orientacao exibida. Um codigo consumido nao pode ser compartilhado entre
-participantes nem reutilizado para repetir um principal interrompido.
+## Analise, consultas e exportacoes
 
-## Consultar e exportar resultados
+No eixo **Analise**:
 
-Em **Filtrar resultados**, escolha projetos, periodo, codigos de participantes,
-visitas, avaliadores tecnicos, versoes, plataformas e instrumento; depois use
-**Aplicar filtros**. Em multisselecao, use Ctrl/Cmd ou Shift e as setas. Opcoes
-do mesmo campo combinam por OU; campos diferentes combinam por E. Campos
-vazios nao restringem. **Limpar filtros** retorna ao projeto de preparacao.
+1. Na barra compartilhada **Filtros da consulta**, escolha projetos (1 a 20),
+   periodo (UTC em WEB / data civil em legado), instrumento, versao, plataforma,
+   participante, avaliador, visita ou filtros de tentativa/desempenho Stroop e
+   acione **Aplicar filtros**.
+2. Em **Avaliacoes e historico**, consulte os contadores A/T oficiais (sempre
+   segregados das sessoes abortadas/expiradas/invalidadas/em andamento), a
+   tabela paginada e o **Detalhe da avaliacao** (preservando `—`/nulo quando
+   nao ha RT valido, sem substituir por zero).
+3. Em **Resultados e analises**, alterne o agrupamento e a metrica descritiva,
+   faca drill-down ate o nivel desejado ou consulte a tabela equivalente
+   acessivel. As visualizacoes sao estritamente descritivas, sem normas clinicas.
+4. Em **Exportacoes**, selecione uma das cinco granularidades (`pacientes`,
+   `avaliacoes`, `tentativas`, `metricas`, `stroop_21_colunas`), escolha as
+   colunas e clique em **Pré-visualizar contagem e amostra** (modo desidentificado
+   padrao) antes de liberar **Baixar arquivo CSV**.
 
-O periodo e inclusivo: avaliacoes WEB usam a data UTC de inicio; registros
-legados conservam a data civil original. Codigo igual em projetos diferentes
-nao representa automaticamente a mesma pessoa. A consulta aceita ate 20
-projetos e 5.000 avaliacoes completas; se exceder, restrinja os filtros.
+`stroop_21_colunas` requer o instrumento `stroop_go_nogo_ptbr` sem filtros por
+tentativa (`condicao`, `go_nogo`, `tipo de resposta`). Cada download revalida no
+servidor permissoes, papel, recorte e snapshot; alteracoes de dados ou vinculos
+invalidadas retornam conflito `409` sem liberar arquivo divergente. A exportacao
+nominal depende de liberacao explicita da pesquisa (`DEC-03`).
 
-Cards, graficos e tabela usam o conjunto completo carregado e um instrumento
-por vez. Consulte o detalhe para conferir metadados, metricas e tentativas.
-**Participante para evolucao** seleciona projeto e codigo para acompanhar
-visitas, mantendo avaliacoes repetidas separadas. RT sem acertos e ausencia de
-dado, sem substituir por zero. As visualizacoes nao oferecem interpretacao
-clinica ou comparacao normativa.
+## Administrar contas, cadastros e vinculos
 
-Ha duas exportacoes diferentes:
+No eixo **Gestao**, utilize **Pacientes**, **Avaliadores** e **Administracao**
+para manter o cadastro central unico (`PAT-...` e `EVA-...`), gerenciar contas,
+criar projetos, atribuir ou revogar vinculos de membros e executar correcoes
+auditadas de vinculo (`relink`) com motivo registrado em trilha de auditoria e sem
+mutar tentativas (`trial_results`) nem metricas calculadas.
 
-- No detalhe Stroop, o CSV oficial individual contem as tentativas e preserva
-  o [contrato de 21 colunas](../experimento/CSV_UNIFICADO.md), com nome mascarado
-  e iniciais vazias.
-- **Exportar visao filtrada** gera uma linha por avaliacao do instrumento e
-  plataforma selecionados. Esse CSV agregado nao serve para importar tentativas.
-
-Cada download revalida sua permissao. Se o acesso mudar, os dados mudarem
-ou a consulta expirar, atualize a consulta completa antes de tentar novamente.
-Arquivos baixados ficam sob custodia do profissional; nao os envie a canais
-publicos. A WEB nao revela nomes/iniciais de participantes do historico.
-
-## Importar CSV pela WEB
-
-1. Selecione o projeto de destino e localize **Importar CSV**, disponivel aos
-   perfis de coleta/importacao e administracao com vinculo ativo.
-2. Escolha o CSV oficial do instrumento registrado, em UTF-8, ate 5 MiB e
-   10.000 registros. Nao use o CSV agregado do painel.
-3. Clique em **Minimizar e importar CSV**. Antes do envio, o navegador cria
-   uma copia com nome `NAO_COLETADO` e iniciais vazias. O original permanece
-   no dispositivo sem alteracao.
-4. Aguarde **Importacao concluida** e consulte o resultado no projeto.
-
-Avaliacao duplicada e rejeitada sem substituir dados. Se o envio nao for
-confirmado, use **Consultar estado** e, quando indicado, **Reenviar a mesma
-copia**. Preserve a pagina e o identificador da operacao ate resolver a
-incerteza; iniciar uma nova operacao nao e a recuperacao da anterior.
-
-Dados ja existentes no banco legado requerem um vinculo explicitamente
-provisionado pelo operador para aparecerem na WEB. Criar um projeto de nome
-igual nao concede acesso ao historico. Consulte a
-[transicao e matriz de cobertura](TRANSICAO_WEB.md).
-
-## Administrar contas e projetos
-
-Com perfil de administracao, abra **Administracao** para cadastrar a identidade
-Google verificada, ajustar perfil/e-mail auxiliar/estado, criar projetos e
-atribuir vinculos. Use os identificadores retornados pelo login da propria
-pessoa, pelo canal institucional; nao deduza identidade pelo e-mail. O ultimo
-administrador ativo e protegido contra bloqueio ou rebaixamento concorrente.
-
-Bloqueios e revogacoes impedem novas operacoes e podem invalidar sessoes ainda
-abertas emitidas pelo profissional. Eles nao apagam resultados concluidos.
-A atribuicao de vinculo a projeto e uma acao explicita; administrador global
-nao recebe acesso a dados de pesquisa automaticamente.
+Bloqueios e revogacoes impedem novas operacoes e invalidam sessoes abertas, sem
+apagar resultados concluidos. O envio manual de CSV pelo navegador (upload web)
+foi retirado do modo produto; dados historicos migrados dependem de mapa
+explicito auditavel via CLI/administracao sem fusao automatica por pseudonimo.
+Consulte a [transicao e matriz de cobertura](TRANSICAO_WEB.md).
 
 ## Ajuda rapida da WEB
 
-- Login sem acesso: confira conta cadastrada, perfil, estado e vinculo com o
-  responsavel. Nao envie senha, cookies ou codigos Google para suporte.
-- Nenhum resultado: confira projeto, filtros e eventual mapa do historico;
-  nao reimporte apenas para tentar tornar um registro visivel.
-- Resultado ainda sem confirmacao: mantenha a pagina aberta e use a acao de
-  reenvio oferecida. Consulte a equipe antes de repetir a tarefa.
-- Acesso expirado ou revogado: solicite orientacao; nao reutilize convite
-  consumido e nao tente retomar principal interrompido.
-- Falha na consulta ou exportacao: atualize a consulta completa. Erro 429
-  indica limite de requisicoes; aguarde antes de tentar novamente.
-- Incidente: informe ao responsavel horario aproximado e mensagem exibida,
-  sem dados de participantes, convites ou capturas identificaveis.
+- Login sem acesso: confira usuario local, senha, perfil, estado e vinculo com
+  o responsavel. Nao envie senha, cookies ou tokens para suporte.
+- Nenhum resultado: confira projeto(s), filtros aplicados e eventual mapa de
+  identidade historica; use **Limpar filtros** quando necessario.
+- Conflito `409` na exportacao: a consulta expirou ou houve alteracao nos dados
+  ou vinculos apos a previa; reaplique os filtros e gere nova previa.
+- Acesso expirado ou revogado: nao reutilize convite consumido e nao tente
+  retomar bloco principal interrompido (D2).
+- Falha operacional (5xx/429): aguarde e registre horario aproximado e
+  `request_id`, sem dados de participantes, convites ou capturas identificaveis.
 
 ## Fluxo local preservado
 

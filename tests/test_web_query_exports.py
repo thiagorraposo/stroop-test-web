@@ -226,5 +226,57 @@ class QueryExportTests(unittest.TestCase):
             connection.execute("INSERT INTO web_legacy_entity_links(entity_type,legacy_participant_uuid,patient_id,reason_code,linked_by_issuer,linked_by_subject) VALUES ('patient',%s,%s,'SYNTHETIC_OTHER',%s,%s)", (participant, patient, *actor))
         self.preview(self.body(self.context(), 'pacientes'), 422)
 
+    def test_export7_csv_injection_roundtrip_csv21_sqlite_e_revogacao_sessao_com_auditoria(self):
+        from pathlib import Path
+        import tempfile
+        from stroop.application.import_sqlite import import_csv
+        from stroop.domain.web_multi_export import serialize_multi_csv
+        from stroop.ingestion.instruments import load_instrument_csv
+
+        # 1. Neutralização de fórmula sem corromper números/ausências
+        dangerous = serialize_multi_csv(
+            [{'assessment_id': '=CMD()', 'project_code': '+1', 'participant_code': '-2',
+              'visit': '@SUM(A1)', 'trial_number': 1, 'block': 'main',
+              'word': '\tTAB\r\n"quoted";', 'ink_color': '\u202eVERDE', 'condition': 'congruent',
+              'correct_response': 'space', 'key_pressed': 'space', 'correct': True,
+              'error_type': 'hit', 'reaction_time_seconds': 0.512}],
+            granularity='tentativas',
+            columns=['assessment_id', 'project_code', 'participant_code', 'visit', 'word', 'ink_color', 'reaction_time_seconds'],
+        )
+        parsed_inj = list(csv.DictReader(io.StringIO(dangerous)))
+        self.assertEqual(parsed_inj[0]['assessment_id'], "'=CMD()")
+        self.assertEqual(parsed_inj[0]['project_code'], "'+1")
+        self.assertEqual(parsed_inj[0]['participant_code'], "'-2")
+        self.assertEqual(parsed_inj[0]['visit'], "'@SUM(A1)")
+        self.assertTrue(parsed_inj[0]['word'].startswith("'\tTAB"))
+        self.assertEqual(parsed_inj[0]['reaction_time_seconds'], '0.512')
+
+        # 2. Roundtrip CSV21 oficial via /api/v1/exports/download + loader/SQLite + auditoria sanitizada
+        receipt, _ = self.complete()
+        context = self.context({'test_code': ['stroop_go_nogo_ptbr']})
+        body = self.body(context, 'stroop_21_colunas')
+        with self.assertLogs('stroop.api', level='INFO') as logs:
+            preview = self.preview(body)
+            csv_response = self.download(body, preview)
+        self.assertEqual(len(logs.output), 2)
+        self.assertIn('export_audit action=preview outcome=success', logs.output[0])
+        self.assertIn('export_audit action=download outcome=success', logs.output[1])
+        self.assertNotIn(preview['export_token'], '\n'.join(logs.output))
+
+        with tempfile.TemporaryDirectory(prefix='stroop-export7-') as tmp:
+            csv_path = Path(tmp) / 'export21.csv'
+            csv_path.write_text(csv_response.text, encoding='utf-8')
+            normalized = load_instrument_csv(csv_path)
+            self.assertEqual(normalized.metadata['assessment_id'], receipt['assessment_id'])
+            self.assertEqual(len(normalized.trial_values), 16)
+            sqlite_path = Path(tmp) / 'roundtrip.sqlite'
+            import_csv(csv_path, sqlite_path)
+
+        # 3. Revogação da conta/sessão entre prévia e download nega antes de qualquer byte
+        preview_before_revoke = self.preview(body)
+        with psycopg.connect(self.database_url) as connection:
+            connection.execute("UPDATE app_users SET active=false WHERE role='consulta'")
+        self.download(body, preview_before_revoke, 403)
+
 
 del WebAssessmentsTests

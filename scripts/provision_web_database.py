@@ -52,6 +52,7 @@ WRITER = {
     ),
     'web_registry_audit_events': ('SELECT', 'INSERT'),
     'web_legacy_entity_links': ('SELECT', 'INSERT', 'UPDATE (active)'),
+    'web_direct_evaluation_operations': ('SELECT', 'INSERT'),
     'web_session_observations': ('SELECT', 'INSERT'),
     'web_session_checkpoints': ('SELECT', 'INSERT',
         'UPDATE (confirmed_through,prefix_hash,received_at)'),
@@ -175,7 +176,8 @@ def provision(environment: Mapping[str, str] | None = None):
             db_name, db_oid, owner_oid = connection.execute("SELECT current_database(),(SELECT oid FROM pg_database WHERE datname=current_database()),(SELECT oid FROM pg_roles WHERE rolname=current_user)").fetchone()
             _baseline(connection)
             functions = ('public.web_lock_emitter(text,text)',
-                         'public.web_manage_user(text,text,text,text,text,text,text,boolean)')
+                         'public.web_manage_user(text,text,text,text,text,text,text,boolean)',
+                         'public.web_relink_identity(text,uuid,text,uuid,uuid,uuid,text,text,text)')
             for signature in functions:
                 function = connection.execute('SELECT proowner,prosecdef FROM pg_proc WHERE oid=to_regprocedure(%s)', (signature,)).fetchone()
                 if not function or function != (owner_oid, True):
@@ -201,6 +203,7 @@ def provision(environment: Mapping[str, str] | None = None):
                 connection.execute(sql.SQL('GRANT USAGE ON SEQUENCE public.{} TO {}').format(sql.Identifier(sequence), sql.Identifier(writer_name)))
             connection.execute(sql.SQL('GRANT EXECUTE ON FUNCTION public.web_lock_emitter(text,text) TO {}').format(sql.Identifier(writer_name)))
             connection.execute(sql.SQL('GRANT EXECUTE ON FUNCTION public.web_manage_user(text,text,text,text,text,text,text,boolean) TO {}').format(sql.Identifier(writer_name)))
+            connection.execute(sql.SQL('GRANT EXECUTE ON FUNCTION public.web_relink_identity(text,uuid,text,uuid,uuid,uuid,text,text,text) TO {}').format(sql.Identifier(writer_name)))
     except ProvisionError:
         raise
     except Exception:

@@ -172,3 +172,184 @@ export function revokeInvitation(projectId: string, invitationId: string,
     }
   }, signal);
 }
+
+export type DirectEvaluationMode = 'onsite' | 'remote';
+export type DirectEvaluationPatientInput =
+  | { patient_id: string }
+  | { new: { full_name: string; initials?: string | null; disambiguation_note?: string | null; confirm_homonym?: boolean } };
+
+export type DirectEvaluationInput = {
+  operation_id: string;
+  patient: DirectEvaluationPatientInput;
+  evaluator_id: string;
+  test_code?: string;
+  visit: string;
+  initials?: string | null;
+  mode: DirectEvaluationMode;
+};
+
+export type DirectEvaluationResponse = {
+  operation_id: string;
+  invitation_id: string;
+  session_id: string;
+  state: 'issued' | 'redeemed' | 'revoked' | 'expired';
+  mode: DirectEvaluationMode;
+  expires_at: string;
+  summary: InvitationSummary;
+  public_entry_url: string;
+  credential_available: boolean;
+  code?: string;
+};
+
+export type DirectHandoffResponse = {
+  session_id: string;
+  state: 'preparing';
+  activated_at: string;
+  expires_at: string;
+  csrf_token: string;
+};
+
+function decodeDirectEvaluation(body: unknown, status: number): DirectEvaluationResponse {
+  if (!record(body)) throw new ApiError('invalid_response', status);
+  if (
+    !validId(body.operation_id) ||
+    !validId(body.invitation_id) ||
+    !validId(body.session_id) ||
+    !['issued', 'redeemed', 'revoked', 'expired'].includes(String(body.state)) ||
+    !['onsite', 'remote'].includes(String(body.mode)) ||
+    !validDate(body.expires_at) ||
+    body.public_entry_url !== '/pratica' ||
+    typeof body.credential_available !== 'boolean'
+  ) {
+    throw new ApiError('invalid_response', status);
+  }
+  const summary = decodeSummary(body.summary, status);
+  const result: DirectEvaluationResponse = {
+    operation_id: body.operation_id,
+    invitation_id: body.invitation_id,
+    session_id: body.session_id,
+    state: body.state as DirectEvaluationResponse['state'],
+    mode: body.mode as DirectEvaluationMode,
+    expires_at: body.expires_at,
+    summary,
+    public_entry_url: body.public_entry_url,
+    credential_available: body.credential_available,
+  };
+  if (body.credential_available) {
+    if (typeof body.code !== 'string' || !/^[A-Za-z0-9_-]{22,128}$/.test(body.code)) {
+      throw new ApiError('invalid_response', status);
+    }
+    result.code = body.code;
+  }
+  return result;
+}
+
+export function createDirectEvaluation(
+  projectId: string,
+  values: DirectEvaluationInput,
+  csrfToken: string,
+  signal?: AbortSignal,
+): Promise<DirectEvaluationResponse> {
+  input(validId(projectId) && validId(values.operation_id) && validId(values.evaluator_id));
+  input(values.mode === 'onsite' || values.mode === 'remote');
+  const visit = values.visit.trim();
+  input(label.test(visit));
+  const test_code = (values.test_code ?? 'stroop_go_nogo_ptbr').trim();
+  input(test_code === 'stroop_go_nogo_ptbr');
+  let initials: string | null = null;
+  if (values.initials !== undefined && values.initials !== null && values.initials.trim() !== '') {
+    initials = values.initials.trim().toUpperCase();
+    input(initialsPattern.test(initials));
+  }
+  let patient: DirectEvaluationPatientInput;
+  if ('patient_id' in values.patient) {
+    input(validId(values.patient.patient_id));
+    patient = { patient_id: values.patient.patient_id };
+  } else {
+    const trimmedName = values.patient.new.full_name.trim();
+    input(trimmedName.length >= 2 && trimmedName.length <= 120);
+    patient = {
+      new: {
+        full_name: trimmedName,
+        initials: values.patient.new.initials ?? null,
+        disambiguation_note: values.patient.new.disambiguation_note ?? null,
+        confirm_homonym: Boolean(values.patient.new.confirm_homonym),
+      },
+    };
+  }
+  return request(`/api/v1/projects/${projectId}/direct-evaluations`, {
+    method: 'POST',
+    headers: headers(csrfToken),
+    body: JSON.stringify({
+      operation_id: values.operation_id,
+      patient,
+      evaluator_id: values.evaluator_id,
+      test_code,
+      visit,
+      initials,
+      mode: values.mode,
+    }),
+  }, async response => {
+    if (![200, 201].includes(response.status)) throw new ApiError('invalid_response', response.status);
+    let body: unknown;
+    try { body = await response.json(); }
+    catch { throw new ApiError('invalid_response', response.status); }
+    return decodeDirectEvaluation(body, response.status);
+  }, signal);
+}
+
+export function getDirectEvaluation(
+  projectId: string,
+  operationId: string,
+  signal?: AbortSignal,
+): Promise<DirectEvaluationResponse> {
+  input(validId(projectId) && validId(operationId));
+  return request(`/api/v1/projects/${projectId}/direct-evaluations/${operationId}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  }, async response => {
+    if (response.status !== 200) throw new ApiError('invalid_response', response.status);
+    let body: unknown;
+    try { body = await response.json(); }
+    catch { throw new ApiError('invalid_response', response.status); }
+    return decodeDirectEvaluation(body, response.status);
+  }, signal);
+}
+
+export function handoffDirectEvaluation(
+  projectId: string,
+  operationId: string,
+  code: string,
+  csrfToken: string,
+  signal?: AbortSignal,
+): Promise<DirectHandoffResponse> {
+  input(validId(projectId) && validId(operationId) && /^[A-Za-z0-9_-]{22,128}$/.test(code));
+  return request(`/api/v1/projects/${projectId}/direct-evaluations/${operationId}/handoff`, {
+    method: 'POST',
+    headers: headers(csrfToken),
+    body: JSON.stringify({ code }),
+  }, async response => {
+    if (response.status !== 200) throw new ApiError('invalid_response', response.status);
+    let body: unknown;
+    try { body = await response.json(); }
+    catch { throw new ApiError('invalid_response', response.status); }
+    if (
+      !record(body) ||
+      !validId(body.session_id) ||
+      body.state !== 'preparing' ||
+      !validDate(body.activated_at) ||
+      !validDate(body.expires_at) ||
+      typeof body.csrf_token !== 'string' ||
+      !/^[A-Za-z0-9_-]{43}$/.test(body.csrf_token)
+    ) {
+      throw new ApiError('invalid_response', response.status);
+    }
+    return {
+      session_id: body.session_id,
+      state: 'preparing',
+      activated_at: body.activated_at,
+      expires_at: body.expires_at,
+      csrf_token: body.csrf_token,
+    };
+  }, signal);
+}

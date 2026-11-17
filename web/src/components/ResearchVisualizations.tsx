@@ -218,6 +218,8 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
                   <th>Avaliação</th>
                   <th>Precisão (%)</th>
                   <th>Tempo mediano (s)</th>
+                  <th>Instrumento / Versão</th>
+                  <th>Plataforma</th>
                 </tr>
               </thead>
               <tbody>
@@ -230,6 +232,8 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
                     <td className="tabular-nums">{row.assessment_id}</td>
                     <td className="tabular-nums">{value(row.summary.accuracy)}</td>
                     <td className="tabular-nums">{value(row.summary.response_time_seconds)}</td>
+                    <td className="tabular-nums">{row.test_code} / {row.test_version}</td>
+                    <td>{row.platform === 'web' ? 'WEB' : 'PsychoPy local'}</td>
                   </tr>
                 ))}
               </tbody>

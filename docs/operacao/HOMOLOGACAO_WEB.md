@@ -4,7 +4,7 @@ Nota de planejamento CHG-004, 2026-11-06 — **PLANEJADO**:
 Ensaios Google/sessões provisionadas abaixo são históricos. WEB-035 exige
 candidata local por SHA e AUTH-L01–L09 reais, sem transferência de aceites
 OIDC; WEB-033 avalia a conta compartilhada em DEC-03 antes de uso real.
-Decisão: [ADR-006](../arquitetura/ADR-006-autenticacao-local.md). Execução/aceite somente no backlog canônico.
+Decisão: [ADR-006](../arquitetura/ADR-006-autenticacao-local.md). Execução/aceite somente no backlog canônico. Manifesto local da candidata M8 em [RELEASE_CANDIDATA_M8](RELEASE_CANDIDATA_M8.md).
 
 
 Observacoes em 2026-10-21 e retomada em 2026-10-27, somente com dados sinteticos. Estado e aceite da

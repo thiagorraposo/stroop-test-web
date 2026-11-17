@@ -7,14 +7,41 @@ import { createEvaluator, listEvaluators } from '../api/evaluators'
 import type { EvaluatorRecord } from '../api/evaluators'
 import { createPatient, deriveInitials, listPatients } from '../api/patients'
 import type { PatientRecord } from '../api/patients'
-import { createInvitation, revokeInvitation } from '../api/sessions'
-import type { CreatedInvitation, InvitationSummary } from '../api/sessions'
+import {
+  createDirectEvaluation,
+  createInvitation,
+  getDirectEvaluation,
+  handoffDirectEvaluation,
+  revokeInvitation,
+} from '../api/sessions'
+import type {
+  CreatedInvitation,
+  DirectEvaluationMode,
+  InvitationSummary,
+} from '../api/sessions'
+import { QrCodeSvg } from './ui/QrCodeSvg'
+
+function newOperationId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
 
 type Saved = {
   invitation: CreatedInvitation
   participant: string
   visit: string
   summary?: InvitationSummary
+  operationId?: string
+  mode?: DirectEvaluationMode
+  publicEntryUrl?: string
+  credentialAvailable: boolean
 }
 
 type HomonymCandidate = {
@@ -36,11 +63,15 @@ const uncertain = (cause: unknown) =>
 export function SessionInvitation({
   project,
   profile,
+  onHandoffToParticipant,
 }: {
   project: Project
   profile: ProfessionalProfile
+  onHandoffToParticipant?(): void
 }) {
   const canManage = profile.role === 'importacao' || profile.role === 'administracao'
+  const [operationId, setOperationId] = useState<string>(() => newOperationId())
+  const [handoffBusy, setHandoffBusy] = useState(false)
 
   // Estados de Pacientes
   const [patients, setPatients] = useState<PatientRecord[]>([])
@@ -402,39 +433,98 @@ export function SessionInvitation({
     setBusy(true)
     setMessage(null)
     try {
-      const invitation =
-        selectedPatient && selectedEvaluator
-          ? await createInvitation(
-              project.id,
-              {
-                patient_id: selectedPatient.id,
-                evaluator_id: selectedEvaluator.id,
-                visit: v,
-                test_code: testCode,
-                initials: ini || null,
-              },
-              profile.csrf_token,
-              io.signal,
-            )
-          : await createInvitation(
-              project.id,
-              { participant_id: p, visit: v },
-              profile.csrf_token,
-              io.signal,
-            )
-      if (!io.signal.aborted) {
-        const summary = invitation.summary
-        setSaved({
-          invitation,
-          participant: summary ? summary.participant_code : p,
-          visit: v,
-          summary,
-        })
-        setReviewing(false)
+      if (selectedPatient && selectedEvaluator) {
+        const mode: DirectEvaluationMode = applicationMode === 'presencial' ? 'onsite' : 'remote'
+        const direct = await createDirectEvaluation(
+          project.id,
+          {
+            operation_id: operationId,
+            patient: { patient_id: selectedPatient.id },
+            evaluator_id: selectedEvaluator.id,
+            test_code: testCode,
+            visit: v,
+            initials: ini || null,
+            mode,
+          },
+          profile.csrf_token,
+          io.signal,
+        )
+        if (!io.signal.aborted) {
+          setSaved({
+            invitation: {
+              invitation_id: direct.invitation_id,
+              session_id: direct.session_id,
+              code: direct.code ?? '',
+              expires_at: direct.expires_at,
+              state: 'issued',
+              summary: direct.summary,
+            },
+            participant: direct.summary.participant_code,
+            visit: v,
+            summary: direct.summary,
+            operationId: direct.operation_id,
+            mode: direct.mode,
+            publicEntryUrl: direct.public_entry_url,
+            credentialAvailable: direct.credential_available,
+          })
+          setReviewing(false)
+        }
+      } else {
+        const invitation = await createInvitation(
+          project.id,
+          { participant_id: p, visit: v },
+          profile.csrf_token,
+          io.signal,
+        )
+        if (!io.signal.aborted) {
+          const summary = invitation.summary
+          setSaved({
+            invitation,
+            participant: summary ? summary.participant_code : p,
+            visit: v,
+            summary,
+            credentialAvailable: true,
+          })
+          setReviewing(false)
+        }
       }
     } catch (cause) {
       if (!io.signal.aborted) {
         if (uncertain(cause)) {
+          if (selectedPatient && selectedEvaluator) {
+            try {
+              const recovered = await getDirectEvaluation(project.id, operationId, io.signal)
+              if (!io.signal.aborted) {
+                setSaved({
+                  invitation: {
+                    invitation_id: recovered.invitation_id,
+                    session_id: recovered.session_id,
+                    code: '',
+                    expires_at: recovered.expires_at,
+                    state: 'issued',
+                    summary: recovered.summary,
+                  },
+                  participant: recovered.summary.participant_code,
+                  visit: v,
+                  summary: recovered.summary,
+                  operationId: recovered.operation_id,
+                  mode: recovered.mode,
+                  publicEntryUrl: recovered.public_entry_url,
+                  credentialAvailable: false,
+                })
+                setReviewing(false)
+                setMessage(
+                  'A operação foi confirmada no servidor após a falha de resposta, mas o código original não pode ser recuperado. Você pode revogar este convite e preparar uma nova sessão.',
+                )
+                return
+              }
+            } catch (lookupError) {
+              if (lookupError instanceof ApiError && lookupError.status === 404) {
+                setMessage('Nenhuma sessão foi criada para esta tentativa. Revise os dados e tente novamente.')
+                return
+              }
+            }
+          }
           setUnknownCreation(true)
           setMessage(
             'Não foi possível confirmar a criação. A sessão pode ter sido criada, mas o código não pode ser recuperado. Nenhuma nova emissão será feita automaticamente. Sem identificador confirmado, não é possível revogar este convite por esta tela. Informe o responsável antes de preparar outra sessão.',
@@ -449,6 +539,97 @@ export function SessionInvitation({
       if (!io.signal.aborted) {
         operation.current = null
         setBusy(false)
+      }
+    }
+  }
+
+  async function queryUnknownOperation() {
+    if (operation.current || busy) return
+    const io = new AbortController()
+    operation.current = io
+    setBusy(true)
+    setMessage(null)
+    try {
+      const recovered = await getDirectEvaluation(project.id, operationId, io.signal)
+      if (!io.signal.aborted) {
+        setUnknownCreation(false)
+        setSaved({
+          invitation: {
+            invitation_id: recovered.invitation_id,
+            session_id: recovered.session_id,
+            code: '',
+            expires_at: recovered.expires_at,
+            state: 'issued',
+            summary: recovered.summary,
+          },
+          participant: recovered.summary.participant_code,
+          visit: recovered.summary.visit,
+          summary: recovered.summary,
+          operationId: recovered.operation_id,
+          mode: recovered.mode,
+          publicEntryUrl: recovered.public_entry_url,
+          credentialAvailable: false,
+        })
+        setMessage(
+          'Operação localizada no servidor sem código recuperável. Revogue o convite confirmado antes de preparar outra sessão.',
+        )
+      }
+    } catch (cause) {
+      if (!io.signal.aborted) {
+        if (cause instanceof ApiError && cause.status === 404) {
+          setUnknownCreation(false)
+          setMessage('Nenhuma operação registrada no servidor para este identificador. Você pode enviar novamente.')
+        } else {
+          setMessage(apiErrorMessage(cause))
+        }
+      }
+    } finally {
+      if (!io.signal.aborted) {
+        operation.current = null
+        setBusy(false)
+      }
+    }
+  }
+
+  async function startOnsiteHandoff() {
+    if (!saved || !saved.operationId || !saved.invitation.code || handoffBusy || operation.current) return
+    const io = new AbortController()
+    operation.current = io
+    setHandoffBusy(true)
+    setMessage(null)
+    try {
+      await handoffDirectEvaluation(
+        project.id,
+        saved.operationId,
+        saved.invitation.code,
+        profile.csrf_token,
+        io.signal,
+      )
+      if (!io.signal.aborted) {
+        setSaved(null)
+        setSelectedPatient(null)
+        setSelectedEvaluator(null)
+        setParticipant('')
+        setInitials('')
+        setVisit('')
+        onHandoffToParticipant?.()
+      }
+    } catch (cause) {
+      if (!io.signal.aborted) {
+        if (cause instanceof ApiError && [401, 403].includes(cause.status)) {
+          window.dispatchEvent(new Event('stroop-professional-session-ended'))
+        } else {
+          setMessage(
+            uncertain(cause)
+              ? 'Não foi possível confirmar a entrega presencial. Verifique sua sessão antes de continuar.'
+              : apiErrorMessage(cause),
+          )
+        }
+      }
+    } finally {
+      if (!io.signal.aborted) {
+        operation.current = null
+        setHandoffBusy(false)
       }
     }
   }
@@ -499,6 +680,7 @@ export function SessionInvitation({
   function reset() {
     if (operation.current) return
     focusForm.current = true
+    setOperationId(newOperationId())
     setSaved(null)
     setRevoked(false)
     setUnknownCreation(false)
@@ -1454,44 +1636,83 @@ export function SessionInvitation({
             </div>
           )}
 
-          <div className="prep-code-box">
-            <span className="prep-code-label">Código de uso único:</span>
-            <output aria-label="Código do convite" className="invitation-code-display prep-code-text">
-              {saved.invitation.code}
-            </output>
-            <span className="prep-code-expiry">Expira em: {saved.invitation.expires_at} (UTC)</span>
-          </div>
+          {saved.credentialAvailable && saved.invitation.code ? (
+            <div className="prep-code-box">
+              <span className="prep-code-label">Código de uso único:</span>
+              <output aria-label="Código do convite" className="invitation-code-display prep-code-text">
+                {saved.invitation.code}
+              </output>
+              <span className="prep-code-expiry">Expira em: {saved.invitation.expires_at} (UTC)</span>
+              {saved.mode === 'remote' && (
+                <div className="prep-qr-container" style={{ marginTop: '0.75rem' }}>
+                  <QrCodeSvg value={saved.invitation.code} label="QR code do código do convite" />
+                  <p className="quiet" style={{ marginTop: '0.5rem' }}>
+                    Endereço público de acesso (sem credencial na URL): <code>{saved.publicEntryUrl ?? '/pratica'}</code>
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p role="status" className="notice">
+              Operação confirmada (ID {saved.operationId}). O código de convite não pode ser recuperado após criação anterior; revogue este convite antes de emitir um novo.
+            </p>
+          )}
 
           <p className="quiet prep-success-notice">
             Entregue este código ao participante pelo canal seguro apropriado. O código de acesso só é exibido nesta confirmação e não fica gravado na URL da prática.
           </p>
 
           <div className="invitation-actions-row prep-success-actions">
+            {saved.mode === 'onsite' && saved.credentialAvailable && saved.invitation.code && saved.operationId && (
+              <button
+                type="button"
+                className="button primary"
+                disabled={busy || handoffBusy}
+                onClick={() => void startOnsiteHandoff()}
+              >
+                {handoffBusy ? 'Iniciando modo presencial…' : 'Iniciar neste dispositivo'}
+              </button>
+            )}
             <a
-              className="button primary"
-              href="/pratica"
+              className={saved.mode === 'onsite' ? 'button secondary' : 'button primary'}
+              href={saved.publicEntryUrl ?? '/pratica'}
               target="_blank"
               rel="noopener noreferrer"
             >
               Abrir prática em outra aba ↗
             </a>
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => {
-                void navigator.clipboard.writeText(saved.invitation.code)
-              }}
-            >
-              📋 Copiar código
-            </button>
+            {saved.credentialAvailable && saved.invitation.code && (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => {
+                  void navigator.clipboard.writeText(saved.invitation.code)
+                }}
+              >
+                📋 Copiar código
+              </button>
+            )}
             <button
               className="button secondary button-danger"
-              disabled={busy || !canManage}
+              disabled={busy || handoffBusy || !canManage}
               onClick={() => void revoke()}
             >
               {busy ? 'Revogando…' : 'Revogar convite'}
             </button>
           </div>
+        </div>
+      )}
+
+      {unknownCreation && (
+        <div className="prep-status-banner info" style={{ marginTop: '1rem' }}>
+          <button
+            type="button"
+            className="button secondary"
+            disabled={busy}
+            onClick={() => void queryUnknownOperation()}
+          >
+            {busy ? 'Consultando operação…' : 'Consultar status da operação'}
+          </button>
         </div>
       )}
 

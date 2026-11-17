@@ -11,13 +11,14 @@ import json
 import secrets
 from datetime import timezone
 from pathlib import Path
+from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
 from api.auth import (
-    TOKEN_PATTERN, _cookie, _origin_is_valid, _professional_context,
+    PROFESSIONAL_COOKIE, TOKEN_PATTERN, _cookie, _origin_is_valid, _professional_context,
     csrf_is_valid, opaque_user_id, parse_opaque_user_id, require_professional,
     _professional_rate_limit,
 )
@@ -76,6 +77,35 @@ class RelinkInvitation(RequestModel):
     patient_id: str | None = None
     evaluator_id: str | None = None
     reason_code: str
+
+
+class DirectEvaluationPatientNewFields(RequestModel):
+    full_name: str
+    initials: str | None = None
+    disambiguation_note: str | None = None
+    confirm_homonym: bool = False
+
+
+class DirectEvaluationPatientExisting(RequestModel):
+    patient_id: str
+
+
+class DirectEvaluationPatientNew(RequestModel):
+    new: DirectEvaluationPatientNewFields
+
+
+class CreateDirectEvaluation(RequestModel):
+    operation_id: str
+    patient: DirectEvaluationPatientExisting | DirectEvaluationPatientNew
+    evaluator_id: str
+    test_code: str = "stroop_go_nogo_ptbr"
+    visit: str
+    initials: str | None = None
+    mode: Literal["onsite", "remote"]
+
+
+class HandoffDirectEvaluation(RequestModel):
+    code: str
 
 
 def _reject_query(request: Request) -> None:
@@ -441,6 +471,215 @@ async def relink_invitation(
         raise APIError("not_found") from None
     except web_registry.PersistenceError:
         raise APIError("service_unavailable") from None
+
+
+def _parse_uuid_field(raw_value: str) -> UUID:
+    try:
+        return UUID(raw_value)
+    except ValueError:
+        raise APIError("invalid_request") from None
+
+
+def _direct_evaluation_hash(body: CreateDirectEvaluation, *, evaluator_id: UUID, patient_id: UUID | None) -> str:
+    if patient_id is not None:
+        patient_repr: dict[str, object] = {"patient_id": str(patient_id)}
+    else:
+        assert isinstance(body.patient, DirectEvaluationPatientNew)
+        patient_repr = {
+            "new": {
+                "full_name": body.patient.new.full_name.strip(),
+                "initials": body.patient.new.initials.strip().upper() if body.patient.new.initials is not None else None,
+                "disambiguation_note": body.patient.new.disambiguation_note.strip() if body.patient.new.disambiguation_note is not None else None,
+                "confirm_homonym": body.patient.new.confirm_homonym,
+            }
+        }
+    canonical = json.dumps(
+        {
+            "patient": patient_repr,
+            "evaluator_id": str(evaluator_id),
+            "test_code": body.test_code.strip(),
+            "visit": body.visit.strip(),
+            "initials": body.initials.strip().upper() if body.initials is not None and body.initials.strip() else None,
+            "mode": body.mode,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+@router.post("/projects/{project_id}/direct-evaluations")
+async def create_direct_evaluation(
+    project_id: UUID,
+    request: Request,
+    body: CreateDirectEvaluation,
+):
+    _reject_query(request)
+    actor = _professional_write(request, "view_dashboard")
+    config: APIConfig = request.app.state.config
+    operation_id = _parse_uuid_field(body.operation_id)
+    evaluator_id = _parse_uuid_field(body.evaluator_id)
+    code = secrets.token_urlsafe(32)
+    code_hash = hashlib.sha256(code.encode("ascii")).hexdigest()
+    invitation_id, session_id = uuid4(), uuid4()
+    patient_id: UUID | None = None
+    new_patient: dict | None = None
+    if isinstance(body.patient, DirectEvaluationPatientExisting):
+        patient_id = _parse_uuid_field(body.patient.patient_id)
+    else:
+        new_patient = {
+            "full_name": body.patient.new.full_name,
+            "initials": body.patient.new.initials,
+            "disambiguation_note": body.patient.new.disambiguation_note,
+            "confirm_homonym": body.patient.new.confirm_homonym,
+        }
+    try:
+        result = application.create_direct_evaluation(
+            config.database_url,
+            operation_id=operation_id,
+            request_hash=_direct_evaluation_hash(body, evaluator_id=evaluator_id, patient_id=patient_id),
+            invitation_id=invitation_id,
+            session_id=session_id,
+            project_id=project_id,
+            code_hash=code_hash,
+            patient_id=patient_id,
+            new_patient=new_patient,
+            evaluator_id=evaluator_id,
+            visit=body.visit,
+            test_code=body.test_code,
+            initials=body.initials,
+            mode=body.mode,
+            actor=actor,
+        )
+    except application.DuplicateCandidateError as exc:
+        raise APIError("duplicate_candidate_found", extra={"candidates": exc.candidates}) from None
+    except application.InvalidDataError:
+        raise APIError("invalid_request") from None
+    except application.ForbiddenError:
+        raise APIError("permission_denied") from None
+    except application.MissingError:
+        raise APIError("not_found") from None
+    except application.ConflictError:
+        raise APIError("state_conflict") from None
+    except PersistenceError:
+        raise _persistence_error() from None
+
+    payload = {
+        "operation_id": str(result["operation_id"]),
+        "invitation_id": str(result["invitation_id"]),
+        "session_id": str(result["session_id"]),
+        "state": result["state"],
+        "mode": result["mode"],
+        "expires_at": _serialize_time(result["expires_at"]),
+        "summary": result["summary"],
+        "public_entry_url": "/pratica",
+        "credential_available": result["credential_available"],
+    }
+    if result["created"]:
+        payload["code"] = code
+        return JSONResponse(payload, status_code=201)
+    return JSONResponse(payload, status_code=200)
+
+
+@router.get("/projects/{project_id}/direct-evaluations/{operation_id}")
+async def get_direct_evaluation(
+    project_id: UUID,
+    operation_id: UUID,
+    request: Request,
+):
+    await _reject_empty_body(request)
+    actor = _professional_read(request, "view_dashboard")
+    try:
+        result = application.get_direct_evaluation(
+            request.app.state.config.database_url,
+            project_id=project_id,
+            operation_id=operation_id,
+            actor=actor,
+        )
+    except application.MissingError:
+        raise APIError("not_found") from None
+    except PersistenceError:
+        raise _persistence_error() from None
+    if result is None:
+        raise APIError("not_found")
+    return {
+        "operation_id": str(result["operation_id"]),
+        "invitation_id": str(result["invitation_id"]),
+        "session_id": str(result["session_id"]),
+        "state": result["state"],
+        "mode": result["mode"],
+        "expires_at": _serialize_time(result["expires_at"]),
+        "summary": result["summary"],
+        "public_entry_url": "/pratica",
+        "credential_available": False,
+    }
+
+
+@router.post("/projects/{project_id}/direct-evaluations/{operation_id}/handoff")
+async def handoff_direct_evaluation(
+    project_id: UUID,
+    operation_id: UUID,
+    request: Request,
+    body: HandoffDirectEvaluation,
+):
+    _reject_query(request)
+    actor, _, prof_token = _professional_context(request, "view_dashboard")
+    config: APIConfig = request.app.state.config
+    if not _origin_is_valid(request, config) or not csrf_is_valid(request, config, prof_token):
+        raise APIError("csrf_failed")
+    _professional_rate_limit(request, prof_token, "write")
+    if not body.code.isascii() or not 32 <= len(body.code) <= 128:
+        raise APIError("not_found")
+    participant_token = secrets.token_urlsafe(32)
+    try:
+        result = application.handoff_direct_evaluation(
+            config.database_url,
+            project_id=project_id,
+            operation_id=operation_id,
+            code_hash=hashlib.sha256(body.code.encode("ascii")).hexdigest(),
+            token_hash=hashlib.sha256(participant_token.encode("ascii")).hexdigest(),
+            actor=actor,
+            professional_token_hash=hashlib.sha256(prof_token.encode("ascii")).hexdigest(),
+            local_auth=config.auth_mode == "local",
+        )
+    except application.ExpiredError:
+        raise APIError("invitation_expired") from None
+    except application.ConflictError:
+        raise APIError("state_conflict") from None
+    except application.ForbiddenError:
+        raise APIError("permission_denied") from None
+    except application.MissingError:
+        raise APIError("not_found") from None
+    except PersistenceError:
+        raise _persistence_error() from None
+
+    response = JSONResponse(
+        {
+            "session_id": str(result["session_id"]),
+            "state": result["state"],
+            "activated_at": _serialize_time(result["activated_at"]),
+            "expires_at": _serialize_time(result["expires_at"]),
+            "csrf_token": _participant_csrf(config, participant_token),
+        },
+        status_code=200,
+    )
+    response.delete_cookie(
+        PROFESSIONAL_COOKIE,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+    response.set_cookie(
+        PARTICIPANT_COOKIE,
+        participant_token,
+        max_age=1800,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
+    return response
 
 
 @router.post("/participant/redeem", status_code=201)

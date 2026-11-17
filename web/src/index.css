@@ -815,6 +815,9 @@
   padding: 24px;
   box-shadow: var(--shadow-xs);
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 :where(.professional-theme) .prep-section-card:focus-within {
@@ -857,11 +860,12 @@
   grid-template-columns: 1fr 1.2fr auto;
   gap: 14px;
   align-items: flex-end;
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
   :where(.professional-theme) .prep-lookup-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
   }
 }
@@ -870,6 +874,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 :where(.professional-theme) .prep-field-label {
@@ -925,12 +930,18 @@
 :where(.professional-theme) .prep-action-cell {
   display: flex;
   align-items: flex-end;
+  min-width: 0;
+  max-width: 100%;
 }
 
 :where(.professional-theme) .button-toggle-registry {
-  white-space: nowrap;
-  height: 42px;
-  padding: 0 16px;
+  white-space: normal;
+  min-height: 42px;
+  height: auto;
+  max-width: 100%;
+  padding: 8px 16px;
+  line-height: 1.25;
+  text-align: center;
 }
 
 :where(.professional-theme) .prep-inline-feedback {
@@ -1093,8 +1104,9 @@
 /* Seção 3: Grid de Parâmetros da Sessão */
 :where(.professional-theme) .prep-session-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 :where(.professional-theme) .prep-participant-code-wrap {
@@ -1118,14 +1130,15 @@
 /* Seção 4: Modalidades */
 :where(.professional-theme) .prep-mode-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
   margin: 0;
+  min-width: 0;
 }
 
 @media (max-width: 700px) {
   :where(.professional-theme) .prep-mode-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

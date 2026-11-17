@@ -96,6 +96,7 @@ class PostgresMigrationsTests(unittest.TestCase):
                 "0012_local_authentication.sql",
                 "0013_local_user_management.sql",
                 "0014_central_patients_evaluators.sql",
+                "0015_direct_evaluation_operations.sql",
             ],
         )
         with psycopg.connect(TEST_DATABASE_URL) as connection:
@@ -154,7 +155,7 @@ class PostgresMigrationsTests(unittest.TestCase):
                 WHERE constraint_schema = 'public' AND constraint_type = 'FOREIGN KEY'
                 """
             ).fetchone()[0]
-            self.assertEqual(foreign_keys, 42)
+            self.assertEqual(foreign_keys, 48)
             self.assertIn("web_legacy_project_links", tables)
             self.assertEqual(connection.execute(
                 "SELECT COUNT(*) FROM web_legacy_project_links").fetchone()[0], 0)
@@ -184,6 +185,7 @@ class PostgresMigrationsTests(unittest.TestCase):
                 "0012_local_authentication.sql",
                 "0013_local_user_management.sql",
                 "0014_central_patients_evaluators.sql",
+                "0015_direct_evaluation_operations.sql",
         ])
         with psycopg.connect(TEST_DATABASE_URL) as connection:
             self.assertEqual(connection.execute("SELECT COUNT(*) FROM assessments").fetchone()[0], 1)
@@ -243,7 +245,7 @@ class PostgresMigrationsTests(unittest.TestCase):
                       connection.execute(invitation_query, (session_id,)).fetchall())
         self.assertEqual(apply_migrations(TEST_DATABASE_URL), [
             '0006_web_completed_results.sql', '0007_web_legacy_project_links.sql', '0008_web_user_lock.sql',
-            '0009_web_csv_imports.sql', '0010_web_user_management.sql', '0011_web_incremental_sessions.sql', '0012_local_authentication.sql', '0013_local_user_management.sql', '0014_central_patients_evaluators.sql'])
+            '0009_web_csv_imports.sql', '0010_web_user_management.sql', '0011_web_incremental_sessions.sql', '0012_local_authentication.sql', '0013_local_user_management.sql', '0014_central_patients_evaluators.sql', '0015_direct_evaluation_operations.sql'])
         with psycopg.connect(TEST_DATABASE_URL) as connection:
             after = (connection.execute(session_query, (session_id,)).fetchall(),
                      connection.execute(order_query, (session_id,)).fetchall(),
@@ -337,6 +339,7 @@ class PostgresMigrationStaticTests(unittest.TestCase):
                 "0012_local_authentication.sql",
                 "0013_local_user_management.sql",
                 "0014_central_patients_evaluators.sql",
+                "0015_direct_evaluation_operations.sql",
             ],
         )
 

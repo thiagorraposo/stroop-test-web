@@ -16,7 +16,11 @@ export function AnalysisExplorer({ context, grouping, onGrouping, onSelect }: {
     if (value.level === 'trial') value.metric_code = 'trials'
     onGrouping(value)
   }
-  const canSelect = ['project', 'visit', 'evaluator', 'condition', 'response_type'].includes(grouping.dimension)
+  const canSelect = ['project', 'visit', 'evaluator', 'condition', 'go_nogo', 'response_type', 'instrument_version'].includes(grouping.dimension)
+    || (grouping.dimension === 'date' && (grouping.time_bucket ?? 'day') === 'day')
+  const numericValues = data.groups.map(group => group.value).filter((v): v is number => v !== null)
+  const peak = Math.max(1, ...numericValues)
+  const minVal = Math.min(0, ...numericValues)
   return <section className="analysis-explorer" aria-label="Exploração da consulta aplicada">
     <h3>Explorar o conjunto completo</h3>
     <p>{context.counts.participants} participantes · {context.counts.visits} visitas · {context.counts.assessments} avaliações · {context.counts.trials} tentativas selecionadas.</p>
@@ -32,6 +36,31 @@ export function AnalysisExplorer({ context, grouping, onGrouping, onSelect }: {
           ...data.indicators.map(item => ({ value: item.code, label: `${item.label} — média por avaliação (${item.unit})`, disabled: !singleStroop || grouping.level === 'trial' }))]} />
     </div>
     <p className="quiet">Métricas oficiais da avaliação completa, agregadas no servidor. Ausentes são excluídos da média e contados separadamente. Instrumentos, versões, protocolos e plataformas são estratificados; visitas repetidas são descritivas. Datas WEB em UTC; legado sem fuso mantém a data registrada.</p>
+    {data.groups.length > 0 && (
+      <figure className="dashboard-chart analytics-card" style={{ margin: '1rem 0' }}>
+        <figcaption>
+          Comparação visual dos grupos ({grouping.metric_code ?? 'assessments'} · população: {data.population})
+        </figcaption>
+        <ul className="chart-meter-list">
+          {data.groups.map(group => (
+            <li key={`chart-${JSON.stringify(group.key)}`}>
+              <span>{group.label} ({group.assessments} aval. / {group.trials} tent.{group.missing > 0 ? ` · ${group.missing} ausente(s)` : ''})</span>
+              {group.value !== null && (
+                <meter
+                  min={minVal}
+                  max={peak}
+                  value={group.value}
+                  aria-label={`${group.label}: ${formatMetric(group.value, 3)} ${group.unit}`}
+                />
+              )}
+              <strong className="tabular-nums">
+                {group.value === null ? 'Ausente' : `${formatMetric(group.value, 3)} ${group.unit}`}
+              </strong>
+            </li>
+          ))}
+        </ul>
+      </figure>
+    )}
     <DataTable caption="Grupos analíticos e população" rows={data.groups} rowKey={row => JSON.stringify(row.key)} columns={[
       { key: 'group', label: 'Grupo e proveniência', render: row => <>{row.label}<details><summary>Identificação do grupo</summary>{row.key.map((value, index) => <p key={index}>{String(value ?? 'Não informado')}</p>)}</details></> },
       { key: 'value', label: 'Valor (unidade)', render: row => `${formatMetric(row.value, 3)} ${row.unit}` },

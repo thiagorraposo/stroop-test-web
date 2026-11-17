@@ -690,6 +690,136 @@ class WebSessionsPostgresTests(unittest.TestCase):
         self.assertEqual(blocked_eval.status_code, 409, blocked_eval.text)
         self.assertEqual(blocked_eval.json()["error"]["code"], "state_conflict")
 
+    def test_prep7_preparacao_direta_idempotencia_rollback_concorrencia_e_handoff_presencial(self):
+        from uuid import uuid4
+
+        evaluator = self.importer.post(
+            "/api/v1/evaluators",
+            json={"full_name": "Avaliadora Direta Sintetica", "initials": "ADS"},
+        )
+        self.assertEqual(evaluator.status_code, 201, evaluator.text)
+        evaluator_id = evaluator.json()["id"]
+
+        # 1. Rollback integral em falha (avaliador inexistente ao tentar criar novo paciente inline)
+        bad_op_id = str(uuid4())
+        bad_resp = self.importer.post(
+            f"/api/v1/projects/{self.project_id}/direct-evaluations",
+            json={
+                "operation_id": bad_op_id,
+                "patient": {"new": {"full_name": "Paciente Rollback Sintetico", "initials": "PRS"}},
+                "evaluator_id": str(uuid4()),
+                "test_code": "stroop_go_nogo_ptbr",
+                "visit": "V_DIRECT_1",
+                "mode": "remote",
+            },
+        )
+        self.assertEqual(bad_resp.status_code, 404, bad_resp.text)
+        with psycopg.connect(self.database_url) as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM web_patients").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT count(*) FROM web_invitations").fetchone()[0], 0)
+
+        # 2. Criacao atomica com novo paciente, idempotencia, payload divergente (409) e GET de status
+        op_remote = str(uuid4())
+        remote_body = {
+            "operation_id": op_remote,
+            "patient": {"new": {"full_name": "Paciente Direto Sintetico", "initials": "PDS"}},
+            "evaluator_id": evaluator_id,
+            "test_code": "stroop_go_nogo_ptbr",
+            "visit": "V_DIRECT_1",
+            "mode": "remote",
+        }
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            r1, r2 = list(pool.map(
+                lambda _: self.importer.post(f"/api/v1/projects/{self.project_id}/direct-evaluations", json=remote_body),
+                range(2),
+            ))
+        statuses = sorted([r1.status_code, r2.status_code])
+        self.assertEqual(statuses, [200, 201], (r1.text, r2.text))
+        created_json = r1.json() if r1.status_code == 201 else r2.json()
+        repeat_json = r2.json() if r1.status_code == 201 else r1.json()
+        self.assertTrue(created_json["credential_available"])
+        self.assertIn("code", created_json)
+        self.assertEqual(created_json["public_entry_url"], "/pratica")
+        self.assertFalse(repeat_json["credential_available"])
+        self.assertNotIn("code", repeat_json)
+        self.assertEqual(repeat_json["invitation_id"], created_json["invitation_id"])
+
+        # Divergente com mesmo operation_id -> 409
+        div_resp = self.importer.post(
+            f"/api/v1/projects/{self.project_id}/direct-evaluations",
+            json={**remote_body, "visit": "V_OUTRA"},
+        )
+        self.assertEqual(div_resp.status_code, 409, div_resp.text)
+
+        # Homonimo sem confirm_homonym -> 409 duplicate_candidate_found sem criar duplicata
+        op_hom = str(uuid4())
+        hom_resp = self.importer.post(
+            f"/api/v1/projects/{self.project_id}/direct-evaluations",
+            json={**remote_body, "operation_id": op_hom},
+        )
+        self.assertEqual(hom_resp.status_code, 409, hom_resp.text)
+        self.assertEqual(hom_resp.json()["error"]["code"], "duplicate_candidate_found")
+        with psycopg.connect(self.database_url) as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM web_patients").fetchone()[0], 1)
+
+        # Consulta de operacao para recuperacao de estado desconhecido
+        get_op = self.importer.get(f"/api/v1/projects/{self.project_id}/direct-evaluations/{op_remote}")
+        self.assertEqual(get_op.status_code, 200, get_op.text)
+        self.assertFalse(get_op.json()["credential_available"])
+        self.assertNotIn("code", get_op.json())
+        self.assertEqual(
+            self.outsider.get(f"/api/v1/projects/{self.project_id}/direct-evaluations/{op_remote}").status_code,
+            404,
+        )
+
+        # Handoff negado para modo remote (409)
+        bad_handoff = self.importer.post(
+            f"/api/v1/projects/{self.project_id}/direct-evaluations/{op_remote}/handoff",
+            json={"code": created_json["code"]},
+        )
+        self.assertEqual(bad_handoff.status_code, 409, bad_handoff.text)
+
+        # 3. Modo presencial (onsite) com handoff atomico: resgata convite e encerra sessao profissional
+        patient_id = created_json["summary"]["patient_id"]
+        op_onsite = str(uuid4())
+        onsite_resp = self.importer.post(
+            f"/api/v1/projects/{self.project_id}/direct-evaluations",
+            json={
+                "operation_id": op_onsite,
+                "patient": {"patient_id": patient_id},
+                "evaluator_id": evaluator_id,
+                "test_code": "stroop_go_nogo_ptbr",
+                "visit": "V_ONSITE_1",
+                "mode": "onsite",
+            },
+        )
+        self.assertEqual(onsite_resp.status_code, 201, onsite_resp.text)
+        onsite_data = onsite_resp.json()
+
+        # Codigo errado no handoff nao revoga a sessao profissional nem consome convite
+        wrong_handoff = self.importer.post(
+            f"/api/v1/projects/{self.project_id}/direct-evaluations/{op_onsite}/handoff",
+            json={"code": "X" * 43},
+        )
+        self.assertEqual(wrong_handoff.status_code, 404, wrong_handoff.text)
+        self.assertEqual(self.importer.get("/api/v1/auth/me").status_code, 200)
+
+        # Handoff valido: resgata sessao participante e derruba sessao profissional
+        ok_handoff = self.importer.post(
+            f"/api/v1/projects/{self.project_id}/direct-evaluations/{op_onsite}/handoff",
+            json={"code": onsite_data["code"]},
+        )
+        self.assertEqual(ok_handoff.status_code, 200, ok_handoff.text)
+        handoff_json = ok_handoff.json()
+        self.assertEqual(handoff_json["state"], "preparing")
+        self.assertEqual(handoff_json["session_id"], onsite_data["session_id"])
+        # Sessao profissional encerrada no servidor
+        self.assertEqual(self.importer.get("/api/v1/auth/me").status_code, 401)
+        # Sessao participante ativa via cookie emitido pelo handoff
+        ps = self.importer.get("/api/v1/participant/session")
+        self.assertEqual(ps.status_code, 200, ps.text)
+        self.assertEqual(ps.json()["session_id"], onsite_data["session_id"])
+
 
 if __name__ == "__main__":
     unittest.main()

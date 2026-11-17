@@ -9,7 +9,11 @@ from uuid import UUID
 
 from stroop.domain.auth import AppUser
 from stroop.domain.registry import (
+    DuplicateCandidateError,
     InvalidRegistryDataError,
+    derive_initials,
+    normalize_person_name,
+    validate_disambiguation_note,
     validate_initials,
     validate_test_code,
 )
@@ -161,15 +165,126 @@ def redeem_limit(database_url: str, remote_hash: str, limit: int, window_seconds
 
 
 __all__ = ["InvalidDataError", "ConflictError", "ExpiredError", "MissingError",
+           "ForbiddenError", "DuplicateCandidateError",
            "PersistenceError", "projects", "create_project", "members", "set_member",
            "create_invitation", "create_cadastral_invitation", "revoke_invitation",
+           "create_direct_evaluation", "get_direct_evaluation", "handoff_direct_evaluation",
            "redeem", "participant_session", "start", "abort", "redeem_limit", "logout"]
 
 
 ConflictError = persistence.ConflictError
 ExpiredError = persistence.ExpiredError
 MissingError = persistence.MissingError
+ForbiddenError = persistence.ForbiddenError
 UnknownCredentialError = persistence.UnknownCredentialError
+
+
+def create_direct_evaluation(
+    database_url: str,
+    *,
+    operation_id: UUID,
+    request_hash: str,
+    invitation_id: UUID,
+    session_id: UUID,
+    project_id: UUID,
+    code_hash: str,
+    patient_id: UUID | None,
+    new_patient: dict | None,
+    evaluator_id: UUID,
+    visit: str,
+    test_code: str | None,
+    initials: str | None,
+    mode: str,
+    actor: AppUser,
+) -> dict:
+    if mode not in {"onsite", "remote"}:
+        raise InvalidDataError
+    try:
+        instrument = validate_test_code(test_code)
+        cleaned_initials = validate_initials(initials) if initials is not None else None
+        prepared_new_patient: dict | None = None
+        if patient_id is None:
+            if not isinstance(new_patient, dict):
+                raise InvalidDataError
+            cleaned_full_name, normalized_full_name = normalize_person_name(
+                new_patient.get("full_name", "")
+            )
+            cleaned_pat_initials = (
+                validate_initials(new_patient["initials"])
+                if new_patient.get("initials") is not None
+                else derive_initials(cleaned_full_name)
+            )
+            cleaned_note = validate_disambiguation_note(new_patient.get("disambiguation_note"))
+            prepared_new_patient = {
+                "full_name": cleaned_full_name,
+                "normalized_name": normalized_full_name,
+                "initials": cleaned_pat_initials,
+                "disambiguation_note": cleaned_note,
+                "confirm_homonym": bool(new_patient.get("confirm_homonym", False)),
+            }
+    except InvalidRegistryDataError as exc:
+        raise InvalidDataError from exc
+    return persistence.create_direct_evaluation(
+        database_url,
+        operation_id=operation_id,
+        request_hash=request_hash,
+        invitation_id=invitation_id,
+        session_id=session_id,
+        project_id=project_id,
+        code_hash=code_hash,
+        patient_id=patient_id,
+        new_patient=prepared_new_patient,
+        evaluator_id=evaluator_id,
+        visit=_label(visit),
+        test_code=instrument["test_code"],
+        test_version=instrument["test_version"],
+        protocol_id=instrument["protocol_id"],
+        initials=cleaned_initials,
+        mode=mode,
+        issuer=actor.issuer,
+        subject=actor.subject,
+    )
+
+
+def get_direct_evaluation(
+    database_url: str,
+    *,
+    project_id: UUID,
+    operation_id: UUID,
+    actor: AppUser,
+) -> dict | None:
+    return persistence.get_direct_evaluation(
+        database_url,
+        project_id=project_id,
+        operation_id=operation_id,
+        issuer=actor.issuer,
+        subject=actor.subject,
+    )
+
+
+def handoff_direct_evaluation(
+    database_url: str,
+    *,
+    project_id: UUID,
+    operation_id: UUID,
+    code_hash: str,
+    token_hash: str,
+    actor: AppUser,
+    professional_token_hash: str,
+    local_auth: bool,
+) -> dict:
+    return persistence.handoff_direct_evaluation(
+        database_url,
+        project_id=project_id,
+        operation_id=operation_id,
+        code_hash=code_hash,
+        token_hash=token_hash,
+        condition_order=_ordered_conditions(),
+        issuer=actor.issuer,
+        subject=actor.subject,
+        professional_token_hash=professional_token_hash,
+        local_auth=local_auth,
+    )
 
 
 def logout(database_url: str, token_hash: str) -> None:
