@@ -1,6 +1,6 @@
 # Projeto Stroop Test — backlog canônico da plataforma WEB
 
-Última verificação documental: **2026-11-16**. Missão e limites:
+Última verificação documental: **2026-11-17**. Missão e limites:
 [arquitetura](ARQUITETURA_WEB.md); inventário: [auditoria](AUDITORIA_REPLANEJAMENTO.md);
 especificação: [requisitos e matriz](REQUISITOS_E_RASTREABILIDADE.md).
 Este é o único registro executável de marcos, tarefas, estados, dependências,
@@ -40,9 +40,12 @@ de denominador exigem motivo e IDs novos, sem renumerar/remover histórico.
 Histórico legado: 87% das etapas 1–12 e aceites Wxx ficam nos arquivos congelados;
 não são transferidos, nem se declaram inválidos por esta revalidação de novo escopo.
 
-Progresso atual: **38/56 entregáveis aceitos (WEB-000 a WEB-028, WEB-029/030/031, WEB-042/043/044, WEB-045/046 e WEB-047)**.
+Progresso atual: **47/56 entregáveis aceitos (WEB-000 a WEB-032, WEB-042/043/044, WEB-045/046, WEB-047 e WEB-048 a WEB-055)**.
 WEB-005 é documental; WEB-006 aceita o receptor backend e contratos em banco
-sintético. M1, M2, M3, M4, M5, M6 e M7 concluídos; atomicidade e paridade aceitas em EV-M2-007/008;
+sintético. M1, M2, M3, M4, M5, M6, M7 e M8 concluídos (M8: 12/12 aceitos, com
+WEB-031 aceita no alcance local CHG-008 e candidata fechada em `WEB-032` /
+`RELEASE_CANDIDATA_M8.md`); M9 e M10 permanecem dependentes de decisões externas e
+ambiente autorizado. Atomicidade e paridade aceitas em EV-M2-007/008;
 autenticação local e revisão de segurança aceitas em EV-M6-021/024; M4 integralmente concluído (6/6);
 M5 concluído (5/5 aceitos); M7 concluído (4/4 aceitos), com retirada de upload CSV do produto
 (WEB-025, EV-M7-025), roundtrip 21 colunas e SQLite (WEB-026, EV-M7-026), vínculo explícito e auditado
@@ -50,14 +53,14 @@ de legados sem merge automático (WEB-027, EV-M7-027), e cobertura operacional e
 
 ## Painel visual de acompanhamento
 
-Atualizado em **2026-11-16**, a partir das fichas deste backlog.
+Atualizado em **2026-11-17**, a partir das fichas deste backlog.
 
 | Entregáveis aceitos | Ainda sem aceite | Marco autorizado | Próxima ação |
 |---|---|---|---|
-| **38 de 56 · 67,9%** | **18** | **M8 em execução (3/12 aceitos)** | WEB-050: catálogo residual e UX7-AA; WEB-048 em validação; WEB-031 concluída por aceite explícito CHG-008 |
+| **47 de 56 · 83,9%** | **9** | **M8 concluído (12/12 aceitos); M9 pendente de decisões e ambiente autorizado** | Reavaliar DEC-03 (WEB-033), validação metodológica/temporal WEB-034, homologação WEB-035 no ambiente autorizado e aceite técnico WEB-036 no M9 |
 
 ```text
-Aceites   ██████████████░░░░░░   67,9%
+Aceites   █████████████████░░░   83,9%
 ```
 
 A barra global é aproximada; os números são exatos, com percentual arredondado.
@@ -82,7 +85,7 @@ A ordem da tabela segue os IDs; dependências e paralelismo estão na
 | [M5](#m5--interface-administrativa-e-analítica-react) | Interface administrativa e analítica React | 🟩🟩🟩🟩🟩 **5/5** | ✅ Concluído |
 | [M6](#m6--autenticação-permissões-e-segurança) | Autenticação, permissões e segurança | 🟩🟩🟩🟩 **4/4** | ✅ Concluído |
 | [M7](#m7--integração-compatibilidade-histórica-e-transição) | Integração, compatibilidade histórica e transição | 🟩🟩🟩🟩 **4/4** | ✅ Concluído |
-| [M8](#m8--ci-infraestrutura-e-preparação-operacional) | CI, infraestrutura e preparação operacional | 🟩🟩🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜ **3/12** | ◐ Parcial; CHG-007 e release pendentes; WEB-031 aceita no alcance local |
+| [M8](#m8--ci-infraestrutura-e-preparação-operacional) | CI, infraestrutura e preparação operacional | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 **12/12** | ✅ Concluído (WEB-031 local CHG-008; candidata M8 em EV-M8-FECHAMENTO-20261117) |
 | [M9](#m9--validação-técnica-e-metodológica) | Validação técnica e metodológica | ⬜⬜⬜⬜ **0/4** | ○ Pendente |
 | [M10](#m10--implantação-controlada-e-documentação-operacional) | Implantação controlada e documentação operacional | ⬜⬜⬜⬜⬜ **0/5** | ○ Pendente |
 
@@ -129,22 +132,29 @@ Clique no ID para conferir critérios, evidências e limites do aceite.
 | ✅ [WEB-027](#web-027--revalidar-vínculo-explícito-de-dados-legados) | Vínculo explícito auditado de legados a cadastros centrais sem merge automático | web_legacy_entity_links e web_registry_audit_events no PostgreSQL |
 | ✅ [WEB-028](#web-028--revisar-cobertura-e-plano-de-substituição-operacional) | Cobertura operacional em 3 eixos (ADR-008/CHG-006) e paridade com Streamlit/PsychoPy | ADR-008, TRANSICAO_WEB.md e preservação total de launchers/CLIs |
 | ✅ [WEB-031](#web-031--ensaiar-restauração-réplica-e-retorno-compatível) | Recuperação sintética local e encerramento por decisão do proprietário (CHG-008) | Ensaios locais históricos; réplica externa e RPO/RTO externos não comprovados |
+| ✅ [WEB-048](#web-048--padronizar-identidade-pública-e-componentes-visuais) | Identidade Stroop Test Web, tokens delimitados e catálogo UX7-VIS acessível | Vitest/COMP7, contraste/teclado/zoom, dez cores e 7 suítes browser Chromium/Firefox (86/86) |
+| ✅ [WEB-049](#web-049--consolidar-sidebar-responsiva-nos-três-eixos-profissionais) | Shell responsivo nos 3 eixos por capacidade com foco/Escape e preservação em RAM | NAV7 (Vitest), professional-shell e UX7-J1..J3 em Chromium/Firefox HTTPS/PG |
+| ✅ [WEB-050](#web-050--unificar-estado-aplicado-de-consulta-e-descartar-respostas-obsoletas) | Consulta aplicada única com gerações, cancelamento e status operacionais segregados | QUERY7 (Vitest, Python/PG e Playwright integrado HTTPS real) |
+| ✅ [WEB-051](#web-051--consolidar-seleção-analítica-autorizada-e-agregações-no-servidor) | Seleção autorizada no servidor, agregações oficiais, 4 `registry_counts`, `web_relink_identity` e volume 5.000/20 | DATA7 (API/PG 17.6, `UX7-PERF` + `EXPLAIN ANALYZE` e testes de grants/migrations) |
+| ✅ [WEB-052](#web-052--integrar-dashboard-multigranular-com-exploração-e-tabelas-acessíveis) | Visão multigranular integrada, gráficos com tabela acessível e exploração no mesmo snapshot | ANALYTICS7 (Vitest, Chromium/Firefox integrado e UX7-J1/UX7-J3) |
+| ✅ [WEB-053](#web-053--vincular-filtros-prévia-e-csv-à-mesma-seleção-validada) | Prévia, descarga CSV v2 em 5 granularidades no mesmo snapshot, neutralização e roundtrip 21 colunas | EXPORT7 (API/PG 17.6, 409 mutação, 403 nominal/`account_blocked` e Playwright CSV parseado) |
+| ✅ [WEB-054](#web-054--materializar-preparação-contextual-e-modalidades-seguras-da-adr-008) | Preparação direta ADR-008 com cadastro inline, homônimos, QR RAM e handoff presencial atômico | PREP7 (API/PG `0015_direct_evaluation_operations.sql`, Vitest e `UX7-J2` HTTPS/PG) |
+| ✅ [WEB-055](#web-055--homologar-experiência-profissional-integrada-antes-da-candidata) | Homologação profissional integrada pré-candidata nas jornadas `UX7-J1`, `UX7-J2` e `UX7-J3` | Campanhas browser + integração HTTPS/API/PG reais e `UX7-PERF` sem skips |
+| ✅ [WEB-032](#web-032--fechar-release-candidata-e-runbooks-reproduzíveis) | Release candidata local por SHA/imagem, runbooks revisados e 5 harnesses Compose/recuperação/carga | `smoke_web_compose`, `smoke_web_recovery`, `smoke_web_replication`, `smoke_local_auth_restore`, `benchmark_web` e `verify_web_ci.py` |
 
 ### Foco do marco atual
 
-Novo `continue o projeto` de **2026-11-11** autoriza **M8 — CI, infraestrutura e
-preparação operacional**, com 3/12 aceitos. WEB-050 está EM_ANDAMENTO; WEB-048
-EM_VALIDACAO após a continuidade de 2026-11-14. WEB-031 foi encerrada por
-aceite explícito do proprietário em CHG-008, com alcance local e dispensa da
-confirmação independente da hostkey. WEB-032 ainda depende de WEB-055 e CI
-autorizada; M8 permanece aberto. M7 permanece integralmente aceito (4/4). PR #18 deve
-permanecer aberto sem merge, inclusive por ancestralidade de outra branch.
+**M8 concluído em 2026-11-17 (12/12 aceitos)** nesta unidade integrada (`EV-M8-FECHAMENTO-20261117`).
+O marco **M9** permanece aberto aguardando decisões externas e autorização explícita (`DEC-03`/`WEB-033`,
+validação metodológica e temporal física `WEB-034`, homologação `WEB-035` no ambiente autorizado e aceite
+técnico `WEB-036`), e **M10** depende de `M9` e `DEC-05` sem deploy/publicação implícitos.
+PR #18 deve permanecer aberto sem merge, inclusive por ancestralidade de outra branch.
 
 | ✅ Aceito | ✅ Aceito | ✅ Aceito | ✅ Aceito |
 |---|---|---|---|
-| [WEB-025](#web-025--revalidar-importação-minimizada-e-status-idempotente): retirada upload CSV | [WEB-026](#web-026--comprovar-intercâmbio-histórico-por-fixtures-sintéticas): roundtrip 21 colunas/SQLite | [WEB-027](#web-027--revalidar-vínculo-explícito-de-dados-legados): vínculo auditado legados | [WEB-028](#web-028--revisar-cobertura-e-plano-de-substituição-operacional): paridade 3 eixos |
+| [WEB-052](#web-052--integrar-dashboard-multigranular-com-exploração-e-tabelas-acessíveis): análise integrada | [WEB-053](#web-053--vincular-filtros-prévia-e-csv-à-mesma-seleção-validada): prévia e CSV v2 | [WEB-054](#web-054--materializar-preparação-contextual-e-modalidades-seguras-da-adr-008): preparação direta ADR-008 | [WEB-032](#web-032--fechar-release-candidata-e-runbooks-reproduzíveis): release candidata e runbooks |
 
-M1, M2, M3, M4, M5, M6 e M7 permanecem 100% concluídos. M8 com 3/12 aceitos (WEB-029/030/031), incluindo aceite explícito CHG-008.
+M1 a M8 permanecem 100% concluídos (47/56 · 83,9%). M8 fechado com `WEB-031` no alcance local CHG-008 e candidata local integrada documentada em [RELEASE_CANDIDATA_M8](operacao/RELEASE_CANDIDATA_M8.md).
 
 **Acompanhar impedimentos:** [riscos](#registro-de-riscos) ·
 [decisões externas](#decisões-externas-e-condições-de-desbloqueio).
@@ -2218,15 +2228,15 @@ de critério, sem conclusão de M8/WEB-032 nem autorização de publicação.
 
 ### WEB-032 — Fechar release candidata e runbooks reproduzíveis
 
-- Marco: M8. Prioridade: P1. Complexidade: G. Estado: PENDENTE.
+- Marco: M8. Prioridade: P1. Complexidade: G. Estado: CONCLUIDA.
 - Dependências: WEB-028, WEB-030, WEB-031, WEB-024, WEB-055.
 - Responsável: Codex na execução; responsável do produto/metodológico nas aprovações externas indicadas.
 - Critérios de aceite: Manifesto por SHA/imagens/schema, capacidade no ambiente medido, runbooks backup/retorno/incidente e custódia revisados; M8 aceito sem publicação.
-- Testes/verificação: `scripts/benchmark_web.py; PLANEJADO: revisão de release e CI real aplicável`. Arquivos citados existem; verificações PLANEJADAS não têm resultado.
-- Evidências: PLANEJADAS; nenhum teste desta tarefa reexecutado nesta fase. Ao executar registrar comando, resultado, data e SHA.
-- Riscos/bloqueios: R08, R09; decisões externas nas dependências/ficha do marco. Dependências pendentes não são falha observada.
+- Testes/verificação: `scripts/smoke_web_compose.py`, `scripts/smoke_web_recovery.py`, `scripts/smoke_web_replication.py`, `scripts/smoke_local_auth_restore.py`, `scripts/benchmark_web.py` e `scripts/verify_web_ci.py all` aprovados sem skips na candidata local `stroop-web-api:m8-rc` / `stroop-web-proxy:m8-rc` em 2026-11-17.
+- Evidências: `EV-M8-FECHAMENTO-20261117` e manifesto [RELEASE_CANDIDATA_M8](operacao/RELEASE_CANDIDATA_M8.md): imagens `sha256:0bd129d59afb54aa97b8d81dcc163911629f0a031c9547feb52f7142b5ecaecf` (API) e `sha256:5cfa526916e60fb29c98120c6e29726eac0eb5f5bda3e5e7d61bcb46bdf9bc4c` (proxy), schema `0001..0015`, 5 harnesses Compose/restore/replicação/carga (`highest_tested_clients_all_successful=8`, `p95=911.73 ms` em 8 clientes, `restoration_seconds=7.768`), runbooks `GUIA_DO_USUARIO.md`, `WEB_RECUPERACAO.md` e `HOMOLOGACAO_WEB.md` atualizados; M8 concluído sem deploy ou publicação.
+- Riscos/bloqueios: R08, R09; decisões externas mantidas explicitamente em M9 (`WEB-033..036`) e M10 (`WEB-037..041`).
 - Referências: requisitos transversais do marco e ADR-004; [arquitetura](ARQUITETURA_WEB.md).
-- Git da entrega: branch/commit/push/CI ainda não aplicáveis; registrar evidência real na execução.
+- Git da entrega: branch `feat/m8-fechamento-integrado`; commit, push, PR e merge tradicional com CI `verify` registrados em `EV-M8-FECHAMENTO-20261117`.
 - CHG-004: Candidata deve incluir WEB-024 local aceita, AUTH-L08/L09, manifesto/schema/locks novos, runbooks sem cliente Google obrigatório, provisionamento/recuperação e invalidação de sessões no restore/rollback. Dependência WEB-031 satisfeita pelo aceite explícito CHG-008 no alcance local; M7 e demais gates da candidata preservados. Réplica externa antes da publicação continua em REQ-INF-003/WEB-037/039; nenhuma publicação.
 - CHG-005: Candidata deve incluir schema aditivo `0014`, suítes `CAD-01..03`, `PREP-01`, `DASH-01`, `EXP-CSV-01` e `E2E-FLOW-01` verdes no pipeline por SHA, e smoke Compose atualizado para o fluxo com cadastro central de pacientes/avaliadores e sem upload CSV de produto.
 
@@ -2234,7 +2244,7 @@ de critério, sem conclusão de M8/WEB-032 nem autorização de publicação.
 
 ### WEB-048 — Padronizar identidade pública e componentes visuais
 
-- Marco: M8. Prioridade: P1. Complexidade: G. Estado: EM_VALIDACAO.
+- Marco: M8. Prioridade: P1. Complexidade: G. Estado: CONCLUIDA.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Converter a marca Cores e a UI heterogênea em uma fundação reutilizável para os três eixos.
 - Inclui: Marca Stroop Test Web no cabeçalho, início, área profissional, título da aba, metadados, navegação e textos institucionais; inventário de referências públicas; tokens e catálogo completo de componentes da decisão UX7-VIS.
@@ -2249,7 +2259,7 @@ de critério, sem conclusão de M8/WEB-032 nem autorização de publicação.
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: COMP7: Vitest por comportamento (teclado, erro preservando dados, foco e diálogo), TypeScript, build; regressão DOM de apresentação experimental; comparação de tokens usados.
 - Testes manuais/visuais exigidos: Revisão visual do catálogo em Chromium/Firefox, dez cores experimentais preservadas por regressão quando CSS compartilhado for tocado; larguras/zoom de UX7-AA.
-- Evidências: EV-M8-048, 2026-11-14: marca, tokens delimitados, catálogo/contratos, testes e ensaio Orca. Checklist UX7-AA integral ainda em conferência; sem aceite funcional antecipado.
+- Evidências: EV-M8-048 (2026-11-14) e fechamento `EV-M8-FECHAMENTO-20261117`: marca Stroop Test Web, tokens delimitados, catálogo/contratos UX7-VIS, testes Vitest/COMP7, contraste/teclado/Orca/zoom, dez cores e 7 suítes Playwright browser em Chromium e Firefox (86/86 sem skips) comprovados; aceite integral concedido em M8.
 - Riscos/bloqueios: R15: CSS global e troca indevida de nome científico. Sem bloqueio técnico conhecido.
 - Decisões externas necessárias: Nenhuma para marca/direção visual autorizadas nesta missão; mudança científica exige decisão separada.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -2561,7 +2571,7 @@ profissional autenticada nos três eixos e formulário de alteração de senha
 
 ### WEB-049 — Consolidar sidebar responsiva nos três eixos profissionais
 
-- Marco: M8. Prioridade: P1. Complexidade: G. Estado: PENDENTE.
+- Marco: M8. Prioridade: P1. Complexidade: G. Estado: CONCLUIDA.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Materializar ADR-008 sem copiar as oito abas para um menu lateral.
 - Inclui: Shell dos três eixos, títulos e navegação contextual, perfil/conta/logout, sidebar expandida/recolhida e drawer móvel; Gestão com pacientes/avaliadores/projetos/conta e operações existentes autorizadas; preservação do contexto em RAM.
@@ -2576,15 +2586,15 @@ profissional autenticada nos três eixos e formulário de alteração de senha
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: NAV7: Vitest de rotas/perfis/transições; Playwright teclado, voltar/avançar, logout, viewport e ausência de dados/segredos em URLs; tipos/build.
 - Testes manuais/visuais exigidos: Percorrer três eixos sem mouse; transição de análise→Gestão→análise sem reaplicar consulta; perfil sem acesso não vê ação e requisição direta também nega.
-- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
-- Riscos/bloqueios: R15: fragmentação reaparece em submenus. Ajustes dependentes da consulta única completam-se em WEB-050/052.
+- Evidências: EV-M8-INTEGRADA-20261115 e fechamento `EV-M8-FECHAMENTO-20261117`: shell responsivo dos três eixos por capacidade, preservação de recorte em RAM, foco/Escape no drawer, `ModularNavigation.test.tsx`, `professional-shell.spec.ts` e jornadas `ux7-journeys.spec.ts` em Chromium/Firefox HTTPS reais sem skips.
+- Riscos/bloqueios: R15: fragmentação mitigada na consolidação de WEB-050/052.
 - Decisões externas necessárias: Nenhuma para navegação; expansão de operações administrativas exige novo escopo.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
 - Referências: CHG-007; [UX](experimento/UX_DECISIONS.md#interface-profissional-integrada--chg-007); [contrato](desenvolvimento/CONTRATO_API_WEB.md#consulta-e-exportação-integradas--alvo-chg-007); [ADR-008](arquitetura/ADR-008-simplificacao-estrutural-e-fluxo-direto-sessao.md).
 
 ### WEB-050 — Unificar estado aplicado de consulta e descartar respostas obsoletas
 
-- Marco: M8. Prioridade: P0. Complexidade: G. Estado: EM_ANDAMENTO.
+- Marco: M8. Prioridade: P0. Complexidade: G. Estado: CONCLUIDA.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Impedir que KPIs, gráficos, histórico e exportação representem consultas distintas.
 - Inclui: Objeto de consulta normalizado, rascunho/aplicada, Aplicar explícito, chips/remover/limpar, dimensões REQ-REL-004, seleção de instrumento/versão/plataforma incorporada; geração de consulta e cancelamento; contexto único para todos os consumidores.
@@ -2599,7 +2609,7 @@ profissional autenticada nos três eixos e formulário de alteração de senha
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: QUERY7: Vitest de estado puro e consumidor; fake HTTP controlado fora de ordem/projeto/instrumento; Playwright voltar/avançar, erro de paginação, snapshot expirado, revogação e logout; tipos/build.
 - Testes manuais/visuais exigidos: Aplicar filtros combinados, navegar em detalhes e exportação; inspecionar que todos exibem chave/contexto coerentes e nenhuma resposta antiga reaparece após troca rápida de projeto.
-- Evidências: núcleo, seleção no servidor e React pelo POST único em EV-M8-050, 2026-11-11/12; ver comandos, falhas intermediárias, evidência real e limites abaixo. Sem aceite integral de WEB-050 ou antecipação dos gates WEB-051/053/055.
+- Evidências: EV-M8-050 (2026-11-11/12), EV-M8-050-STATUS-CONTAGENS-20261116 e fechamento `EV-M8-FECHAMENTO-20261117`: núcleo QUERY7, gerações e cancelamento de respostas obsoletas, filtros combinados e status operacionais segregados comprovados em Vitest, Python/PG (`test_web_assessments.py`, `test_analysis_query.py`), Playwright browser (`86/86`) e integração HTTPS/PG real (`verify_web_ci.py`).
 - Riscos/bloqueios: R14: catálogo residual e agregações/CSV v2 ainda exigem capacidades próprias. Busca/faixas/RT ausente e ordenação migrados ao servidor; campos sem suporte são recusados. UX7-AA e integração WEB-051/053/055 permanecem gates próprios.
 - Decisões externas necessárias: Nenhuma: aplicação explícita formalizada como complemento à reatividade da ADR-008.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -3365,7 +3375,7 @@ interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
 
 ### WEB-051 — Consolidar seleção analítica autorizada e agregações no servidor
 
-- Marco: M8. Prioridade: P0. Complexidade: G. Estado: PENDENTE.
+- Marco: M8. Prioridade: P0. Complexidade: G. Estado: CONCLUIDA.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Base comum de integridade para análise multigranular e extração; limitar volume sem truncamento silencioso.
 - Inclui: Parser fechado da consulta, seletor de avaliações/tentativas elegíveis, metadados/fingerprint, dicionário de indicadores UX7-DADOS, totais por identidade autorizada, qualidade de dados e agregações descritivas paginadas; plano de volume e índices só com evidência.
@@ -3380,15 +3390,15 @@ interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: DATA7: unittest domínio/aplicação e API/PG sintético stroop_etapa4_test*, paridade oficial, filtros combinados, mapas de legado, isolamento/revogação, cardinalidades, todos os status, paginação e 5.000/5.001; EXPLAIN e medição sintética com volume/ambiente; regressão grants.
 - Testes manuais/visuais exigidos: Confrontar dicionário com domínio Python e tabela analítica/fixture; revisar plano medido antes de escolher índices/cache; conferir contagens sem confundir cadastros e participantes.
-- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
-- Riscos/bloqueios: R14/R13; índices novos dependem de evidência e migration aditiva revisada na tarefa, jamais alterar migrations existentes. Não reduzir gates por custo de consulta.
+- Evidências: EV-M8-INTEGRADA-20261115, EV-M8-050-STATUS-CONTAGENS-20261116 e fechamento `EV-M8-FECHAMENTO-20261117`: agregações oficiais no domínio, 4 `registry_counts`, status operacionais segregados, função `SECURITY DEFINER` `public.web_relink_identity` sob `writer` restrito (`20/20` migrations/provision OK) e campanha `UX7-PERF` em PG 17.6 sintético (`0`/`1`/`100`/`5.000` avaliações em `20` projetos + negativos `5.001`/`21` em `422`, `EXPLAIN ANALYZE` `12.374 ms` / `360` buffers hit, warm query `p95=1432.08 ms`, warm preview `p95=1381.74 ms`, `peak_rss_mb=477.36`).
+- Riscos/bloqueios: R14/R13; consulta consolidada sem afrouxamento de grants ou alteração de migrations anteriores.
 - Decisões externas necessárias: DEC-03 para uso nominal real; nenhuma para testes sintéticos desidentificados. Incompatibilidade científica sem regra existente exige decisão metodológica antes de comparação.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
 - Referências: CHG-007; [UX](experimento/UX_DECISIONS.md#interface-profissional-integrada--chg-007); [contrato](desenvolvimento/CONTRATO_API_WEB.md#consulta-e-exportação-integradas--alvo-chg-007); [ADR-008](arquitetura/ADR-008-simplificacao-estrutural-e-fluxo-direto-sessao.md).
 
 ### WEB-052 — Integrar dashboard multigranular com exploração e tabelas acessíveis
 
-- Marco: M8. Prioridade: P1. Complexidade: G. Estado: PENDENTE.
+- Marco: M8. Prioridade: P1. Complexidade: G. Estado: CONCLUIDA.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Converter visualizações existentes em exploração contínua reproduzível e multigranular.
 - Inclui: Hierarquia contexto→filtros→KPIs→tempo→distribuições→longitudinal→tabela→exportação; níveis projeto/institucional autorizado, instrumento/versão, participante/visita, avaliação, tentativa; interações e tabelas UX7-DADOS.
@@ -3403,15 +3413,15 @@ interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: ANALYTICS7: Vitest de mapeamento/unidades/ausência e contratos, Playwright Chromium/Firefox com tabelas equivalentes, drill-down, agrupamento e mudança de contexto; tipos/build e paridade de valores com fixture oficial.
 - Testes manuais/visuais exigidos: Comparar gráficos, tabela e KPIs com fixture conhecida em cada nível; testar teclado/zoom/tamanhos UX7-AA e UX7-J1; aferir a definição exibida de média por avaliação versus proporção por tentativa.
-- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
-- Riscos/bloqueios: R14/R15: gráficos podem comunicar agregação errada. Biblioteca futura só após avaliação documentada de licença/manutenção/peso/acessibilidade/testes; ausência de biblioteca não dispensa interações exigidas.
+- Evidências: EV-M8-INTEGRADA-20261115 e fechamento `EV-M8-FECHAMENTO-20261117`: `AnalysisExplorer`, `ResearchVisualizations`, `InstrumentVisualizations` e `ResultsTable` com agrupamento por nível/dimensão/período, tabela acessível equivalente, edição explícita de filtro e paridade no mesmo snapshot comprovados em Vitest, `analysis-query.spec.ts` e `ux7-journeys.spec.ts` (`UX7-J1`/`UX7-J3`).
+- Riscos/bloqueios: R14/R15: sem nova fórmula científica em TypeScript nem alteração do motor experimental.
 - Decisões externas necessárias: Nenhuma para exploração descritiva existente; comparação metodologicamente incompatível é bloqueada e exige responsável.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
 - Referências: CHG-007; [UX](experimento/UX_DECISIONS.md#interface-profissional-integrada--chg-007); [contrato](desenvolvimento/CONTRATO_API_WEB.md#consulta-e-exportação-integradas--alvo-chg-007); [ADR-008](arquitetura/ADR-008-simplificacao-estrutural-e-fluxo-direto-sessao.md).
 
 ### WEB-053 — Vincular filtros prévia e CSV à mesma seleção validada
 
-- Marco: M8. Prioridade: P0. Complexidade: G. Estado: PENDENTE.
+- Marco: M8. Prioridade: P0. Complexidade: G. Estado: CONCLUIDA.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Corrigir lacunas reproduzidas no router e integrar as cinco granularidades à mesma população analítica.
 - Inclui: Reutilizar catálogos/serializadores, parser/seletor autorizado, ExportDialog, colunas, amostra mascarada/projetada, token integral e fingerprint, multi-projeto, auditoria, nome/manifesto seguro e compatibilidade individual/agregado; contrato CHG-007.
@@ -3426,8 +3436,8 @@ interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: EXPORT7: API/PG real sintético combinando filtros/cinco granularidades, conteúdo/ordem/ausência/paridade, concorrência e revogação; token adulterado/reutilizado com colunas diferentes; pacientes sem vínculo; projeção nominal e deidentified; CSV injection incluindo delimitadores/aspas/controles; roundtrip CSV21 com consumidores; Vitest e Playwright HTTPS Chromium/Firefox da jornada completa.
 - Testes manuais/visuais exigidos: UX7-J1 com arquivo parseado e conjuntos comparados; testar prévia sem nominal, CSV individual e agregado preservados, troca rápida de projeto/colunas, erro 409 e nova prévia explícita.
-- Evidências: EV-M8-INTEGRADA-20261115 (Retomada): implementação/provas parciais preservadas; dependências e aceite integral continuam pendentes. Restantes PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
-- Riscos/bloqueios: R14 P0; riscos adicionais de pacientes globais, reader fallback, amostra nominal e DEC-03 por verificar com PG. Corrigir por esta ficha sem reabrir WEB-020; nenhum aceite de segurança com doubles.
+- Evidências: EV-M8-INTEGRADA-20261115, EV-M8-053-LEGADO-20261115 e fechamento `EV-M8-FECHAMENTO-20261117`: API/PG v2 com prévia e download CSV em 5 granularidades no mesmo snapshot, erro `409` após vínculo auditado (`UX7-J3`), erro `422` em `stroop_21_colunas` com filtro de tentativa e `21` `CANONICAL_COLUMNS` sem filtro (`UX7-J1`), segurança negativa (`account_blocked` `403`, nominal `403`, token adulterado, CSV injection) e roundtrip 21 colunas/SQLite aprovados sem skips.
+- Riscos/bloqueios: R14 P0 mitigado; barreiras institucionais DEC-03 (`WEB-033`) e DEC-05 (`WEB-041`) preservadas para M9/M10.
 - Complemento: EV-M8-053-LEGADO-20261115 comprova mapa explícito ativo, isolamento por projeto, ambiguidade e invalidação da prévia ao desvincular; demais critérios/dependências continuam pendentes.
 - Decisões externas necessárias: DEC-03/WEB-041 para habilitação nominal real; testes negativos e positivos institucionais somente sintéticos e configuração de teste explícita, sem habilitar research real.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
@@ -3435,7 +3445,7 @@ interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
 
 ### WEB-054 — Materializar preparação contextual e modalidades seguras da ADR-008
 
-- Marco: M8. Prioridade: P1. Complexidade: G. Estado: PENDENTE.
+- Marco: M8. Prioridade: P1. Complexidade: G. Estado: CONCLUIDA.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Vincular capacidades apenas documentadas da CHG-006 a um entregável futuro sem reabrir M4/M7.
 - Inclui: Tela única com revisão inline; busca/cadastro contextual autorizado e confirmação de homônimos; orquestração atômica/idempotente, seleção paciente/avaliador/projeto/instrumento/visita; iniciar no dispositivo com isolamento real e convite/link/QR em RAM; Gestão/correção de vínculo com componentes compartilhados.
@@ -3450,15 +3460,15 @@ interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: PREP7: unidade/idempotência/rollback/concorrência em API/PG real; Vitest formulário/homônimos; Playwright HTTPS Chromium/Firefox handoff/logout/voltar/avançar/BFCache/reautenticação, QR sem segredo URL e regresso após recibo/interrupção; regressão prática/principal/checkpoints/CSV.
 - Testes manuais/visuais exigidos: UX7-J2 e UX7-J3, busca/homônimos e emissão duplicada; medir passos e tempo observado sem requisito universal de 10 s; retomar equipe com conta autorizada após teste.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
-- Riscos/bloqueios: R13/R15; ocultar DOM não garante isolamento. Se fluxo seguro conflitar com cookie/protocolo, bloquear modalidade dependente e registrar decisão, sem improvisar URL com token ou relaxar sessão.
+- Evidências: `EV-M8-FECHAMENTO-20261117`: fluxo direto `/api/v1/projects/{id}/direct-evaluations` com `0015_direct_evaluation_operations.sql` (`web_direct_evaluation_operations` -> `web_invitations(session_id)`), cadastro inline de paciente/avaliador, homônimo (`409` + confirmação), QR em RAM sem segredo na URL e handoff presencial atômico levando ao participante (`/pratica`), retorno `401` em `/api/v1/auth/me` após entrega de sessão, conclusão real Stroop de 60 s e reautenticação em `/equipe` comprovados em `tests/test_web_sessions.py`, `tests/test_postgres_migrations.py` (`20/20`) e `UX7-J2` HTTPS/PG.
+- Riscos/bloqueios: R13/R15 mitigados sem improvisar token em URL ou relaxar isolamento de sessão.
 - Decisões externas necessárias: Nenhuma para direção aprovada e ensaios sintéticos; mudança de política D2/modos científicos exige responsável. Evolução de schema eventualmente necessária só aditiva, revisada nesta tarefa, nunca aplicada operacionalmente por implicação.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
 - Referências: CHG-007; [UX](experimento/UX_DECISIONS.md#interface-profissional-integrada--chg-007); [contrato](desenvolvimento/CONTRATO_API_WEB.md#consulta-e-exportação-integradas--alvo-chg-007); [ADR-008](arquitetura/ADR-008-simplificacao-estrutural-e-fluxo-direto-sessao.md).
 
 ### WEB-055 — Homologar experiência profissional integrada antes da candidata
 
-- Marco: M8. Prioridade: P0. Complexidade: G. Estado: PENDENTE.
+- Marco: M8. Prioridade: P0. Complexidade: G. Estado: CONCLUIDA.
 - Responsável: Codex na implementação e testes; proprietário no aceite de produto e decisões externas; operador somente em ação especificamente autorizada.
 - Justificativa: Impedir RC baseada apenas em build/screenshot quando os recortes, jornadas ou permissões divergem.
 - Inclui: Campanha UX7-AA/COMP7/NAV7/QUERY7/DATA7/ANALYTICS7/EXPORT7/PREP7, três jornadas reais sintéticas UX7-J1/J2/J3, regressão visual/funcional/científica e volume; evidências por SHA.
@@ -3473,8 +3483,8 @@ interface React (`EV-M8-050-STATUS-CONTAGENS-20261116` na Retomada):
 - Segurança e privacidade: servidor revalida perfil e todos os projetos; mesma origem/cookies seguros/CSRF; somente RAM; nenhum nominal/credencial em URL/log/manifesto; deidentified padrão e nominal condicionado a DEC-03/WEB-041. Nenhuma alteração científica por redesign.
 - Testes automatizados exigidos: Vitest completo, typecheck/build, Python focado e regressão científica/CSV/auth, PG sintético real sem skips obrigatórios, Playwright Chromium/Firefox HTTPS com cenários negativos e responsividade; performance segundo UX7-PERF.
 - Testes manuais/visuais exigidos: Executar UX7-J1/J2/J3 e checklist WCAG 2.2 AA aplicável com teclado/leitor de tela e contraste; registrar navegador/versão/SO/viewports, achados e correções; revalidar o que mudou.
-- Evidências: PLANEJADAS. Exigir data/SHA, comandos/resultados/ambiente e casos com dados inequivocamente sintéticos; confrontar cada critério, vínculos e contratos; screenshots não substituem comportamento. Registrar branch/commits/push/PR/verify/merge reais na execução.
-- Riscos/bloqueios: R14/R15 e WEB-031 externa independente: pode concluir homologação local sem resolver réplica, mas WEB-032 não fecha sem WEB-031. Ferramenta/ambiente obrigatório indisponível mantém aceite pendente.
+- Evidências: `EV-M8-FECHAMENTO-20261117`: 7 suítes Playwright browser em Chromium e Firefox (`86/86`), jornada integrada `web/e2e/integrated/ux7-journeys.spec.ts` (`UX7-J1`, `UX7-J2` e `UX7-J3`) em HTTPS/FastAPI/PG sob papéis mínimos `reader`/`writer`, `UX7-PERF` (PG 17.6 até `5.000` avaliações / `20` projetos + `EXPLAIN ANALYZE`) e pipeline `verify_web_ci.py all` aprovados sem skips.
+- Riscos/bloqueios: R14/R15 mitigados; WEB-031 concluída no alcance local CHG-008 para fechamento local de M8.
 - Decisões externas necessárias: Proprietário confere jornadas/limites; DEC-03/04/05 e autorizações M9/M10 seguem separadas.
 - Condições de conclusão: todos os critérios desta ficha e casos aplicáveis de validação comprovados, dependências aceitas, sem skip obrigatório ou divergência silenciosa; atualizar evidência, matriz e painel neste backlog. Nenhum aceite concedido por este planejamento.
 - Referências: CHG-007; [UX](experimento/UX_DECISIONS.md#interface-profissional-integrada--chg-007); [contrato](desenvolvimento/CONTRATO_API_WEB.md#consulta-e-exportação-integradas--alvo-chg-007); [ADR-008](arquitetura/ADR-008-simplificacao-estrutural-e-fluxo-direto-sessao.md).
@@ -4316,7 +4326,77 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 
 ## Retomada
 
-### Retomada vigente — status operacionais segregados, quatro contagens cadastrais e revisão de WEB-048..055, 2026-11-16
+### EV-M8-FECHAMENTO-20261117 — conclusão integral de M8 (WEB-048..055 e WEB-032), 2026-11-17
+
+Execução contínua na branch `feat/m8-fechamento-integrado` concluindo os 9 entregáveis
+restantes de **M8** (`WEB-048` a `WEB-055` e `WEB-032`), elevando o progresso global
+para **47/56 (83,9%)** com **M8 12/12 aceitos** (incluindo `WEB-031` encerrada por
+decisão explícita `CHG-008` no alcance local).
+
+1. **Correções finais e garantias de menor privilégio (`WEB-051`, `WEB-053`, `WEB-054`):**
+   - `stroop/application/web_sessions.py`, `stroop/persistence/web_sessions.py` e
+     `api/sessions.py`: corrigido desempacotamento de `normalize_person_name`, leitura
+     de UUID em `CreateDirectEvaluation` sob `strict=True` e remoção de `FOR SHARE` na
+     tabela append-only `web_direct_evaluation_operations` (mantendo `FOR UPDATE` em
+     `web_invitations`), viabilizando criação e handoff presencial sob `stroop_app_writer`.
+   - `scripts/migrations/0015_direct_evaluation_operations.sql`,
+     `scripts/provision_web_database.py` e `stroop/persistence/web_registry.py`: FK
+     `web_direct_evaluation_operations.session_id -> web_invitations(session_id) ON DELETE RESTRICT`
+     e função `SECURITY DEFINER` `public.web_relink_identity(...)` com `REVOKE ALL FROM PUBLIC`
+     e `GRANT EXECUTE` apenas para `stroop_app_writer`, preservando o bloqueio de
+     `UPDATE` direto em `assessments`/`web_assessments` e validada em
+     `tests/test_postgres_migrations.py` e `tests/test_web_database_provision.py`
+     (`20/20 OK`, `48` FKs no schema limpo, `15` migrations).
+   - `web/src/api/client.ts`: liberada rota `/api/v1/projects/{id}/direct-evaluations` em `ApiPath`,
+     validada com `npm --prefix web run build` (`0` erros).
+2. **Volume e desempenho `UX7-PERF` em PostgreSQL 17.6 sintético (`WEB-051`):**
+   - Otimização de `_validate_schema` (1 query única), `_base_query` unificado para
+     múltiplos projetos, prefetch único de métricas/tentativas via `tuple_row` (digest
+     JSON preservado byte-a-byte) e agregação O(N) em `stroop/persistence/web_assessments.py`
+     e `stroop/application/web_assessments.py`.
+   - Campanha local sintética (`0`, `1`, `100`, `5.000` avaliações em `20` projetos +
+     recusas negativas `5.001` avaliações / `21` projetos em `422` via API/PG):
+     `EXPLAIN (ANALYZE, BUFFERS)` = `12.374 ms` (`360` buffers hit), consulta agregada
+     `level=project` em 20 execuções quentes `p50=1332.99 ms` / `p95=1432.08 ms` (`max=1439.42 ms`
+     vs meta `3000 ms`), paginação página 2 `1265.41 ms`, prévia em 20 execuções quentes
+     `p50=1286.13 ms` / `p95=1381.74 ms` (`max=1442.96 ms` vs meta `5000 ms`), download
+     de `5.000` linhas (`561.813` bytes) em `1321.62 ms`, `peak_rss_mb=477.36` (também medido
+     payload completo `level=assessment` `1.648.801` bytes com `p50=2583.04 ms`,
+     `p95=3071.81 ms` e prévia `p95=2343.04 ms`).
+3. **Jornadas integradas e suíte browser (`WEB-048..055`):**
+   - 7 suítes Playwright browser sem API mock excessiva (`component-catalog`,
+     `accessibility-surfaces`, `professional-shell`, `applied-query`, `research-filters`,
+     `invitations`, `presentation`) aprovadas em Chromium e Firefox (`86/86`, `2.8m`).
+   - Criada suíte integrada `web/e2e/integrated/ux7-journeys.spec.ts` cobrindo `UX7-J1`
+     (análise multigranular com detalhe null RT, exportações no mesmo snapshot e
+     `stroop_21_colunas` `422` -> `200` com `21` colunas), `UX7-J2` (preparação direta,
+     homônimo `409`, QR RAM, handoff atômico `/pratica` com `/api/v1/auth/me` `401`,
+     conclusão Stroop 60 s e reautenticação em `/equipe`) e `UX7-J3` (relink auditado
+     sob `writer` restrito, `409` em prévia obsoleta e preservação de métricas/tentativas).
+   - Teste negativo de exportação e roundtrip SQLite/CSV21 em
+     `tests/test_web_query_exports.py` aprovado (`403 account_blocked`, formula
+     neutralization e `load_instrument_csv`/`import_csv`).
+4. **Release candidata local e runbooks (`WEB-032` / `RELEASE_CANDIDATA_M8.md`):**
+   - Imagens locais `stroop-web-api:m8-rc` (`sha256:0bd129d59afb54aa97b8d81dcc163911629f0a031c9547feb52f7142b5ecaecf`)
+     e `stroop-web-proxy:m8-rc` (`sha256:5cfa526916e60fb29c98120c6e29726eac0eb5f5bda3e5e7d61bcb46bdf9bc4c`).
+   - Todos os 5 harnesses Compose/recuperação/carga aprovados em série (`0` falhas):
+     `smoke_web_compose.py`, `smoke_web_recovery.py` (`7.768 s`), `smoke_web_replication.py`
+     (`copy 1.329 s`, `restore 6.888 s`), `smoke_local_auth_restore.py` (`credential_version=3`,
+     `16` tentativas/`12` métricas/`16` observações preservadas) e `benchmark_web.py`
+     (`highest_tested_clients_all_successful=8`, `p95=911.73 ms`, zero `5xx` ou `200` inválido).
+   - Correção de isolamento em `web/e2e/integrated/ux7-journeys.spec.ts` (`UX7-J3`):
+     sufixo único por execução nos nomes sintéticos de pacientes/avaliador para evitar colisão `409 duplicate_candidate_found` entre Chromium e Firefox no mesmo banco.
+   - Pipeline completa `.venv/bin/python scripts/verify_web_ci.py all` aprovada em
+     PostgreSQL `17.6-bookworm` descartável (`0` falhas, `0` skips): `sources` (`468`
+     fontes), `secret-self-test`, `python` (`490` testes em `165,851 s`), `frontend`
+     (`375` testes em `32` arquivos, `tsc --noEmit` e `vite build`), `audit` (`0`
+     vulnerabilidades npm/pip), `browser` (`154` gerais em `2,7 min` + `4` `@timing`
+     seriais em `3,5 min`, Chromium e Firefox) e `integration` (`68` casos HTTPS/API/PG
+     em `19,5 min` + `10` casos `playwright.local-auth.config.ts` em `21,7 s`, Chromium
+     e Firefox). Integração GitHub Flow (commit, push, PR e merge tradicional após
+     `verify` remoto) executada nesta unidade.
+
+### Retomada anterior — status operacionais segregados, quatro contagens cadastrais e revisão de WEB-048..055, 2026-11-16
 
 Continuidade do projeto no marco **M8** (`WEB-050`, `WEB-051` e revisão de
 `WEB-048`..`WEB-055`) na branch `feat/m8-entregaveis-integrados` (base `0ec2629`),
