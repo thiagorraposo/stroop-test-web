@@ -930,12 +930,18 @@
 :where(.professional-theme) .prep-action-cell {
   display: flex;
   align-items: flex-end;
+  min-width: 0;
+  max-width: 100%;
 }
 
 :where(.professional-theme) .button-toggle-registry {
-  white-space: nowrap;
-  height: 42px;
-  padding: 0 16px;
+  white-space: normal;
+  min-height: 42px;
+  height: auto;
+  max-width: 100%;
+  padding: 8px 16px;
+  line-height: 1.25;
+  text-align: center;
 }
 
 :where(.professional-theme) .prep-inline-feedback {
