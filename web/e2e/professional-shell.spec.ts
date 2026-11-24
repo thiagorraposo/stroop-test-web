@@ -47,6 +47,7 @@ test('NAV7: três eixos, histórico, detalhe, teclado, drawer e cinco larguras s
   expect(queries).toBe(1)
   const initial = queries
 
+  await page.getByRole('tab', {name:'Avaliações e tentativas'}).click()
   await page.getByLabel('Buscar na tabela (código, visita ou instrumento)').fill('V1')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(1)
   await page.getByRole('button', { name: /Ver avaliação PAT-20261116-000001, visita V1/ }).click()
@@ -62,7 +63,8 @@ test('NAV7: três eixos, histórico, detalhe, teclado, drawer e cinco larguras s
   await page.goBack()
   await expect(page.getByRole('tab', { name: 'Pacientes', exact: true })).toHaveAttribute('aria-selected', 'true')
   await axes.getByRole('button', { name: 'Resultados e Análise Unificada', exact: true }).click()
-  await expect(page.getByRole('tab', { name: 'Visão geral (Dashboard)' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: 'Visão geral' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: 'Avaliações e tentativas' }).click()
   await expect(page.getByLabel('Buscar na tabela (código, visita ou instrumento)')).toHaveValue('V1')
   expect(queries).toBe(initial)
 

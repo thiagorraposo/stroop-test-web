@@ -22,7 +22,7 @@ async function access(page: Page, role = 'importacao', active = true) {
     await page.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
     await expect(page.getByLabel('Projeto', { exact: true })).toHaveValue(id)
   } else {
-    await expect(page.getByRole('heading', { name: 'Resultados da pesquisa' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Nova Avaliação', exact: true })).toHaveCount(0)
   }
 }

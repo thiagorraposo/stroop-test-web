@@ -1,3 +1,4 @@
+import { analyticsSection } from './support/analytics'
 import { selectMulti } from './support/multiselect'
 import { analysisFixture } from '../src/test/analysis-fixture'
 /** Doubles HTTP sinteticos: UI profissional, sem reivindicar integracao real. */
@@ -32,6 +33,17 @@ async function access(page: Page, role = 'consulta') {
 function card(page: Page, title: string) {
   return page.locator('.dashboard-cards > div').filter({ has: page.getByText(title, { exact: true }) }).locator('dd')
 }
+test('recorte sintético nas seis dimensões de tela', async ({ page }) => {
+  await access(page)
+  await page.route('**/api/v1/analysis/query', route => route.fulfill({ json: analysisFixture(route.request().postDataJSON(), [first, second]) }))
+  await page.goto('/equipe')
+  await expect(card(page, 'Avaliações oficiais')).toHaveText('2')
+  for (const [width,height] of [[1920,1080],[1440,900],[1366,768],[1024,768],[768,1024],[390,844]] as const) {
+    await page.setViewportSize({width,height})
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({path: `/tmp/stroop-analytics-v2-${width}.png`})
+  }
+})
 for (const [role, label] of [['consulta', 'Consulta'], ['importacao', 'Coleta e importação'], ['administracao', 'Administração']]) {
   test(`perfil ${role} consulta metricas de referencia`, async ({ page }) => {
     const errors: string[] = []
@@ -39,21 +51,23 @@ for (const [role, label] of [['consulta', 'Consulta'], ['importacao', 'Coleta e 
     await access(page, role)
     await page.route('**/api/v1/analysis/query', route => route.fulfill({ json: analysisFixture(route.request().postDataJSON(), [first, second]) }))
     await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
     await expect(page.locator('.role-badge')).toHaveText(label!)
-    await expect(card(page, 'Avaliações')).toHaveText('2')
-    await expect(card(page, 'Participantes únicos')).toHaveText('2')
-    await expect(card(page, 'Precisão média')).toHaveText('75,0%')
-    await expect(card(page, 'Precisão mediana')).toHaveText('75,0%')
-    await expect(card(page, 'Mediana dos tempos por avaliação')).toHaveText('0,625 s')
-    await expect(card(page, 'Omissões')).toHaveText('4')
-    await expect(card(page, 'Comissões')).toHaveText('4')
+    await expect(card(page, 'Avaliações oficiais')).toHaveText('2')
+    await expect(card(page, 'Participantes do recorte')).toHaveText('2')
+    for (const stratum of await page.locator('details').filter({ has: page.getByText(/^Resumo das avaliações ·/) }).all()) {
+      await stratum.locator(':scope > summary').click()
+      for (const [name, value] of [['Precisão média','75,0%'], ['Precisão mediana','75,0%'], ['Mediana dos tempos por avaliação','0,625 s'], ['Omissões','2'], ['Comissões','2']]) {
+        await expect(stratum.locator('dl > div').filter({has: page.getByText(name!, {exact:true})}).locator('dd')).toHaveText(value!)
+      }
+    }
     await expect(page.getByRole('meter', { name: '2026-10-16: 2 avaliações' })).toBeVisible()
     await expect(page.getByRole('main')).toContainText('não representa avaliação clínica ou diagnóstico')
     if (role === 'consulta') {
-      await page.screenshot({ path: '/tmp/stroop-w15-dashboard.png', fullPage: true })
+      await page.screenshot({ path: '/tmp/stroop-v2-dashboard.png', fullPage: true })
       await page.setViewportSize({ width: 390, height: 844 })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-      await page.screenshot({ path: '/tmp/stroop-w15-dashboard-mobile.png', fullPage: true })
+      await page.screenshot({ path: '/tmp/stroop-v2-dashboard-mobile.png', fullPage: true })
     }
     expect(errors).toEqual([])
     await expect(page.getByRole('main')).not.toContainText(profile.csrf_token)
@@ -73,9 +87,10 @@ test('aguarda todas as paginas e descarta subconjunto em falha', async ({ page }
       : route.fulfill({ json: analysisFixture(body, [first, second], { items: [{ ...second, project_id: projectId }] }) })
   })
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   await expect(page.getByText(/^Carregando avaliações/)).toContainText('1 recebidas')
   await expect(page.locator('.dashboard-cards')).toHaveCount(0)
-  release(); await expect(card(page, 'Avaliações')).toHaveText('2')
+  release(); await expect(card(page, 'Avaliações oficiais')).toHaveText('2')
   fail = true; await page.getByRole('button', { name: 'Aplicar filtros' }).click()
   await expect(page.getByRole('button', { name: 'Entrar', exact: true })).toBeVisible()
   await expect(page.locator('.dashboard-cards')).toHaveCount(0)
@@ -93,11 +108,13 @@ test('separa instrumento/plataforma e aplica filtros vazios pelo teclado', async
     }
     return route.fulfill({ json: analysisFixture(body, [first, second, generic].filter(row => !query.test_code || query.test_code.includes(row.test_code))) })
   })
-  await page.goto('/equipe'); await expect(card(page, 'Avaliações')).toHaveText('3')
+  await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click(); await expect(card(page, 'Avaliações oficiais')).toHaveText('3')
   await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), generic.test_code)
   await page.getByRole('button', { name: 'Aplicar filtros' }).click()
-  await expect(card(page, 'Avaliações')).toHaveText('1')
+  await expect(card(page, 'Avaliações oficiais')).toHaveText('1')
   await expect(page.getByText('Precisão média', { exact: true })).toHaveCount(0)
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' })).toContainText(generic.participant_id)
   await page.getByText('Filtros avançados e ordenação', { exact: true }).click()
   await selectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), 'P_SINTETICO_AUSENTE')
@@ -117,9 +134,11 @@ test('abre detalhe pelo teclado, exporta CSV e trata revogacao segura', async ({
       'Content-Disposition': 'attachment; filename="stroop_go_nogo_ptbr_2026-10-16_12h00m00s_trials.csv"' },
       body: 'participant_id,participant_name\nP_SINTETICO_web1,NAO_COLETADO\n' }))
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   await page.getByRole('button', { name: `Ver avaliação ${first.participant_id}, visita V1` }).focus(); await page.keyboard.press('Enter')
   const panel = page.getByRole('region', { name: 'Detalhe da avaliação' })
-  await expect(panel).toBeFocused()
+  await expect(page.getByRole('dialog', { name: 'Avaliação e tentativas' }).locator(':focus')).toHaveCount(1)
   await expect(panel.getByRole('table', { name: 'Tentativas registradas' })).toContainText('0,625')
   const downloaded = page.waitForEvent('download')
   await panel.getByRole('button', { name: 'Exportar CSV oficial' }).click()
@@ -129,4 +148,76 @@ test('abre detalhe pelo teclado, exporta CSV e trata revogacao segura', async ({
   await expect(panel.getByRole('status')).toHaveText('O recurso solicitado não está disponível.')
   await expect(page.getByRole('main')).not.toContainText('SYNTHETIC_SECRET')
   await panel.getByRole('button', { name: 'Fechar detalhe' }).click(); await expect(panel).toHaveCount(0)
+})
+test('consulta paginada com 5000 avaliações preserva todas as linhas', async ({ page }, info) => {
+  const rows = Array.from({length:5000}, (_,index) => row('SINTETICA_'+index))
+  await access(page)
+  let requests = 0
+  await page.route('**/api/v1/analysis/query', route => {
+    const body = route.request().postDataJSON()
+    const offset = Number(body.page.cursor ?? 0)
+    requests++
+    return route.fulfill({json:analysisFixture(body, rows, {
+      items:rows.slice(offset,offset+100).map(item => ({...item,project_id:projectId})),
+      next_cursor:offset+100<rows.length ? String(offset+100) : null,
+    })})
+  })
+  const start = Date.now()
+  await page.goto('/equipe')
+  await expect(card(page, 'Avaliações oficiais')).toHaveText('5000',{timeout:60000})
+  const loaded = Date.now()
+  await analyticsSection(page,'Avaliações e tentativas')
+  const table = page.getByRole('table',{name:'Avaliações filtradas'})
+  await expect(table.locator('tbody tr')).toHaveCount(25)
+  const rendered = Date.now()
+  await page.getByLabel('Buscar na tabela (código, visita ou instrumento)').fill('SINTETICA_4999')
+  await expect(table.locator('tbody tr')).toHaveCount(1)
+  expect(requests).toBe(50)
+  await info.attach('medidas-sinteticas',{body:JSON.stringify({publishMs:loaded-start,tableMs:rendered-loaded,searchMs:Date.now()-rendered,requests}),contentType:'application/json'})
+})
+
+test('ponto de dispersão abre avaliação e a sequência mantém RT individual', async ({page}) => {
+  await access(page)
+  let queries = 0
+  await page.route('**/api/v1/analysis/query', route => {
+    queries++
+    return route.fulfill({json:analysisFixture(route.request().postDataJSON(),[first])})
+  })
+  await page.route(`**${base}/${first.assessment_id}`, route => route.fulfill({json:detail}))
+  await page.goto('/equipe')
+  await analyticsSection(page, 'Exploração de resultados')
+  await page.getByLabel('Visualizações das avaliações').selectOption('scatter')
+  await page.getByLabel('Inspecionar avaliação').selectOption(first.assessment_id)
+  await page.getByRole('button',{name:'Abrir avaliação',exact:true}).click()
+  const drawer = page.getByRole('dialog',{name:'Avaliação e tentativas'})
+  await expect(drawer).toContainText(first.assessment_id)
+  await drawer.getByLabel('Mostrar respostas').selectOption('hit')
+  await expect(drawer.getByRole('table',{name:'Tentativas registradas'})).toContainText('0,625')
+  await page.keyboard.press('Escape')
+  await expect(drawer).toHaveCount(0)
+  expect(queries).toBe(1)
+})
+
+test('as seis páginas analíticas preservam o recorte e o reflow', async ({page}, info) => {
+  test.setTimeout(90_000)
+  await access(page)
+  let requests = 0
+  await page.route('**/api/v1/analysis/query', route => {
+    requests++
+    return route.fulfill({json:analysisFixture(route.request().postDataJSON(),[first,second])})
+  })
+  await page.goto('/equipe')
+  await expect(card(page,'Avaliações oficiais')).toHaveText('2')
+  for (const name of ['Visão geral','Exploração de resultados','Análise longitudinal','Avaliações e tentativas','Qualidade da coleta','Exportações']) {
+    await analyticsSection(page,name)
+    await expect(page.getByRole('heading',{name,exact:true})).toBeVisible()
+    for (const [width,height] of [[1920,1080],[1440,900],[1366,768],[1024,768],[768,1024],[390,844]] as const) {
+      await page.setViewportSize({width,height})
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), name+' '+width).toBe(true)
+      if (width===1366 || width===390) {
+        await page.screenshot({path:info.outputPath(name+'-'+width+'.png')})
+      }
+    }
+  }
+  expect(requests).toBe(1)
 })

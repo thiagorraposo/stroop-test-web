@@ -26,7 +26,7 @@ async function login(page: Page): Promise<Profile> {
   const value = await response
   expect(value.status()).toBe(200)
   const profile = await value.json() as Profile
-  await expect(page.getByRole('heading', { name: 'Resultados da pesquisa' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible()
   return profile
 }
 async function replay(page: Page) {

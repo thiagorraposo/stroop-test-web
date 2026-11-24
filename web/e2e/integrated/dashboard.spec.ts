@@ -1,3 +1,4 @@
+import { analyticsSection } from '../support/analytics'
 import { selectMulti } from '../support/multiselect'
 /** HTTPS + API + SELECT PostgreSQL reais; perfis/dados exclusivamente sinteticos. */
 import { execFileSync } from 'node:child_process'
@@ -18,19 +19,24 @@ for (const [role, label] of [['consulta', 'Consulta'], ['importacao', 'Coleta e 
     const errors: string[] = []
     page.on('pageerror', error => errors.push(error.name))
     await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
     await expect(page.locator('.role-badge')).toHaveText(label!)
     await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
     await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
-    await expect(page.locator('.dashboard-cards').getByText('1', { exact: true })).toHaveCount(2)
-    await expect(page.locator('.dashboard-cards')).toContainText('56,2%')
-    await expect(page.locator('.dashboard-cards')).toContainText('0,512 s')
-    const table = page.getByRole('table', { name: 'Avaliações filtradas' })
+    await expect(page.locator('.dashboard-cards').first().getByText('1', { exact: true })).toHaveCount(3)
+    await page.getByText(/^Resumo das avaliações ·/).click()
+    await expect(page.locator('.dashboard-cards').last()).toContainText('56,2%')
+    await expect(page.locator('.dashboard-cards').last()).toContainText('0,512 s')
+    await analyticsSection(page, 'Avaliações e tentativas')
+  const table = page.getByRole('table', { name: 'Avaliações filtradas' })
     await expect(table).toContainText('P_SINTETICO_W15')
+    await page.getByText('Colunas visíveis').click()
+    await page.getByRole('checkbox',{name:'Plataforma',exact:true}).check()
     await expect(table).toContainText('PsychoPy local')
     await page.getByRole('button', { name: 'Ver avaliação P_SINTETICO_W15, visita V_SINTETICA' }).focus()
     await page.keyboard.press('Enter')
     const panel = page.getByRole('region', { name: 'Detalhe da avaliação' })
-    await expect(panel).toBeFocused()
+    await expect(page.getByRole('dialog').locator(':focus')).toHaveCount(1)
     await expect(panel.getByRole('table', { name: 'Tentativas registradas' }).locator('tbody tr')).toHaveCount(16)
     const downloaded = page.waitForEvent('download')
     await panel.getByRole('button', { name: 'Exportar CSV oficial' }).click()
@@ -51,6 +57,7 @@ for (const [role, label] of [['consulta', 'Consulta'], ['importacao', 'Coleta e 
     await expect(panel.getByRole('status')).toHaveText('O recurso solicitado não está disponível.')
     await page.reload()
     if (role === 'administracao') {
+      await page.locator('.query-controls > summary').click()
       await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
       await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
       await expect(page.locator('.professional-dashboard > p[role=alert]')).toHaveText('O recurso solicitado não está disponível.')

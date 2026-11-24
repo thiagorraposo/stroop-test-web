@@ -1,3 +1,4 @@
+import { analyticsSection } from '../support/analytics'
 /** W13A: emissao pela interface e coleta HTTPS/PostgreSQL reais, sem mocks. */
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -27,6 +28,7 @@ async function professional(page: Page, _context: BrowserContext, role: string):
     await page.getByRole('button', { name: 'Nova Avaliação', exact: true }).click()
     await page.getByRole('combobox', { name: 'Projeto', exact: true }).selectOption(prepared.project_id)
   } else {
+    await page.locator('.query-controls > summary').click()
     await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
     await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   }
@@ -64,8 +66,10 @@ test('cadastro pela equipe conserva metadados ate recibo, consulta e CSV reais',
     expect([stored.state, stored.assessments, stored.trials, stored.metrics, stored.observations, stored.confirmed_through])
       .toEqual(['completed', 1, 16, 12, 16, 16])
     await page.reload()
+    await page.locator('.query-controls > summary').click()
     await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
     await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+    await analyticsSection(page,'Avaliações e tentativas')
     await page.getByRole('button', { name: `Ver avaliação ${participant}, visita ${visit}` }).click()
     const detail = page.getByRole('region', { name: 'Detalhe da avaliação' })
     await expect(detail).toBeVisible()
@@ -118,6 +122,7 @@ test('administracao vinculada emite e revoga pela tela impedindo resgate', async
 
 test('consulta vinculada nao recebe controles de cadastro ou revogacao', async ({ page, context }) => {
   await professional(page, context, 'consulta')
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Gerar convite', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Revogar convite', exact: true })).toHaveCount(0)

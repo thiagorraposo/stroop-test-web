@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
+import { analyticsSection } from '../support/analytics'
 import { selectMulti } from '../support/multiselect'
 const python = fileURLToPath(new URL('../../../.venv/bin/python', import.meta.url))
 const script = fileURLToPath(new URL('./dashboard-manage.py', import.meta.url))
@@ -11,11 +12,13 @@ test('consulta aplicada gera prévia e CSV da mesma avaliação, invalida prévi
   const prepared = JSON.parse(execFileSync(python, [script], { input: JSON.stringify({ role: 'consulta' }), encoding: 'utf8', stdio: ['pipe','pipe','pipe'] }))
   await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(1)
-  await page.getByRole('tab', { name: 'Exportações', exact: true }).click()
+  await analyticsSection(page, 'Exportações')
   const preview = page.waitForResponse(response => response.url().endsWith('/exports/preview'))
   await page.getByRole('button', { name: 'Pré-visualizar contagem e amostra' }).click()
   const response = await preview

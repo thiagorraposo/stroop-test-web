@@ -126,10 +126,10 @@ test('expiracao profissional limpa painel e exige novo login sem persistir dados
     : { status: 401, json: { error: { code: 'authentication_required' } } }))
   await page.route('**/api/v1/projects?*', route => route.fulfill({ status: 200, json: { items: [], next_cursor: null } }))
   await page.goto('/equipe')
-  await expect(page.getByRole('heading', { name: 'Resultados da pesquisa' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible()
   expired = true
   await page.clock.fastForward(1_800_001)
   await expect(page.getByRole('button', { name: 'Entrar', exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Resultados da pesquisa' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toHaveCount(0)
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
 })

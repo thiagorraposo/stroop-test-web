@@ -1,3 +1,4 @@
+import { analyticsSection } from './support/analytics'
 import { analysisFixture } from '../src/test/analysis-fixture'
 /** W15C: navegador com HTTP sintetico; suite integrated prova backend real. */
 import { readFile } from 'node:fs/promises'
@@ -19,7 +20,10 @@ async function access(page: Page, role = 'consulta') {
   await page.route(`**${base}/options*`, route => route.fulfill({ json: { participant_id: ['P_SINTETICO'], visit: ['V1'], evaluator_id: [], test_version: ['1.0'], platform: ['web'], test_code: [assessment.test_code] } }))
   await page.route('**/api/v1/analysis/query', route => route.fulfill({ json: analysisFixture(route.request().postDataJSON(), [assessment], {}, snapshot) }))
   await page.goto('/equipe')
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(1)
+  await analyticsSection(page, 'Exportações')
+  await page.locator('.query-controls > summary').click()
 }
 for (const role of ['consulta', 'importacao', 'administracao']) {
   test(`${role} exporta manualmente snapshot autorizado sem token em URL ou storage`, async ({ page }) => {

@@ -1,3 +1,4 @@
+import { analyticsSection } from '../support/analytics'
 import { selectMulti } from '../support/multiselect'
 /** QUERY7: POST normalizado em HTTPS/API/PG reais, sem interceptação HTTP. */
 import { execFileSync } from 'node:child_process'
@@ -11,6 +12,7 @@ test('POST vincula consulta normalizada, população A/T e revogação sem nomin
   const prepared = JSON.parse(execFileSync(python, [script], { input: JSON.stringify({ role: 'consulta' }), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }))
   await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   await expect(page.getByRole('form', { name: 'Filtros da consulta' })).toBeVisible()
   const responses = await page.evaluate(async ({ project, csrf, assessment }) => {
     const query = async (filters: Record<string, unknown>, token = csrf) => {
@@ -72,10 +74,12 @@ test('React aplica busca/faixas/RT ausente no POST compartilhado entre módulos'
     if (/\/assessments\?/.test(request.url())) listingGets.push(request.url())
   })
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
   await selectMulti(form.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   const table = page.getByRole('table', { name: 'Avaliações filtradas' })
   await expect(table.locator('tbody tr')).toHaveCount(4)
   await form.getByText('Filtros avançados e ordenação', { exact: true }).click()
@@ -95,15 +99,15 @@ test('React aplica busca/faixas/RT ausente no POST compartilhado entre módulos'
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
   await expect(table.locator('tbody tr')).toHaveCount(3)
   const count = queries.length
-  await page.getByRole('tab', { name: 'Resultados e análises', exact: true }).click()
-  await expect(page.locator('.dashboard-cards > div').filter({ has: page.getByText('Avaliações analisadas', { exact: true }) }).locator('dd')).toHaveText('3')
-  await page.getByRole('tab', { name: 'Avaliações e histórico', exact: true }).click()
+  await analyticsSection(page, 'Exploração de resultados')
+  await expect(page.getByRole('region', { name: 'Exploração da consulta aplicada' })).toContainText('3 avaliações')
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(table.locator('tbody tr')).toHaveCount(3)
   expect(queries.length).toBe(count)
   expect(queries.at(-1)).toMatchObject({ query: { filters: { accuracy_min: 50, accuracy_max: 80, include_null_rt: false } },
     page: { sort: 'response_time_desc' } })
   expect(listingGets).toEqual([])
-  await page.getByRole('tab', { name: 'Visão geral (Dashboard)', exact: true }).click()
+  await analyticsSection(page, 'Exportações')
   await expect(page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })).toBeDisabled()
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0])
 })
@@ -115,6 +119,7 @@ test('precisão Go/No-Go e erros selecionam avaliação completa e bloqueiam CSV
   const queries: AnalysisBody[] = []
   page.on('request', request => { if (request.url().endsWith('/api/v1/analysis/query')) queries.push(request.postDataJSON()) })
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
   await selectMulti(form.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
@@ -124,6 +129,7 @@ test('precisão Go/No-Go e erros selecionam avaliação completa e bloqueiam CSV
   await form.getByRole('combobox', { name: 'Presença de erros de comissão', exact: true }).selectOption('no')
   await form.getByRole('combobox', { name: 'Presença de erros de omissão', exact: true }).selectOption('yes')
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   const table = page.getByRole('table', { name: 'Avaliações filtradas' })
   await expect(table.locator('tbody tr')).toHaveCount(1)
   await expect(table).toContainText('P_SINTETICO_SEM_HITS')
@@ -131,10 +137,10 @@ test('precisão Go/No-Go e erros selecionam avaliação completa e bloqueiam CSV
   await expect(page.getByRole('status').filter({ hasText: 'Filtros aplicados:' })).toContainText('erros de comissão: sem')
   await expect(page.getByRole('status').filter({ hasText: 'Para exportar os filtros avançados, use Exportações' })).toBeVisible()
   const before = queries.length
-  await page.getByRole('tab', { name: 'Resultados e análises', exact: true }).click()
-  await expect(page.locator('.dashboard-cards > div').filter({ has: page.getByText('Avaliações analisadas', { exact: true }) }).locator('dd')).toHaveText('1')
+  await analyticsSection(page, 'Exploração de resultados')
+  await expect(page.getByRole('region', { name: 'Exploração da consulta aplicada' })).toContainText('1 avaliações')
   expect(queries.length).toBe(before)
-  await page.getByRole('tab', { name: 'Avaliações e histórico', exact: true }).click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   await form.getByRole('button', { name: /Remover filtro Precisão Go/ }).click()
   await expect(form.getByRole('status').filter({ hasText: 'Alterações não aplicadas' })).toBeVisible()
   await form.getByRole('button', { name: 'Descartar alterações', exact: true }).click()
@@ -150,6 +156,7 @@ test('Go/No-Go combina filtros na mesma tentativa e mantém rascunho e mediana o
   const prepared = JSON.parse(execFileSync(python, [script], { input: JSON.stringify({ role: 'consulta' }), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }))
   await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
   await selectMulti(form.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
@@ -189,6 +196,7 @@ test('IDs cadastrais selecionam paciente vinculado sem expor nome nominal em URL
   const linked = JSON.parse(execFileSync(python, [script], { input: JSON.stringify({ action: 'link_patient', project_id: prepared.project_id }), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }))
   await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
   await form.getByText('Filtros avançados e ordenação', { exact: true }).click()
@@ -215,6 +223,7 @@ test('status operacionais segregados e quatro contagens cadastrais distinguem po
   const seeded = JSON.parse(execFileSync(python, [script], { input: JSON.stringify({ action: 'seed_operational', project_id: prepared.project_id }), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }))
   await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   await selectMulti(form.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
   const apply = async () => {
@@ -230,6 +239,7 @@ test('status operacionais segregados e quatro contagens cadastrais distinguem po
   expect(initial.registry_counts.filtered_participants).toBe(1)
   expect(initial.registry_counts.visible_patients).toBeGreaterThanOrEqual(2)
   expect(initial.operational.counts.aborted).toBe(1)
+  await page.getByText('Populações cadastrais e participantes', {exact:true}).click()
   await expect(page.getByRole('region', { name: 'Quatro contagens cadastrais e de participantes', exact: true })).toBeVisible()
   await form.getByText('Filtros avançados e ordenação', { exact: true }).click()
   await form.getByRole('combobox', { name: 'Status da avaliação', exact: true }).selectOption('aborted')
@@ -237,8 +247,9 @@ test('status operacionais segregados e quatro contagens cadastrais distinguem po
   expect(opBody.counts.assessments).toBe(0)
   expect(opBody.operational.items).toHaveLength(1)
   expect(opBody.operational.items[0].session_id).toBe(seeded.session_id)
+  await analyticsSection(page, 'Qualidade da coleta')
   await expect(page.getByRole('table', { name: 'Sessões operacionais segregadas', exact: true })).toContainText('P_SINTETICO_ABORTADO')
-  await page.getByRole('tab', { name: 'Exportações', exact: true }).click()
+  await analyticsSection(page, 'Exportações')
   await expect(page.getByText(/A exportação CSV oficial exige status/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Pré-visualizar contagem e amostra', exact: true })).toBeDisabled()
 })
