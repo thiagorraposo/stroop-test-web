@@ -973,3 +973,11 @@ conferir requisito→teste→aceite. Não copiar resultados nas duas fontes. Se 
 ou contrato mudar, registrar por quê e reavaliar critérios afetados; não reabrir
 conclusão histórica sem evidência de regressão ou novo escopo. Novos requisitos
 exigem tarefa/critério antes de execução e não concedem crédito retroativo.
+
+### Exploração analítica profissional de 2026-11-24
+
+REQ-REL-006 a REQ-REL-010 e REQ-CSV-006/007 utilizam o contexto publicado
+entre os seis destinos. A evidência de paginação e cancelamento fica em
+`AppliedQuery.test.tsx`, a de identidade dos grupos em `AnalysisExplorer.test.tsx`
+e a dos quartis em `DistributionView.test.ts`. As viagens HTTPS de consulta,
+tentativas e exportação permanecem em `web/e2e/integrated`.

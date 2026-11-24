@@ -373,3 +373,25 @@ ambiente autorizado. Screenshots, mocks HTTP, testes de render e build não
 substituem arquivo/PG/auditoria/jornada real. Falta de evidência obrigatória
 mantém tarefa aberta. Nominal real, medição física, instituição, VPS e deploy
 exigem as decisões/autorização específicas já previstas.
+
+## Analytics Experience 2.0 — ensaio sintético local em 2026-11-24
+
+Na base `041f247d`, Chromium confirmou as métricas de referência e registrou
+capturas do dashboard em desktop e móvel. A visão geral reformulada foi ensaiada
+em 1920×1080, 1440×900, 1366×768, 1024×768, 768×1024 e 390×844. O teste
+verifica o total de avaliações publicado e a largura do documento.
+
+A fixture de 5.000 avaliações usa 50 respostas HTTP sintéticas. Em uma execução
+Chromium por versão, a publicação observada passou de 2.239 para 2.047 ms e a
+busca local de 478 para 146 ms. O tempo entre publicação e tabela passou de 50
+para 181 ms, incluindo a navegação explícita na nova interface. São observações
+locais isoladas, sensíveis à carga da máquina e à automação. Ambas fizeram 50
+requisições. A campanha HTTPS separada utilizou API real e PostgreSQL descartável
+em UTC. Os 16 casos de analysis-query, trial-filters e query-exports passaram
+em Chromium e Firefox. Na revalidação completa local da branch em 2026-11-24
+(PostgreSQL 17.6 descartável em tmpfs), foram aprovados sem skips: Vitest
+(`376/376` em 33 arquivos), `tsc --noEmit` + `vite build`, Playwright browser
+não-timing (`162/162` em Chromium e Firefox), `verify_web_ci.py integration`
+(`68/68` HTTPS/API/PG + `10/10` `local-auth`), scanner `sources` (`468` fontes)
+e `secret-self-test`, além de `verify_web_docs.py` e `tests.test_verify_web_docs`.
+Os ensaios não medem latência física de apresentação.

@@ -4326,6 +4326,24 @@ não inferir ausência de problema por falta de reprodução PG nesta missão.
 
 ## Retomada
 
+### Analytics Experience 2.0 — entrega e validação de 2026-11-24
+
+Missão autorizada de evolução da entrega profissional de M8. Branch
+`feat/analytics-experience-v2`, base `041f247df7fb797a5e80009dce801dac0e3e1bcb`.
+O painel anterior reunia explorador, comparações, registros e exportação na visão
+geral. A inspeção confirmou seleção de grupo por rótulo e comparações locais
+sem separação integral de proveniência. A implementação distribuiu os seis
+destinos, extraiu a validação paginada, estratificou comparações e vinculou
+o drill-down ao valor da chave. Registro de ensaios em
+[Validação WEB](VALIDACAO_WEB.md): Vitest (`376/376`), `tsc`/`vite build`,
+Playwright browser não-timing (`162/162` em Chromium e Firefox), integração real
+HTTPS/API/PostgreSQL 17.6 descartável (`68/68` + `10/10` `local-auth`), scanner
+de secrets (`sources`/`secret-self-test`) e `verify_web_docs.py` aprovados sem
+falhas nem skips. O aceite histórico dos marcos permanece inalterado
+(`47/56 · 83,9%`; M9 e M10 seguem pendentes de decisões externas e homologação).
+Pronto para envio em commits por contexto, abertura de PR, validação na CI remota
+(`verify`), merge tradicional na `main` e deploy autorizado via SSH local.
+
 ### EV-M8-FECHAMENTO-20261117 — conclusão integral de M8 (WEB-048..055 e WEB-032), 2026-11-17
 
 Execução contínua na branch `feat/m8-fechamento-integrado` concluindo os 9 entregáveis

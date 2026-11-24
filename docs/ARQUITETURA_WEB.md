@@ -331,3 +331,14 @@ reuso, licença, manutenção, peso medido no bundle e compatibilidade de teclad
 Vitest/Playwright antes de adoção; nenhuma dependência instalada nesta missão.
 Preservar Streamlit/launchers/CLIs e migrations existentes. Runbooks M10 devem
 retratar a interface final aceita. DEC-03/04/05 e réplica externa continuam gates.
+
+## Análise profissional por contexto publicado
+
+A área profissional conserva os eixos de aplicação e gestão. O eixo analítico
+compartilha o rascunho e a consulta aplicada entre visão geral, exploração,
+longitudinal, registros, qualidade e exportação. A navegação usa destinos
+públicos. O adaptador `features/analytics/loadAnalysis.ts` valida páginas e
+identidades antes de publicar o conjunto em RAM. Agrupamentos exigem nova consulta
+oficial. Busca local, colunas, tipo de gráfico e comparação entre visitas são
+estados de apresentação. O explorador carrega as visualizações das avaliações
+sob demanda. As comparações separam instrumento, versão, protocolo e plataforma.

@@ -100,3 +100,26 @@ ocupado pode adiar anúncios. Erro de credencial é genérico e associado a ambo
 os campos; falha de serviço não declara credenciais inválidas. Autocomplete
 nativo e limpeza imediata de senha permanecem obrigatórios. Nenhum componente
 deve bloquear colagem ou substituir o gerenciador de senhas do navegador.
+
+## Exploração profissional por pergunta de pesquisa
+
+`Overview` apresenta as quatro contagens da consulta. Cada população cadastral
+tem sua própria legenda em uma seção expansível. `AnalysisExplorer` configura
+o agrupamento do servidor e usa o último elemento da chave como valor da dimensão.
+Os outros elementos identificam estrato e nível. Restringir uma dimensão edita
+o rascunho. Selecionar um ponto de dispersão permite abrir a avaliação original.
+
+`DistributionView` calcula os quartis descritivos por interpolação linear no
+índice (n − 1)p dos valores disponíveis. Os extremos do boxplot são mínimo e
+máximo. As classes de precisão têm largura de 20 pontos percentuais e incluem o
+limite inferior. A última inclui 100%. `VisitMatrix` exibe cada avaliação
+separadamente quando há repetição de visita. `TrialSequence` consome as
+tentativas do detalhe autorizado e expressa o RT individual em segundos.
+
+A implementação usa HTML e SVG locais com controles HTML e valores tabulares.
+ECharts suporta importação modular, tipagem e renderizadores SVG e Canvas.
+Chart.js usa Canvas e exige conteúdo acessível complementar. Para os gráficos
+implementados, manter a tabela junto dos dados também atende ao detalhamento e
+dispensa uma biblioteca adicional no cliente. A comparação não incluiu um
+benchmark dos dois pacotes. [ECharts](https://echarts.apache.org/handbook/en/basics/import/)
+e [Chart.js](https://www.chartjs.org/docs/latest/general/accessibility.html).
