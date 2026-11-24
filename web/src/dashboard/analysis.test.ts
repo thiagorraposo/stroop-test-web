@@ -178,8 +178,8 @@ test('CHG-005: computeOverviewKPIs agrega metricas por status, instrumento e ava
   expect(kpis.byEvaluator['EVA-000002']).toBe(4)
 })
 
-test('CHG-005: dicionario de metricas oficiais contem todas as 6 metricas com origem, definicao e nulos', () => {
-  expect(OFFICIAL_METRICS_DICTIONARY).toHaveLength(6)
+test('CHG-005: dicionario de metricas oficiais contem as 12 metricas com origem, definicao e nulos', () => {
+  expect(OFFICIAL_METRICS_DICTIONARY).toHaveLength(12)
   const codes = OFFICIAL_METRICS_DICTIONARY.map(m => m.code)
   expect(codes).toEqual([
     'accuracy',
@@ -188,6 +188,7 @@ test('CHG-005: dicionario de metricas oficiais contem todas as 6 metricas com or
     'response_time_seconds',
     'omission_errors',
     'commission_errors',
+    'omission_errors_percentage', 'total_trials', 'total_go_trials', 'total_no_go_trials', 'hits', 'correct_rejections',
   ])
   for (const metric of OFFICIAL_METRICS_DICTIONARY) {
     expect(metric.label.length).toBeGreaterThan(0)
