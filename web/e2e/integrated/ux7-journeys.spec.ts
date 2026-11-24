@@ -56,6 +56,7 @@ test('UX7-J1 — pesquisador consulta, aprofunda e exporta multi-granularidade c
 
   // Selecionar os 2 projetos autorizados + filtro por instrumento + preservar RT nulo
   await selectMulti(projectsGroup, prepared.projects)
+  await expect(form.getByText('Carregando opções autorizadas…')).toHaveCount(0)
   await selectMulti(form.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
 

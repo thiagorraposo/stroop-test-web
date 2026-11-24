@@ -22,7 +22,9 @@ for (const [role, label] of [['consulta', 'Consulta'], ['importacao', 'Coleta e 
   await page.locator('.query-controls > summary').click()
     await expect(page.locator('.role-badge')).toHaveText(label!)
     await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.project_id)
+    const applied = page.waitForResponse(response => response.url().endsWith('/api/v1/analysis/query') && response.request().method() === 'POST' && response.status() === 200)
     await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+    await applied
     await expect(page.locator('.dashboard-cards').first().getByText('1', { exact: true })).toHaveCount(3)
     await page.getByText(/^Resumo das avaliações ·/).click()
     await expect(page.locator('.dashboard-cards').last()).toContainText('56,2%')

@@ -94,11 +94,13 @@ export function ResearchFilters({
   const [pending, setPending] = useState(false)
   const [revision, setRevision] = useState(0)
 
+  const selectedKey = selected.join(',')
+
   useEffect(() => {
     const io = new AbortController()
-    setFacets(empty)
     setError(null)
     if (!selected.length || selected.length > 20 || (start && end && start > end)) {
+      setFacets(empty)
       setPending(false)
       return () => io.abort()
     }
@@ -119,6 +121,7 @@ export function ResearchFilters({
         if (!io.signal.aborted) setFacets(merged)
       } catch (cause) {
         if (!io.signal.aborted) {
+          setFacets(empty)
           setError(apiErrorMessage(cause))
           if (cause instanceof ApiError && [401, 403].includes(cause.status)) window.dispatchEvent(new Event('stroop-professional-session-ended'))
         }
@@ -127,7 +130,7 @@ export function ResearchFilters({
       }
     })()
     return () => io.abort()
-  }, [selected, start, end, revision, refreshKey])
+  }, [selectedKey, start, end, revision, refreshKey])
 
   function apply(event?: FormEvent) {
     event?.preventDefault()
@@ -415,16 +418,6 @@ export function ResearchFilters({
       </div>
 
       {validation && <p id={validationId} role="alert">{validation}</p>}
-      {pending && <p role="status">Carregando opções autorizadas…</p>}
-      {error && (
-        <>
-          <p role="alert">Opções de filtro: {error}</p>
-          <button type="button" className="button secondary" onClick={() => setRevision(n => n + 1)}>
-            Atualizar opções
-          </button>
-        </>
-      )}
-      {dirty && <p role="status">Alterações não aplicadas. Aplique ou descarte para habilitar downloads.</p>}
       <div className="filter-form-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '1.25rem', flexWrap: 'wrap' }}>
         <button className="button primary" type="submit">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -437,6 +430,16 @@ export function ResearchFilters({
         </button>
         {dirty && <button className="button secondary" type="button" onClick={() => update(appliedQuery)}>Descartar alterações</button>}
       </div>
+      {pending && <p role="status">Carregando opções autorizadas…</p>}
+      {error && (
+        <>
+          <p role="alert">Opções de filtro: {error}</p>
+          <button type="button" className="button secondary" onClick={() => setRevision(n => n + 1)}>
+            Atualizar opções
+          </button>
+        </>
+      )}
+      {dirty && <p role="status">Alterações não aplicadas. Aplique ou descarte para habilitar downloads.</p>}
     </form>
   )
 }
