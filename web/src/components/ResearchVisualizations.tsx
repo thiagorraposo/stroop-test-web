@@ -6,6 +6,7 @@ type Row = Assessment & { project_id: string }
 type Props = {
   rows: readonly Row[]
   projects: readonly Project[]
+  fixedParticipant?: boolean
   viewMode?: 'all' | 'visitas' | 'condicoes' | 'operacional'
 }
 const projectName = (id: string, projects: readonly Project[]) => projects.find(project => project.id === id)?.code ?? id
@@ -16,13 +17,16 @@ const stroop = (row: Row): row is Row & { summary: StroopSummary } => !('metrics
 const value = (number: number | null) => number === null ? 'Ausente' : formatMetric(number, 3)
 
 /** Visuais exclusivamente descritivos do conjunto recebido; nenhuma inferência clínica (REQ-REL-005). */
-export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Props) {
+export function ResearchVisualizations({ rows, projects, viewMode = 'all', fixedParticipant = false }: Props) {
   const [chosen, setChosen] = useState('')
+  const [comparison, setComparison] = useState<string[]>([])
   const eligible = rows.filter(stroop)
   const participants = [...new Map(eligible.map(row => [identity(row), row])).entries()]
     .sort(([a], [b]) => a.localeCompare(b))
   const selected = participants.some(([key]) => key === chosen) ? chosen : participants[0]?.[0] ?? ''
-  const longitudinal = eligible.filter(row => identity(row) === selected).sort(order)
+  const history = eligible.filter(row => identity(row) === selected).sort(order)
+
+  const longitudinal = comparison.length ? history.filter(row => comparison.includes(rowKey(row))) : history
 
   // 1. Totais por Projeto
   const projectTotals = [...new Set(eligible.map(row => row.project_id))].sort().map(id => ({
@@ -42,12 +46,12 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
   const totalGoTrials = eligible.reduce((acc, r) => acc + r.summary.total_go_trials, 0)
   const totalGoHits = eligible.reduce((acc, r) => acc + r.summary.hits, 0)
   const totalGoOmissions = eligible.reduce((acc, r) => acc + r.summary.omission_errors, 0)
-  const meanGoAccuracy = totalGoTrials > 0 ? (totalGoHits / totalGoTrials) * 100 : null
+  const goCorrectShare = totalGoTrials > 0 ? (totalGoHits / totalGoTrials) * 100 : null
 
   const totalNoGoTrials = eligible.reduce((acc, r) => acc + r.summary.total_no_go_trials, 0)
   const totalNoGoCorrectRejections = eligible.reduce((acc, r) => acc + r.summary.correct_rejections, 0)
   const totalNoGoCommissions = eligible.reduce((acc, r) => acc + r.summary.commission_errors, 0)
-  const meanNoGoAccuracy = totalNoGoTrials > 0 ? (totalNoGoCorrectRejections / totalNoGoTrials) * 100 : null
+  const noGoCorrectShare = totalNoGoTrials > 0 ? (totalNoGoCorrectRejections / totalNoGoTrials) * 100 : null
 
   // 4. Totais por Visita
   const visitKeys = [...new Set(eligible.map(r => r.visit))].sort()
@@ -146,10 +150,10 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
               </p>
             </div>
           </div>
-          <div className="analytics-participant-select">
+          {!fixedParticipant && <div className="analytics-participant-select">
             <label>
               Participante para evolução
-              <select value={selected} onChange={event => setChosen(event.target.value)}>
+              <select value={selected} onChange={event => { setChosen(event.target.value); setComparison([]) }}>
                 {participants.map(([key, row]) => (
                   <option key={key} value={key}>
                     {projectName(row.project_id, projects)} · {row.participant_id}
@@ -157,11 +161,14 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
                 ))}
               </select>
             </label>
-          </div>
+          </div>}
           <p className="quiet">
             Visitas repetidas representam avaliações distintas, ordenadas pelo início registrado e identificador.
             Datas legadas conservam a referência civil; não se atribui fuso.
           </p>
+          <details><summary>Comparar avaliações selecionadas</summary>{history.map(row => <label key={rowKey(row)}>
+            <input type="checkbox" checked={comparison.includes(rowKey(row))} onChange={e => setComparison(e.target.checked ? [...comparison, rowKey(row)] : comparison.filter(id => id !== rowKey(row)))} />
+            {row.visit} · {row.started_at} · {row.assessment_id}</label>)}</details>
           <div className="comparison-tables-grid">
             <figure className="dashboard-chart">
               <figcaption>Precisão por avaliação (%)</figcaption>
@@ -205,6 +212,12 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
                 ))}
               </ul>
             </figure>
+            <figure className="dashboard-chart"><figcaption>Erros por avaliação (contagem)</figcaption>
+              <ul className="chart-meter-list">{longitudinal.map(row => <li key={rowKey(row)}>
+                <span>{row.visit} · {row.assessment_id}</span><span>Omissões: {row.summary.omission_errors}</span>
+                <meter max={Math.max(1,row.summary.total_trials)} value={row.summary.omission_errors} aria-label="Omissões sobre as tentativas da avaliação" />
+                <span>Comissões: {row.summary.commission_errors}</span><meter max={Math.max(1,row.summary.total_trials)} value={row.summary.commission_errors} aria-label="Comissões sobre as tentativas da avaliação"/>
+              </li>)}</ul></figure>
           </div>
           <div className="table-scroll" style={{ marginTop: '1rem' }}>
             <table>
@@ -219,7 +232,7 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
                   <th>Precisão (%)</th>
                   <th>Tempo mediano (s)</th>
                   <th>Instrumento / Versão</th>
-                  <th>Plataforma</th>
+                  <th>Plataforma</th><th>Protocolo</th><th>Precisão Go / No-Go (%)</th><th>Omissões / comissões</th>
                 </tr>
               </thead>
               <tbody>
@@ -233,7 +246,7 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
                     <td className="tabular-nums">{value(row.summary.accuracy)}</td>
                     <td className="tabular-nums">{value(row.summary.response_time_seconds)}</td>
                     <td className="tabular-nums">{row.test_code} / {row.test_version}</td>
-                    <td>{row.platform === 'web' ? 'WEB' : 'PsychoPy local'}</td>
+                    <td>{row.platform === 'web' ? 'WEB' : 'PsychoPy local'}</td><td>{row.protocol_id ?? 'Ausente'}</td><td>{value(row.summary.accuracy_go_trials)} / {value(row.summary.accuracy_no_go_trials)}</td><td>{row.summary.omission_errors} / {row.summary.commission_errors}</td>
                   </tr>
                 ))}
               </tbody>
@@ -325,31 +338,31 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
             </p>
           </div>
           <figure className="dashboard-chart">
-            <figcaption>Precisão média por condição (%)</figcaption>
+            <figcaption>Proporção de respostas corretas sobre as tentativas das avaliações completas (%)</figcaption>
             <ul className="chart-meter-list">
               <li>
                 <span>Condição Go (com resposta)</span>
-                {meanGoAccuracy !== null && (
+                {goCorrectShare !== null && (
                   <meter
                     min={0}
                     max={100}
-                    value={meanGoAccuracy}
-                    aria-label={`Condição Go: precisão média ${formatMetric(meanGoAccuracy, 1)}%`}
+                    value={goCorrectShare}
+                    aria-label={`Condição Go: proporção correta ${formatMetric(goCorrectShare, 1)}%`}
                   />
                 )}
-                <strong className="tabular-nums">{value(meanGoAccuracy)}%</strong>
+                <strong className="tabular-nums">{value(goCorrectShare)}%</strong>
               </li>
               <li>
                 <span>Condição No-Go (inibição)</span>
-                {meanNoGoAccuracy !== null && (
+                {noGoCorrectShare !== null && (
                   <meter
                     min={0}
                     max={100}
-                    value={meanNoGoAccuracy}
-                    aria-label={`Condição No-Go: precisão média ${formatMetric(meanNoGoAccuracy, 1)}%`}
+                    value={noGoCorrectShare}
+                    aria-label={`Condição No-Go: proporção correta ${formatMetric(noGoCorrectShare, 1)}%`}
                   />
                 )}
-                <strong className="tabular-nums">{value(meanNoGoAccuracy)}%</strong>
+                <strong className="tabular-nums">{value(noGoCorrectShare)}%</strong>
               </li>
             </ul>
           </figure>
@@ -362,7 +375,7 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
                   <th>Tentativas</th>
                   <th>Acertos / Inibições corretas</th>
                   <th>Erros (Omissões / Comissões)</th>
-                  <th>Precisão média (%)</th>
+                  <th>Proporção correta (%)</th>
                 </tr>
               </thead>
               <tbody>
@@ -371,14 +384,14 @@ export function ResearchVisualizations({ rows, projects, viewMode = 'all' }: Pro
                   <td className="tabular-nums">{totalGoTrials}</td>
                   <td className="tabular-nums">{totalGoHits} (acertos)</td>
                   <td className="tabular-nums">{totalGoOmissions} (omissões)</td>
-                  <td className="tabular-nums">{value(meanGoAccuracy)}%</td>
+                  <td className="tabular-nums">{value(goCorrectShare)}%</td>
                 </tr>
                 <tr>
                   <td>No-Go (inibição de resposta motora)</td>
                   <td className="tabular-nums">{totalNoGoTrials}</td>
                   <td className="tabular-nums">{totalNoGoCorrectRejections} (rejeições corretas)</td>
                   <td className="tabular-nums">{totalNoGoCommissions} (comissões)</td>
-                  <td className="tabular-nums">{value(meanNoGoAccuracy)}%</td>
+                  <td className="tabular-nums">{value(noGoCorrectShare)}%</td>
                 </tr>
               </tbody>
             </table>

@@ -172,3 +172,52 @@
 .professional-theme .results-table th button { color: inherit; background: transparent; border: 0; min-height: 24px; text-align: left; font: inherit; cursor: pointer; }
 .professional-theme .table-compact td { padding-block: 4px; }
 .professional-theme .analysis-explorer { margin-block: 24px; }
+
+.professional-theme .professional-dashboard {
+  --analytics-rule: #d7dce6;
+  --analytics-ink: #202b46;
+  color: var(--analytics-ink);
+  font-variant-numeric: tabular-nums;
+}
+.professional-theme .professional-sidebar .professional-sections { gap: 2px; }
+.professional-theme .professional-sidebar .professional-sections button { border: 0; border-radius: 4px; background: transparent; padding: 9px 12px; }
+.professional-theme .professional-sidebar .professional-sections [aria-selected="true"] { background: var(--ui-selection); color: var(--ui-action-hover); }
+.professional-theme .query-controls { border-block: 1px solid var(--analytics-rule); padding-block: 10px; }
+.professional-theme .query-controls > summary { font-weight: 650; cursor: pointer; color: var(--ui-action-hover); }
+.professional-theme .analysis-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.professional-theme .professional-dashboard h2 { font-size: clamp(1.35rem, 2vw, 1.7rem); }
+.professional-theme .results-table th { position: sticky; top: 0; background: var(--ui-surface); }
+
+.professional-theme.content-card:has(.professional-shell) { padding: clamp(14px, 2vw, 28px); }
+.professional-theme:has(.professional-shell) > .eyebrow { display: none; }
+.professional-theme:has(.professional-shell) > h1 { font-size: 24px; margin: 0 0 8px; }
+.professional-theme:has(.professional-shell) .session-bar { margin: 0; padding: 6px 12px; }
+.professional-theme:has(.professional-shell) .session-bar p { margin: 0; }
+.professional-theme:has(.professional-shell) .password-settings { margin: 6px 0 12px; }
+.professional-theme .professional-dashboard { border-top: none; padding-top: 0; margin-top: 0; }
+.professional-theme .professional-dashboard .active-filters-bar { width: auto; max-width: none; }
+.professional-theme .dashboard-cards { border-block: 1px solid var(--analytics-rule); gap: 0; }
+.professional-theme .dashboard-cards > div { background: white; border-radius: 0; border: 0; border-inline-start: 2px solid var(--ui-selection); }
+.professional-theme .professional-sidebar nav { align-items: stretch; }
+.professional-theme .professional-sidebar nav button { margin: 0; }
+.professional-theme .dashboard-cards > div { padding: 10px 14px; }
+.professional-theme .professional-workspace [role="tabpanel"]:focus:not(:focus-visible) { outline: none; }
+.professional-theme .professional-dashboard > .button { margin-block: 6px; }
+@media (max-width: 600px) {
+  .professional-theme .dashboard-cards { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .professional-theme .dashboard-cards > div { padding: 8px; }
+}
+.professional-theme .analytics-title { margin: 0 0 12px; line-height: 1.3; font-weight: 650; }
+.professional-theme .query-context { border: 1px solid var(--analytics-rule); border-radius: 6px; padding: 12px 14px; background: var(--ui-background); }
+.professional-theme .query-context > button { float: right; font-size: 13px; min-height: 32px; padding: 4px 8px; }
+.professional-theme .query-controls { border: 0; padding: 4px 0; }
+.professional-theme .query-controls > summary { width: fit-content; }
+.professional-theme .query-context > p { margin: 6px 0 0; }
+.professional-theme .query-context .active-filters-bar { clear: both; padding: 5px 0; border: 0; background: transparent; }
+.professional-theme .professional-sidebar .sidebar-toggle { width: fit-content; align-self: flex-end; padding: 4px 10px; min-height: 34px; }
+.professional-theme .analysis-explorer { padding: 16px; border: 1px solid var(--analytics-rule); border-radius: 6px; }
+.professional-theme .analysis-explorer .filter-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,180px),1fr)); gap: 12px; }
+@media(max-width: 700px) {
+  .professional-theme .query-context > button { float: none; margin: 0 0 8px; }
+  .professional-theme .query-controls > summary { width: auto; }
+}
