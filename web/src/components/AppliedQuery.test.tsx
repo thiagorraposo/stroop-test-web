@@ -56,6 +56,7 @@ test('QUERY7: resposta antiga, mesmo ignorando AbortSignal, não substitui proje
   const old = deferred<AnalysisPage>()
   vi.mocked(queryAnalysis).mockImplementation(body => body.query.projects[0] === project ? old.promise : Promise.resolve(page('ATUAL', second)))
   await start()
+  await act(async () => button('Avaliações e tentativas').click())
   const group = [...host.querySelectorAll('fieldset')].find(element => element.querySelector('legend')?.textContent === 'Projetos da consulta')!
   for (const option of group.querySelectorAll<HTMLInputElement>('input[type=checkbox]')) {
     if (option.checked !== (option.value === second)) await act(async () => option.click())
@@ -71,10 +72,11 @@ test('QUERY7: erro na segunda página remove todo conjunto e nenhum total parcia
   const tail = deferred<AnalysisPage>()
   vi.mocked(queryAnalysis).mockImplementation(body => body.page.cursor ? tail.promise : Promise.resolve({ ...page('PARCIAL'), counts: { participants: 2, visits: 2, assessments: 2, trials: 4 }, next_cursor: 'next' }))
   await start()
+  await act(async () => button('Avaliações e tentativas').click())
   expect(host.querySelector('.dashboard-cards')).toBeNull()
   await act(async () => tail.reject(new Error('synthetic-failure')))
   expect(host.querySelector('table.results-table')).toBeNull()
-  await act(async () => button('Resultados e análises').click())
+  await act(async () => button('Exploração de resultados').click())
   expect(host.querySelector('.dashboard-cards')).toBeNull()
   expect(host.textContent).not.toContain('PARCIAL')
   expect(host.querySelector('[role=alert]')).not.toBeNull()
@@ -85,6 +87,7 @@ test('QUERY7: detalhe pendente do recorte anterior não reaparece depois de apli
   const detail = deferred<Awaited<ReturnType<typeof getAssessment>>>()
   vi.mocked(getAssessment).mockReturnValue(detail.promise)
   await start()
+  await act(async () => button('Avaliações e tentativas').click())
   await act(async () => [...host.querySelectorAll('button')].find(b => b.getAttribute('aria-label')?.startsWith('Ver avaliação'))!.click())
   await applyDate()
   await act(async () => detail.resolve({ ...row('ANTIGA'), project_id: project, session_id: null, completed_at: null, metrics: [], trials: [], frame_period_ms: null }))
@@ -96,7 +99,7 @@ test('QUERY7: mesma consulta/rascunho atravessa análise, histórico e exportaç
   vi.mocked(queryAnalysis).mockResolvedValue(page('ATUAL'))
   await start(); await applyDate()
   const count = vi.mocked(queryAnalysis).mock.calls.length
-  for (const name of ['Avaliações e histórico', 'Resultados e análises', 'Exportações', 'Visão geral (Dashboard)']) {
+  for (const name of ['Avaliações e tentativas', 'Exploração de resultados', 'Exportações', 'Visão geral']) {
     await act(async () => button(name).click())
     expect((host.querySelector('input[type=date]') as HTMLInputElement).value).toBe('2026-11-01')
   }
@@ -108,6 +111,7 @@ test('QUERY7: expiração descarta conjunto completo e bloqueia download sem rea
   vi.useFakeTimers()
   vi.mocked(queryAnalysis).mockResolvedValue({ ...page('EXPIRA'), expires_at: new Date(Date.now() + 1000).toISOString() })
   await start()
+  await act(async () => button('Avaliações e tentativas').click())
   expect(host.querySelector('table.results-table')?.textContent).toContain('EXPIRA')
   await act(async () => { await vi.advanceTimersByTimeAsync(1001) })
   expect(host.querySelector('table.results-table')).toBeNull()

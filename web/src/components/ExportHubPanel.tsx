@@ -142,7 +142,7 @@ export function ExportHubPanel({ profile, context, dirty = false, onExpired }: P
   }
 
   const handlePreview = async () => {
-    if (!context || dirty) {
+    if (!context || dirty || Date.parse(context.expires_at) <= Date.now()) {
       setError('Aplique uma consulta completa antes de exportar.')
       return
     }
@@ -172,7 +172,7 @@ export function ExportHubPanel({ profile, context, dirty = false, onExpired }: P
   }
 
   const handleDownload = async () => {
-    if (!context || dirty || !preview || Date.parse(preview.expires_at) <= Date.now()) return
+    if (!context || dirty || Date.parse(context.expires_at) <= Date.now() || !preview || Date.parse(preview.expires_at) <= Date.now()) return
     const controller = new AbortController(); io.current?.abort(); io.current = controller
     setDownloading(true)
     setError(null)
@@ -206,11 +206,8 @@ export function ExportHubPanel({ profile, context, dirty = false, onExpired }: P
 
   return (
     <div className="export-hub-panel" aria-label="Central de exportações multi-granularidade">
-      <h2>Central de exportações avançada (REQ-CSV-005)</h2>
-      <p className="quiet">
-        Granularidades e políticas de exportação (REQ-CSV-005). Exportação estruturada em formato CSV com escolha de granularidade, seleção de colunas e
-        controle de privacidade.
-      </p>
+      <h2>Central de exportações</h2>
+      {context && <p>Recorte aplicado · {context.counts.participants} participantes · {context.counts.assessments} avaliações · {context.counts.trials} tentativas selecionadas</p>}
 
       {/* 1. Escolha de Granularidade */}
       <fieldset className="export-section">
@@ -235,9 +232,34 @@ export function ExportHubPanel({ profile, context, dirty = false, onExpired }: P
         </div>
       </fieldset>
 
+      {/* 3. Seleção de Colunas */}
+      <fieldset className="export-section">
+        <legend>
+          2. Colunas da granularidade ({selectedColumns.length}/{currentGranularityOption.columns.length})
+        </legend>
+        <div className="column-actions">
+          <button type="button" className="button secondary" onClick={selectAllColumns}>
+            Selecionar todas
+          </button>
+        </div>
+        <div className="columns-grid">
+          {currentGranularityOption.columns.map(col => (
+            <label key={col} className="column-checkbox">
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes(col)}
+                disabled={granularity === 'stroop_21_colunas'}
+                onChange={() => toggleColumn(col)}
+              />
+              <code>{col}</code>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       {/* 2. Modo de Identificação */}
       <fieldset className="export-section">
-        <legend>2. Modo de identificação (Privacidade e DEC-03)</legend>
+        <legend>3. Modo de identificação</legend>
         <div className="mode-options">
           <label>
             <input
@@ -272,31 +294,6 @@ export function ExportHubPanel({ profile, context, dirty = false, onExpired }: P
               iniciais, mediante autorização e habilitação institucional.
             </span>
           </label>
-        </div>
-      </fieldset>
-
-      {/* 3. Seleção de Colunas */}
-      <fieldset className="export-section">
-        <legend>
-          3. Colunas da granularidade ({selectedColumns.length}/{currentGranularityOption.columns.length})
-        </legend>
-        <div className="column-actions">
-          <button type="button" className="button secondary" onClick={selectAllColumns}>
-            Selecionar todas
-          </button>
-        </div>
-        <div className="columns-grid">
-          {currentGranularityOption.columns.map(col => (
-            <label key={col} className="column-checkbox">
-              <input
-                type="checkbox"
-                checked={selectedColumns.includes(col)}
-                disabled={granularity === 'stroop_21_colunas'}
-                onChange={() => toggleColumn(col)}
-              />
-              <code>{col}</code>
-            </label>
-          ))}
         </div>
       </fieldset>
 

@@ -63,7 +63,7 @@ test('renderiza as 5 granularidades e desabilita modo nominal para perfil consul
     root.render(<ExportHubPanel profile={consultaProfile} />)
   })
 
-  expect(container.textContent).toContain('Central de exportações avançada (REQ-CSV-005)')
+  expect(container.textContent).toContain('Central de exportações')
   expect(container.textContent).toContain('Pacientes')
   expect(container.textContent).toContain('Avaliações')
   expect(container.textContent).toContain('Tentativas')

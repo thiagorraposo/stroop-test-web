@@ -8,6 +8,11 @@ import { ProfessionalDashboard } from './ProfessionalDashboard'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
+Object.defineProperties(HTMLDialogElement.prototype, {
+  showModal: { configurable: true, value: function (this: HTMLDialogElement) { this.open = true } },
+  close: { configurable: true, value: function (this: HTMLDialogElement) { this.open = false } },
+})
+
 const adminProfile = {
   user_id: 'admin_sintetico',
   role: 'administracao' as const,
