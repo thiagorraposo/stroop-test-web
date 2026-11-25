@@ -1,3 +1,4 @@
+import { analyticsSection } from '../support/analytics'
 /** WEB-055: Jornadas prioritárias reais UX7-J1, UX7-J2 e UX7-J3 em HTTPS/API/PG reais. */
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -34,6 +35,7 @@ test('UX7-J1 — pesquisador consulta, aprofunda e exporta multi-granularidade c
   }])
 
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   // Terceiro projeto nao autorizado nao aparece e POST cruzado falha fechado com 404
   const projectsGroup = form.getByRole('group', { name: 'Projetos da consulta', exact: true })
@@ -54,9 +56,11 @@ test('UX7-J1 — pesquisador consulta, aprofunda e exporta multi-granularidade c
 
   // Selecionar os 2 projetos autorizados + filtro por instrumento + preservar RT nulo
   await selectMulti(projectsGroup, prepared.projects)
+  await expect(form.getByText('Carregando opções autorizadas…')).toHaveCount(0)
   await selectMulti(form.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
   await form.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
 
+  await analyticsSection(page, 'Avaliações e tentativas')
   const table = page.getByRole('table', { name: 'Avaliações filtradas' })
   await expect(table.locator('tbody tr')).toHaveCount(4)
   await expect(table).toContainText('P_SINTETICO_SEM_HITS')
@@ -70,6 +74,7 @@ test('UX7-J1 — pesquisador consulta, aprofunda e exporta multi-granularidade c
   await expect(table.locator('tbody tr')).toHaveCount(4)
 
   // Analise exploratoria: trocar agrupamento (ex: visita) e manter tabela equivalente
+  await analyticsSection(page, 'Exploração de resultados')
   await expect(page.getByRole('heading', { name: 'Explorar o conjunto completo', exact: true })).toBeVisible()
   await page.getByLabel('Agrupar por', { exact: true }).selectOption('visit')
   await expect(page.getByRole('table', { name: 'Grupos analíticos e população' })).toContainText('V_ZERO')

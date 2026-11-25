@@ -1,3 +1,4 @@
+import { analyticsSection } from '../support/analytics'
 import { selectMulti, expectMulti } from '../support/multiselect'
 /** W15B: importadores canonicos + PostgreSQL + API + HTTPS reais. */
 import { execFileSync } from 'node:child_process'
@@ -15,10 +16,14 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
   const detailRequests: string[] = []
   page.on('request', request => { if (/\/assessments\/[^/?]+(?:\?|$)/.test(request.url()) && !request.url().includes('/options')) detailRequests.push(request.url()) })
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   const table = page.getByRole('table', { name: 'Avaliações filtradas' })
   await expect(table.locator('tbody tr')).toHaveCount(6)
+  await page.getByText('Colunas visíveis').click()
+  await page.getByRole('checkbox',{name:'Instrumento',exact:true}).check()
   const instruments = page.getByRole('group', { name: 'Instrumento da consulta', exact: true })
   const selected = ['instrumento_sintetico_demo', 'stroop_go_nogo_ptbr']
   await selectMulti(instruments, selected)
@@ -36,12 +41,16 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
   await expect(table.locator('tbody tr')).toHaveCount(6)
   await expect(table).toContainText('instrumento_sintetico_demo')
   await expect(table).toContainText('stroop_go_nogo_ptbr')
+  await analyticsSection(page, 'Exportações')
   await expect(page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })).toBeDisabled()
   // Métricas científicas continuam separadas por instrumento.
   await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'stroop_go_nogo_ptbr')
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(table.locator('tbody tr')).toHaveCount(4)
+  await page.getByText('Colunas visíveis').click()
   for (const label of ['Avaliador', 'Precisão Go (%)', 'Precisão No-Go (%)', 'Omissões', 'Comissões', 'Acertos', 'Rejeições corretas']) {
+    await page.getByRole('checkbox',{name:label,exact:true}).check()
     await expect(table.getByRole('columnheader', { name: label, exact: true })).toBeVisible()
   }
   expect(await table.evaluate(element => { const parent = element.parentElement!; return parent.scrollWidth > parent.clientWidth })).toBe(true)
@@ -55,11 +64,13 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.evaluate(() => { document.documentElement.style.zoom = '' })
   expect(detailRequests).toEqual([]) // tabela e graficos nao disparam detalhe por linha.
+  await analyticsSection(page, 'Exploração de resultados')
+  await page.getByLabel('Visualizações das avaliações').selectOption('operations')
   const errors = page.getByRole('table', { name: 'Contagens de erros por projeto' })
   await expect(errors.locator('tbody tr')).toHaveCount(2)
   await expect(errors).toContainText(prepared.codes[0]!)
   await expect(errors).toContainText(prepared.codes[1]!)
-  await page.getByRole('button', { name: /Análises por Visita/ }).click()
+  await analyticsSection(page, 'Análise longitudinal')
   const evolution = page.getByRole('combobox', { name: 'Participante para evolução', exact: true })
   await evolution.selectOption(JSON.stringify([prepared.projects[0], 'P_SINTETICO_W15']))
   const longitudinal = page.getByRole('table', { name: 'Evolução do participante por avaliação' })
@@ -73,10 +84,11 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
   await evolution.selectOption(JSON.stringify([prepared.projects[0], 'P_SINTETICO_SEM_HITS']))
   await expect(longitudinal).toContainText('Ausente')
   await expect(longitudinal).toContainText('50,000')
+  await analyticsSection(page, 'Avaliações e tentativas')
   await page.getByRole('button', { name: 'Ver avaliação P_SINTETICO_SEM_HITS, visita V_ZERO' }).focus()
   await page.keyboard.press('Enter')
   const detail = page.getByRole('region', { name: 'Detalhe da avaliação' })
-  await expect(detail).toBeFocused()
+  await expect(page.getByRole('dialog').locator(':focus')).toHaveCount(1)
   await expect(detail).toContainText(prepared.no_hits_id)
   await expect(detail).toContainText(prepared.projects[0]!)
   await expect(detail).toContainText('Legado sem identificação técnica')
@@ -91,6 +103,7 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
   await page.getByRole('button', { name: 'Fechar detalhe', exact: true }).click()
   await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'instrumento_sintetico_demo')
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await analyticsSection(page, 'Exploração de resultados')
   const generic = page.getByRole('region', { name: 'Resultados por instrumento' })
   await expect(generic.getByRole('heading', { name: 'Demonstração sintética' })).toBeVisible()
   const metrics = generic.getByRole('table', { name: 'Métricas por instrumento e avaliação' })
@@ -98,6 +111,7 @@ test('resultados completos reais preservam unidades, visitas e identidades por p
   for (const value of ['2,500', '3,500', '4,000', '8,000', 'count', 'unit']) await expect(metrics).toContainText(value)
   await expect(page.getByText('Precisão média', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Comparações descritivas' })).toHaveCount(0)
+  await analyticsSection(page, 'Avaliações e tentativas')
   await page.getByRole('button', { name: 'Ver avaliação P_SINTETICO_DEMO, visita V1' }).click()
   await expect(detail).toContainText(prepared.demo_ids[0]!)
   await expect(detail.getByRole('table', { name: 'Tentativas registradas' })).toHaveCount(0)

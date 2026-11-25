@@ -1,3 +1,4 @@
+import { analyticsSection } from './support/analytics'
 import { selectMulti, expectMulti } from './support/multiselect'
 import { analysisFixture } from '../src/test/analysis-fixture'
 /** QUERY7: navegador real e HTTP sintético; integração real usa suíte separada. */
@@ -14,20 +15,23 @@ async function access(page: Page) {
   await page.route(`**${base}/options*`, r => r.fulfill({ json: { participant_id: ['P_SINTETICO'], visit: ['V1'], evaluator_id: [], test_version: ['1'], platform: ['web'], test_code: [row.test_code] } }))
   await page.route('**/api/v1/analysis/query', r => r.fulfill({ json: analysisFixture(r.request().postDataJSON(), [row]) }))
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' })).toContainText('P_SINTETICO')
 }
 const apply = (page: Page) => page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
 
 test('rascunho, chips, limpar e descartar mantêm contexto entre módulos e bloqueiam download', async ({ page }) => {
   await access(page)
+  await analyticsSection(page, 'Exportações')
   const download = page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })
   await expect(download).toBeEnabled()
   await page.getByLabel('Data inicial', { exact: true }).fill('2026-11-01')
   await expect(download).toBeDisabled()
-  await page.getByRole('tab', { name: 'Avaliações e histórico', exact: true }).click()
+  await page.getByRole('tab', { name: 'Avaliações e tentativas', exact: true }).click()
   await expect(page.getByLabel('Data inicial', { exact: true })).toHaveValue('2026-11-01')
   await apply(page)
-  await page.getByRole('tab', { name: 'Resultados e análises', exact: true }).click()
+  await page.getByRole('tab', { name: 'Exploração de resultados', exact: true }).click()
   await expect(page.getByText(/^Filtros aplicados:/)).toContainText('2026-11-01')
   await page.getByRole('button', { name: /^Remover filtro Período:/ }).click()
   await expect(page.getByText(/^Filtros aplicados:/)).toContainText('2026-11-01')
@@ -40,8 +44,9 @@ test('rascunho, chips, limpar e descartar mantêm contexto entre módulos e bloq
   await expect(preview).toBeDisabled()
   await expect(page.getByText(/^Filtros aplicados:/)).toContainText('2026-11-01')
   await apply(page)
-  await page.getByRole('tab', { name: 'Visão geral (Dashboard)', exact: true }).click()
+  await page.getByRole('tab', { name: 'Visão geral', exact: true }).click()
   await expect(page.getByText(/^Filtros aplicados:/)).toContainText('sem restrições adicionais')
+  await analyticsSection(page, 'Exportações')
   await expect(download).toBeEnabled()
 })
 
@@ -56,6 +61,7 @@ test('recorte avançado não exporta conjunto maior; buscar opções não perde 
   await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), row.test_code)
   await page.getByRole('combobox', { name: 'Faixa de precisão', exact: true }).selectOption('50to80')
   await apply(page)
+  await analyticsSection(page, 'Exportações')
   await expect(page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })).toBeDisabled()
   await expect(page.getByText(/nenhum arquivo sem esses filtros/)).toBeVisible()
   expect(exports).toBe(0)
@@ -76,7 +82,7 @@ for (const failure of ['snapshot', 'revogacao', 'logout']) {
     await expect(page.locator('.dashboard-cards')).toHaveCount(0)
     if (failure === 'snapshot') {
       await expect(page.getByRole('alert')).toContainText('nenhum total parcial')
-      await page.getByRole('tab', { name: 'Resultados e análises', exact: true }).click()
+      await page.getByRole('tab', { name: 'Exploração de resultados', exact: true }).click()
       await expect(page.locator('.dashboard-cards')).toHaveCount(0)
     } else {
       await page.route('**/api/v1/auth/me', r => r.fulfill({ status: 401, json: { error: { code: 'authentication_required' } } }))

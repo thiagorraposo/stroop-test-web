@@ -1,3 +1,4 @@
+import { analyticsSection } from '../support/analytics'
 /** Gestao de contas e acesso comprovados pela interface e API HTTPS real. */
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -80,6 +81,7 @@ test('administra perfil sintetico/projeto, prepara sessao e acesso depende do vi
     data: payload, headers: { 'X-CSRF-Token': csrf } })
   expect(completed.status()).toBe(201)
   await importerPage.reload()
+  await analyticsSection(importerPage,'Avaliações e tentativas')
   await expect(importerPage.getByRole('table', { name: 'Avaliações filtradas' })).toContainText('P_SINTETICO_W15D')
 
   const credentials = await request.newContext({ baseURL: 'https://127.0.0.1:4373', ignoreHTTPSErrors: true,

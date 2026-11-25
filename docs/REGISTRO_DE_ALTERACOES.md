@@ -4,6 +4,14 @@ Fatos datados; estado/aceite vigentes somente no [backlog canônico](Projeto%20S
 Entradas antigas preservam política e evidências de suas datas; não constituem
 comandos atuais nem resultados reexecutados.
 
+## 2026-11-24 — Reformulação da experiência analítica profissional
+
+A visão geral passou a priorizar as contagens oficiais. A consulta tabular,
+o acompanhamento longitudinal e a qualidade da coleta ganharam destinos
+próprios. O explorador oferece configurações rápidas e visualizações por estrato.
+O detalhe de avaliação passou para um painel lateral. A projeção CSV continua
+vinculada à consulta reautorizada pelo servidor. Base local `041f247d`.
+
 ## 2026-11-16 — IDs cadastrais na consulta aplicada e acessibilidade UX7-AA de superfícies
 
 `POST /api/v1/analysis/query` e o estado aplicado React passam a suportar

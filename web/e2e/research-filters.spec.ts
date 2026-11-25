@@ -1,3 +1,4 @@
+import { analyticsSection } from './support/analytics'
 import { selectMulti, expectMulti } from './support/multiselect'
 import { analysisFixture } from '../src/test/analysis-fixture'
 /** Dados e respostas HTTP sinteticos para filtros; integracao real tem suite propria. */
@@ -14,7 +15,8 @@ async function access(page: Page) {
   await page.route('**/api/v1/projects?*', r => r.fulfill({ json: { items: [first, second].map((id, index) => ({ id, code: `PROJETO_${index}`, name: 'Pesquisa sintetica', active: true, created_at: '2026-10-16T12:00:00Z' })), next_cursor: null } }))
   await page.route('**/api/v1/projects/*/assessments/options*', r => r.fulfill({ json: facets }))
 }
-async function open(page: Page) { await page.goto('/equipe'); await expect(card(page, 'Avaliações')).toHaveText('1'); await page.getByText('Filtros avançados e ordenação', { exact: true }).click() }
+async function open(page: Page) { await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click(); await expect(card(page, 'Avaliações oficiais')).toHaveText('1'); await page.getByText('Filtros avançados e ordenação', { exact: true }).click() }
 async function apply(page: Page) { await page.getByRole('button', { name: 'Aplicar filtros' }).click() }
 
 test('agrega todos projetos/paginas e distingue participantes por projeto', async ({ page }) => {
@@ -28,7 +30,8 @@ test('agrega todos projetos/paginas e distingue participantes por projeto', asyn
   await open(page)
   await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), [first, second])
   await selectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), 'P_SINTETICO'); await apply(page)
-  await expect(card(page, 'Avaliações')).toHaveText('3'); await expect(card(page, 'Participantes únicos')).toHaveText('2')
+  await expect(card(page, 'Avaliações oficiais')).toHaveText('3'); await expect(card(page, 'Participantes do recorte')).toHaveText('2')
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(3)
 })
 
@@ -87,7 +90,8 @@ test('troca de projeto cancela consulta anterior sem reaplicar resposta atrasada
   })
   await open(page); await selectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), 'P_SINTETICO'); await apply(page); await received
   await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), second); await selectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), []); await apply(page); release()
-  await expect(card(page, 'Avaliações')).toHaveText('1')
+  await expect(card(page, 'Avaliações oficiais')).toHaveText('1')
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' })).toContainText('PROJETO_1')
   await expectMulti(page.getByRole('group', { name: 'Participantes (códigos)', exact: true }), [])
 })

@@ -94,11 +94,13 @@ export function ResearchFilters({
   const [pending, setPending] = useState(false)
   const [revision, setRevision] = useState(0)
 
+  const selectedKey = selected.join(',')
+
   useEffect(() => {
     const io = new AbortController()
-    setFacets(empty)
     setError(null)
     if (!selected.length || selected.length > 20 || (start && end && start > end)) {
+      setFacets(empty)
       setPending(false)
       return () => io.abort()
     }
@@ -119,6 +121,7 @@ export function ResearchFilters({
         if (!io.signal.aborted) setFacets(merged)
       } catch (cause) {
         if (!io.signal.aborted) {
+          setFacets(empty)
           setError(apiErrorMessage(cause))
           if (cause instanceof ApiError && [401, 403].includes(cause.status)) window.dispatchEvent(new Event('stroop-professional-session-ended'))
         }
@@ -127,7 +130,7 @@ export function ResearchFilters({
       }
     })()
     return () => io.abort()
-  }, [selected, start, end, revision, refreshKey])
+  }, [selectedKey, start, end, revision, refreshKey])
 
   function apply(event?: FormEvent) {
     event?.preventDefault()
@@ -218,7 +221,7 @@ export function ResearchFilters({
 
       <details className="context-help-details">
         <summary className="context-help-summary">
-          <span>ℹ️ Orientações e regras de combinação dos filtros</span>
+          <span>Orientações e regras de combinação dos filtros</span>
         </summary>
         <div className="context-help-content">
           <p className="quiet">
@@ -257,8 +260,7 @@ export function ResearchFilters({
         {/* GRUPO 1: ESCOPO E PERÍODO */}
         <div className="filter-group-box">
           <div className="filter-group-legend">
-            <span>📅</span>
-            <span>1. Escopo e Período</span>
+            <span>Escopo e período</span>
           </div>
           <SearchableMultiSelect label="Projetos da consulta" value={selected} onChange={setSelected}
             options={projects.map(project => ({ value: project.id, label: `${project.code}${project.active ? '' : ' (inativo)'}` }))} />
@@ -272,6 +274,9 @@ export function ResearchFilters({
             <input type="date" value={end} aria-invalid={Boolean(start && end && start > end) || undefined}
               aria-describedby={validation ? validationId : undefined} onChange={event => setEnd(event.target.value)} />
           </label>
+          <SearchableMultiSelect label="Visitas" value={values.visit}
+            onChange={visit => setValues({ ...values, visit })}
+            options={[...new Set([...facets.visit, ...values.visit])].sort().map(value => ({ value, label: value }))} />
           <SearchableMultiSelect label="Instrumento da consulta" value={instruments} onChange={setInstruments}
             options={[...new Set([...facets.test_code, ...instruments])].sort().map(code => ({ value: code, label: code }))} />
         </div>
@@ -281,10 +286,9 @@ export function ResearchFilters({
         {/* GRUPO 2: DIMENSÕES EXPERIMENTAIS */}
         <div className="filter-group-box">
           <div className="filter-group-legend">
-            <span>🔬</span>
-            <span>2. Dimensões Experimentais</span>
+            <span>Dimensões experimentais</span>
           </div>
-          {(Object.keys(labels) as (keyof typeof labels)[]).map(key => (
+          {(Object.keys(labels) as (keyof typeof labels)[]).filter(key => key !== 'visit').map(key => (
             <SearchableMultiSelect key={key} label={labels[key]} value={values[key]}
               onChange={items => setValues({ ...values, [key]: items })}
               options={key === 'patient_id'
@@ -299,7 +303,6 @@ export function ResearchFilters({
         {/* GRUPO 3: CRITÉRIOS DE PESQUISA & MÉTRICAS */}
         <div className="filter-group-box">
           <div className="filter-group-legend">
-            <span>📊</span>
             <span>3. Critérios & Métricas</span>
           </div>
           <label>
@@ -375,7 +378,6 @@ export function ResearchFilters({
         {/* GRUPO 4: ORDENAÇÃO E TRATAMENTO */}
         <div className="filter-group-box">
           <div className="filter-group-legend">
-            <span>⚙️</span>
             <span>4. Ordenação & Tratamento</span>
           </div>
           <label>
@@ -415,22 +417,7 @@ export function ResearchFilters({
         </details>
       </div>
 
-      <p className="quiet">
-        Período inclusivo pela data da avaliação: WEB usa o dia UTC do início; legado conserva a data civil registrada,
-        sem atribuir fuso. Máximo de 20 projetos e 5.000 avaliações completas por consulta; restrinja os filtros para
-        volumes maiores.
-      </p>
       {validation && <p id={validationId} role="alert">{validation}</p>}
-      {pending && <p role="status">Carregando opções autorizadas…</p>}
-      {error && (
-        <>
-          <p role="alert">Opções de filtro: {error}</p>
-          <button type="button" className="button secondary" onClick={() => setRevision(n => n + 1)}>
-            Atualizar opções
-          </button>
-        </>
-      )}
-      {dirty && <p role="status">Alterações não aplicadas. Aplique ou descarte para habilitar downloads.</p>}
       <div className="filter-form-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '1.25rem', flexWrap: 'wrap' }}>
         <button className="button primary" type="submit">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -443,6 +430,16 @@ export function ResearchFilters({
         </button>
         {dirty && <button className="button secondary" type="button" onClick={() => update(appliedQuery)}>Descartar alterações</button>}
       </div>
+      {pending && <p role="status">Carregando opções autorizadas…</p>}
+      {error && (
+        <>
+          <p role="alert">Opções de filtro: {error}</p>
+          <button type="button" className="button secondary" onClick={() => setRevision(n => n + 1)}>
+            Atualizar opções
+          </button>
+        </>
+      )}
+      {dirty && <p role="status">Alterações não aplicadas. Aplique ou descarte para habilitar downloads.</p>}
     </form>
   )
 }

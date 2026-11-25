@@ -1,3 +1,4 @@
+import { analyticsSection } from '../support/analytics'
 import { selectMulti } from '../support/multiselect'
 /** W15C: download de snapshot PostgreSQL/API/HTTPS reais, sem interceptacoes. */
 import { execFileSync } from 'node:child_process'
@@ -14,10 +15,12 @@ function manage(name: string, value = {}): Prepared {
 async function open(page: Page, context: BrowserContext, prepared: Prepared) {
   await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   await selectMulti(page.getByRole('group', { name: 'Projetos da consulta', exact: true }), prepared.projects)
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
 }
 async function download(page: Page) {
+  await analyticsSection(page, 'Exportações')
   const response = page.waitForResponse(value => value.url().endsWith('/api/v1/assessments/export'))
   const event = page.waitForEvent('download').catch(() => null)
   await page.getByRole('button', { name: 'Exportar visão filtrada', exact: true }).click()
@@ -38,6 +41,7 @@ async function download(page: Page) {
 test('CSV real corresponde a todas paginas/projetos e filtros; vinculo revogado impede novo download', async ({ page, context }) => {
   const prepared = manage('filters')
   await open(page, context, prepared)
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(25)
   await expect(page.getByRole('navigation', { name: 'Páginas da tabela de avaliações' })).toContainText('105 avaliações na tabela')
   const all = await download(page)
@@ -56,6 +60,7 @@ test('CSV real corresponde a todas paginas/projetos e filtros; vinculo revogado 
   await selectMulti(page.getByRole('group', { name: 'Versões', exact: true }), 'synthetic.1')
   await selectMulti(page.getByRole('group', { name: 'Visitas', exact: true }), 'V_SINTETICA')
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByRole('table', { name: 'Avaliações filtradas' }).locator('tbody tr')).toHaveCount(2)
   const filtered = await download(page)
   expect(filtered.lines).toHaveLength(3)
@@ -80,6 +85,7 @@ test('CSV demonstrativo real conserva metricas proprias e nao mistura contagens 
   await open(page, context, prepared)
   await selectMulti(page.getByRole('group', { name: 'Instrumento da consulta', exact: true }), 'instrumento_sintetico_demo')
   await page.getByRole('button', { name: 'Aplicar filtros', exact: true }).click()
+  await analyticsSection(page, 'Exploração de resultados')
   await expect(page.getByRole('table', { name: 'Métricas por instrumento e avaliação' }).locator('tbody tr')).toHaveCount(4)
   const output = await download(page)
   expect(output.lines).toHaveLength(3)

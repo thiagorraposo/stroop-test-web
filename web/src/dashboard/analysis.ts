@@ -60,6 +60,42 @@ export const OFFICIAL_METRICS_DICTIONARY: readonly OfficialMetricDefinition[] = 
     unit: 'contagem inteira',
     nullTreatment: 'Não admite nulo: sempre zero ou número inteiro positivo (≥ 0).',
   },
+  {
+    code: 'omission_errors_percentage', label: 'Percentual de omissões',
+    origin: '100 × omissões / tentativas Go',
+    definition: 'Percentual das tentativas Go da avaliação completa em que houve omissão.',
+    unit: '%', nullTreatment: 'Nulo publicado é excluído da média. A função oficial usa zero para percentual com denominador zero.',
+  },
+  {
+    code: 'total_trials', label: 'Total de tentativas',
+    origin: 'Contagem de tentativas principais',
+    definition: 'Número de tentativas principais da avaliação completa.',
+    unit: 'contagem', nullTreatment: 'Uma contagem disponível pode ser zero. Nulo representa ausência de medida.',
+  },
+  {
+    code: 'total_go_trials', label: 'Total de tentativas Go',
+    origin: 'Contagem de tentativas principais Go',
+    definition: 'Número de tentativas principais Go da avaliação completa.',
+    unit: 'contagem', nullTreatment: 'Uma contagem disponível pode ser zero. Nulo representa ausência de medida.',
+  },
+  {
+    code: 'total_no_go_trials', label: 'Total de tentativas No-Go',
+    origin: 'Contagem de tentativas principais No-Go',
+    definition: 'Número de tentativas principais No-Go da avaliação completa.',
+    unit: 'contagem', nullTreatment: 'Uma contagem disponível pode ser zero. Nulo representa ausência de medida.',
+  },
+  {
+    code: 'hits', label: 'Acertos Go',
+    origin: 'Contagem de respostas corretas Go',
+    definition: 'Número de tentativas Go com a resposta correta.',
+    unit: 'contagem', nullTreatment: 'Uma contagem disponível pode ser zero. Nulo representa ausência de medida.',
+  },
+  {
+    code: 'correct_rejections', label: 'Rejeições corretas',
+    origin: 'Contagem de inibições corretas No-Go',
+    definition: 'Número de tentativas No-Go em que a resposta foi corretamente inibida.',
+    unit: 'contagem', nullTreatment: 'Uma contagem disponível pode ser zero. Nulo representa ausência de medida.',
+  },
 ]
 
 export type AdvancedFilterCriteria = {

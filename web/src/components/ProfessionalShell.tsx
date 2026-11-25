@@ -4,9 +4,9 @@ import type { ProfessionalProfile } from '../api/client'
 import type { AdministrativeModule } from './ProfessionalDashboard'
 import { Drawer } from './ui/presentation'
 
-const analysis = [
-  ['dashboard', 'Visão geral (Dashboard)'], ['historico', 'Avaliações e histórico'],
-  ['resultados', 'Resultados e análises'], ['exportacoes', 'Exportações'],
+export const analysisSections = [
+  ['dashboard', 'Visão geral'], ['resultados', 'Exploração de resultados'],
+  ['longitudinal', 'Análise longitudinal'], ['historico', 'Avaliações e tentativas'], ['qualidade', 'Qualidade da coleta'], ['exportacoes', 'Exportações'],
 ] as const
 const management = [['pacientes', 'Pacientes'], ['avaliadores', 'Avaliadores'], ['administracao', 'Administração']] as const
 const axisOf = (active: AdministrativeModule) => active === 'preparar' ? 'preparar' : management.some(([key]) => key === active) ? 'gestao' : 'analise'
@@ -20,7 +20,7 @@ export function ProfessionalShell({ profile, active, onNavigate, children }: {
   const keyboardTab = useRef(false)
   const activeRef = useRef(active), navigateRef = useRef(onNavigate)
   navigateRef.current = onNavigate
-  const allowed = (value: string): value is AdministrativeModule => [...analysis, ...management, ['preparar']].some(([key]) => key === value)
+  const allowed = (value: string): value is AdministrativeModule => [...analysisSections, ...management, ['preparar']].some(([key]) => key === value)
     && !(value === 'administracao' && profile.role !== 'administracao') && !(value === 'preparar' && profile.role === 'consulta')
   const axis = axisOf(active)
   const move = (next: AdministrativeModule, push = true) => {
@@ -37,7 +37,7 @@ export function ProfessionalShell({ profile, active, onNavigate, children }: {
   }, [profile.role])
   useEffect(() => {
     activeRef.current = active
-    if (!keyboardTab.current) content.current?.focus({ preventScroll: true })
+    if (!keyboardTab.current && document.activeElement !== document.body) content.current?.focus({ preventScroll: true })
     keyboardTab.current = false
     if (positions.current.has(active)) window.scrollTo(0, positions.current.get(active)!)
     const suffix = axis === 'analise' ? 'Resultados e Análise Unificada' : axis === 'gestao' ? 'Gestão' : 'Nova Avaliação'
@@ -49,19 +49,8 @@ export function ProfessionalShell({ profile, active, onNavigate, children }: {
       .map(([key, label, target, icon]) => <button key={key} type="button" className="button secondary" aria-current={axis === key ? 'page' : undefined}
         aria-label={label} title={label} onClick={() => move(target)}><span aria-hidden="true">{icon}</span><span className="axis-label">{label}</span></button>)}
   </nav>
-  const secondary = axis === 'analise' ? analysis : axis === 'gestao' ? management.filter(([key]) => key !== 'administracao' || profile.role === 'administracao') : []
-  return <div className={`professional-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
-    <a className="skip-link" href={`#${id}`}>Ir para o conteúdo profissional</a>
-    <aside className="professional-sidebar" aria-label="Navegação profissional">
-      <button type="button" className="button secondary sidebar-toggle" aria-expanded={!collapsed} onClick={() => setCollapsed(value => !value)} aria-label={collapsed ? 'Expandir navegação' : 'Recolher navegação'}>☰</button>
-      {navigation()}
-      <p className="sidebar-profile">Perfil: {profile.role === 'administracao' ? 'Administração' : profile.role === 'consulta' ? 'Consulta' : 'Coleta'}</p>
-      <a className="sidebar-account" href="#conta-profissional">Conta e sessão</a>
-    </aside>
-    <div className="professional-workspace">
-      <button type="button" className="button secondary mobile-navigation" aria-expanded={open} onClick={() => setOpen(true)}>Abrir navegação profissional</button>
-      <Drawer title="Navegação profissional" open={open} onClose={() => setOpen(false)}>{navigation()}</Drawer>
-      {!!secondary.length && <nav aria-label={axis === 'analise' ? 'Seções de análise' : 'Seções de gestão'} className="professional-sections" role="tablist">
+  const secondary = axis === 'analise' ? analysisSections : axis === 'gestao' ? management.filter(([key]) => key !== 'administracao' || profile.role === 'administracao') : []
+  const sections = !!secondary.length && <nav aria-label={axis === 'analise' ? 'Seções de análise' : 'Seções de gestão'} className="professional-sections" role="tablist">
         {secondary.map(([key, label], index) => <button type="button" role="tab" key={key} id={`${id}-tab-${key}`} aria-controls={`${id}-panel`} aria-selected={active === key} tabIndex={active === key ? 0 : -1}
           className="button secondary" onClick={() => move(key)} onKeyDown={event => {
             if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return
@@ -69,8 +58,21 @@ export function ProfessionalShell({ profile, active, onNavigate, children }: {
             const next = event.key === 'Home' ? secondary[0] : event.key === 'End' ? secondary.at(-1) : secondary[(index + (event.key === 'ArrowRight' ? 1 : -1) + secondary.length) % secondary.length]
             if (next) { keyboardTab.current = true; move(next[0]); document.getElementById(`${id}-tab-${next[0]}`)?.focus() }
           }}>{label}</button>)}
-      </nav>}
-      <section id={`${id}-panel`} ref={content} tabIndex={-1} role={secondary.length ? 'tabpanel' : 'region'} aria-labelledby={secondary.length ? `${id}-tab-${active}` : undefined} aria-label={secondary.length ? undefined : 'Nova Avaliação'}>
+      </nav>
+  return <div className={`professional-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
+    <a className="skip-link" href={`#${id}`}>Ir para o conteúdo profissional</a>
+    <aside className="professional-sidebar" aria-label="Navegação profissional">
+      <button type="button" className="button secondary sidebar-toggle" aria-expanded={!collapsed} onClick={() => setCollapsed(value => !value)} aria-label={collapsed ? 'Expandir navegação' : 'Recolher navegação'}>☰</button>
+      {navigation()}
+      {!collapsed && !open && sections}
+      <p className="sidebar-profile">Perfil: {profile.role === 'administracao' ? 'Administração' : profile.role === 'consulta' ? 'Consulta' : 'Coleta'}</p>
+      <a className="sidebar-account" href="#conta-profissional">Conta e sessão</a>
+    </aside>
+    <div className="professional-workspace">
+      <button type="button" className="button secondary mobile-navigation" aria-expanded={open} onClick={() => setOpen(true)}>Abrir navegação profissional</button>
+      <Drawer title="Navegação profissional" open={open} onClose={() => setOpen(false)}>{navigation()}{sections}</Drawer>
+      {collapsed && !open && sections}
+      <section id={`${id}-panel`} ref={content} tabIndex={-1} role={secondary.length ? 'tabpanel' : 'region'} aria-label={secondary.find(([key]) => key === active)?.[1] ?? 'Nova Avaliação'}>
         <span id={id} />{children}
       </section>
     </div>

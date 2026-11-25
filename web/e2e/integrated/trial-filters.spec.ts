@@ -1,3 +1,4 @@
+import { analyticsSection } from '../support/analytics'
 import { selectMulti, expectMulti } from '../support/multiselect'
 /** QUERY7: filtros de tentativa com React/API/PG/HTTPS reais e fixture sintética. */
 import { execFileSync } from 'node:child_process'
@@ -10,11 +11,13 @@ test('condição e resposta selecionam a mesma tentativa e preservam métricas d
   const prepared = JSON.parse(execFileSync(python, [script], { input: JSON.stringify({ role: 'consulta' }), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }))
   await context.addCookies([{ name: prepared.cookie_name, value: prepared.token, domain: '127.0.0.1', path: '/', secure: true, httpOnly: true, sameSite: 'Lax' }])
   await page.goto('/equipe')
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
+  await analyticsSection(page, 'Avaliações e tentativas')
   const table = page.getByRole('table', { name: 'Avaliações filtradas' })
   await expect(table.locator('tbody tr')).toHaveCount(1)
-  const card = (label: string) => page.locator('.dashboard-cards > div').filter({ has: page.getByText(label, { exact: true }) }).locator('dd')
-  const accuracy = await card('Precisão média').textContent()
+  const accuracyCell = table.locator('tbody tr td').nth(5)
+  const accuracy = await accuracyCell.textContent()
   await form.getByText('Filtros avançados e ordenação', { exact: true }).click()
   const condition = form.getByRole('group', { name: 'Condição experimental', exact: true })
   const response = form.getByRole('group', { name: 'Tipo de resposta / erro', exact: true })
@@ -33,9 +36,11 @@ test('condição e resposta selecionam a mesma tentativa e preservam métricas d
   await selectMulti(response, ['hit', 'omission'])
   await apply.focus(); await page.keyboard.press('Enter')
   await expect(table.locator('tbody tr')).toHaveCount(1)
-  await expect(card('Precisão média')).toHaveText(accuracy!)
+  await expect(accuracyCell).toHaveText(accuracy!)
   await expect(page.getByText(/^Filtros aplicados:/)).toContainText('respostas: hit, omission')
+  await analyticsSection(page, 'Exportações')
   await expect(page.getByRole('button', { name: 'Exportar visão filtrada', exact: true })).toBeDisabled()
+  await analyticsSection(page, 'Avaliações e tentativas')
   await expect(page.getByText('Para exportar os filtros avançados, use Exportações', { exact: false })).toBeVisible()
   await form.getByRole('searchbox', { name: 'Buscar opções de tipo de resposta / erro', exact: true }).fill('comissão')
   await expectMulti(response, ['hit', 'omission'])
@@ -51,7 +56,7 @@ test('condição e resposta selecionam a mesma tentativa e preservam métricas d
   await form.getByRole('button', { name: 'Descartar alterações', exact: true }).click()
   await expectMulti(response, ['hit', 'omission'])
   await expect(table.locator('tbody tr')).toHaveCount(1)
-  await expect(card('Precisão média')).toHaveText(accuracy!)
+  await expect(accuracyCell).toHaveText(accuracy!)
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0])
   expect(page.url()).not.toContain('response_type')
 })

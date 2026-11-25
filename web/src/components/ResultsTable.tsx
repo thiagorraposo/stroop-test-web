@@ -15,7 +15,8 @@ export function ResultsTable({ rows, projects, onDetail, state, onState, selecte
   const base = [ ['project_id', 'Projeto'], ['participant_id', 'Participante'], ['visit', 'Visita'], ['started_at', 'Início'], ['platform', 'Plataforma'], ['evaluator_id', 'Avaliador'], ['test_code', 'Instrumento'], ['test_version', 'Versão'] ]
   const metrics = [ ['accuracy', 'Precisão (%)'], ['accuracy_go_trials', 'Precisão Go (%)'], ['accuracy_no_go_trials', 'Precisão No-Go (%)'], ['omission_errors', 'Omissões'], ['commission_errors', 'Comissões'], ['hits', 'Acertos'], ['correct_rejections', 'Rejeições corretas'], ['response_time_seconds', 'RT mediano (s)'] ]
   const columns = [...base, ...(stroop ? metrics : [])] as [string, string][]
-  const visible = view.columns.length ? columns.filter(([key]) => view.columns.includes(key)) : columns
+  const selectedColumns = view.columns.length ? view.columns : ['project_id', 'participant_id', 'visit', 'started_at', 'accuracy', 'response_time_seconds']
+  const visible = columns.filter(([key]) => selectedColumns.includes(key))
   const get = (row: ScopedAssessment, key: string): string | number | null => {
     if (key === 'project_id') return projects.find(project => project.id === row.project_id)?.code ?? row.project_id
     if (key === 'platform') return row.platform === 'web' ? 'WEB' : 'PsychoPy local'
@@ -37,8 +38,8 @@ export function ResultsTable({ rows, projects, onDetail, state, onState, selecte
       <label>Buscar na tabela (código, visita ou instrumento)<input type="search" value={view.search} onChange={e => change({ search: e.target.value, page: 1 })} /></label>
       <label>Linhas por página<select value={view.size} onChange={e => change({ size: Number(e.target.value), page: 1 })}>{[10,25,50,100].map(value => <option key={value} value={value}>{value}</option>)}</select></label>
       <label><input type="checkbox" checked={view.compact} onChange={e => change({ compact: e.target.checked })} />Densidade compacta</label>
-      <details><summary>Colunas visíveis</summary>{columns.map(([key, label]) => <label key={key}><input type="checkbox" checked={!view.columns.length || view.columns.includes(key)} onChange={e => {
-        const current = view.columns.length ? view.columns : columns.map(([code]) => code)
+      <details><summary>Colunas visíveis</summary>{columns.map(([key, label]) => <label key={key}><input type="checkbox" checked={selectedColumns.includes(key)} onChange={e => {
+        const current = selectedColumns
         const next = e.target.checked ? [...current, key] : current.filter(code => code !== key)
         if (next.length) change({ columns: next })
       }} />{label}</label>)}</details>

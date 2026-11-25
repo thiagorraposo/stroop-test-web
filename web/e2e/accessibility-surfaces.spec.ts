@@ -1,3 +1,4 @@
+import { analyticsSection } from './support/analytics'
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { analysisFixture } from '../src/test/analysis-fixture'
@@ -246,6 +247,7 @@ test('UX7-AA: orientações, 404, barra autenticada e troca de senha mantêm con
   await expect(newPwd).toBeFocused()
   await expect(newPwd).toHaveAttribute('aria-invalid', 'true')
   expect((await newPwd.getAttribute('aria-describedby'))?.split(' ')).toContain(await pwdAlert.getAttribute('id'))
+  await page.locator('.query-controls > summary').click()
   const form = page.getByRole('form', { name: 'Filtros da consulta' })
   await form.getByLabel('Data inicial', { exact: true }).fill('2026-11-16')
   await form.getByLabel('Data final', { exact: true }).fill('2026-11-01')
@@ -278,8 +280,8 @@ test('UX7-AA: módulos autenticados (análise, histórico, exportação, nova av
 
   await page.goto('/equipe')
   await expect(page.getByText('Sua sessão está ativa.', { exact: true })).toBeVisible()
-  for (const tabName of ['Avaliações e histórico', 'Resultados e análises', 'Exportações']) {
-    await page.getByRole('tab', { name: tabName, exact: true }).click()
+  for (const tabName of ['Avaliações e tentativas', 'Exploração de resultados', 'Exportações']) {
+    await analyticsSection(page, tabName)
     for (const width of [360, 768, 1366, 320]) { await page.setViewportSize({ width, height: 900 }); await noOverflow(page) }
   }
   await page.setViewportSize({ width: 1366, height: 900 })
@@ -290,7 +292,7 @@ test('UX7-AA: módulos autenticados (análise, histórico, exportação, nova av
   await page.setViewportSize({ width: 1366, height: 900 })
   await axes.getByRole('button', { name: 'Gestão', exact: true }).click()
   for (const tabName of ['Pacientes', 'Avaliadores', 'Administração']) {
-    await page.getByRole('tab', { name: tabName, exact: true }).click()
+    await analyticsSection(page, tabName)
     for (const width of [360, 768, 1366, 320]) { await page.setViewportSize({ width, height: 900 }); await noOverflow(page) }
   }
 })

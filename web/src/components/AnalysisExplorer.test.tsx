@@ -38,7 +38,7 @@ test('ANALYTICS7: renderiza gráfico acessível, tabela equivalente, unidades/au
       population: 'complete_assessment_metrics_and_selected_main_trials',
       compatibility: 'stratified_by_test_version_protocol_platform',
       groups: [
-        { key: ['stroop_go_nogo_ptbr', '0.2.2-web.1', 'stroop/0.2.2-web.1', 'web', '2026-11-16'], label: '2026-11-16', assessments: 2, trials: 32, value: 0.512, present: 1, missing: 1, unit: 'seconds' },
+        { key: ['stroop_go_nogo_ptbr', '0.2.2-web.1', 'stroop/0.2.2-web.1', 'web', '2026-11-16'], label: '16 de novembro', assessments: 2, trials: 32, value: 0.512, present: 1, missing: 1, unit: 'seconds' },
       ],
       indicators: [
         {
@@ -56,16 +56,16 @@ test('ANALYTICS7: renderiza gráfico acessível, tabela equivalente, unidades/au
   const onSelect = vi.fn()
   await act(async () => root.render(<AnalysisExplorer context={page} grouping={grouping} onGrouping={onGrouping} onSelect={onSelect} />))
 
-  expect(container.querySelector('figure figcaption')?.textContent).toContain('response_time')
+  expect(container.querySelector('figure figcaption')?.textContent).toContain('Tempo mediano de resposta')
   const meter = container.querySelector('meter')
-  expect(meter?.getAttribute('aria-label')).toContain('2026-11-16')
+  expect(meter?.getAttribute('aria-label')).toContain('16 de novembro')
   expect(container.textContent).toContain('1 ausente(s)')
   const table = container.querySelector('table')!
   expect(table.caption?.textContent).toBe('Grupos analíticos e população')
   expect(table.textContent).toContain('0,512 seconds')
   expect(table.textContent).toContain('1 / 1')
 
-  const selectBtn = [...container.querySelectorAll('button')].find(b => b.textContent?.includes('Selecionar 2026-11-16'))!
+  const selectBtn = [...container.querySelectorAll('button')].find(b => b.textContent?.includes('Selecionar 16 de novembro'))!
   await act(async () => selectBtn.click())
   expect(onSelect).toHaveBeenCalledWith('date', '2026-11-16')
 
